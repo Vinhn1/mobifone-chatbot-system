@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Cuda / PyTorch / Vector DB databases local files (nếu có sau này)
+.chroma/
+chroma.db
+
+# Environments (Virtual Environments)
+.venv/
+venv/
+ENV/
+env/
+
+# Logs
+logs/
+*.log
+
+# Scraped Data & Processed Data (Không commit dữ liệu thô và KB lên git)
+data/
+data/raw/
+data/processed/
+crawl_summary.json
+
+# IDEs and editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
