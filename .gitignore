@@ -1,0 +1,39 @@
+# ============================================================
+# Git Ignore for Monorepo (mobifone-chatbot-system)
+# ============================================================
+
+# Python (Scraper & AI Core)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.chroma/
+chroma.db
+faiss_index/
+*.log
+
+# Dữ liệu cào (Không đẩy dữ liệu thô & processed lên Git)
+**/data/raw/
+**/data/processed/
+**/data/*.json
+**/data/*.csv
+crawl_summary.json
+logs/
+
+# NodeJS (Backend & Frontend)
+node_modules/
+.npm
+dist/
+.next/
+out/
+build/
+*.local
+
+# IDEs & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
