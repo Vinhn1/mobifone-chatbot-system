@@ -1,6 +1,6 @@
 import os
 import json
-import google.generativeai as genai
+from google import genai
 import chromadb
 from chromadb.utils import embedding_functions
 from dotenv import load_dotenv
@@ -11,11 +11,11 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Load biến môi trường từ file .env
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 
-# Cấu hình Gemini API
+# Khởi tạo client Gemini mới
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if not GEMINI_API_KEY:
     raise ValueError("❌ Không tìm thấy GEMINI_API_KEY trong file .env! Hãy kiểm tra lại file .env của bạn.")
-genai.configure(api_key=GEMINI_API_KEY)
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 class MobiFoneRAG:
     def __init__(self, db_path=None, collection_name="mobifone_knowledge"):
@@ -98,10 +98,34 @@ class MobiFoneRAG:
 
     def retrieve(self, query, n_results=3):
         """Tìm kiếm các thông tin liên quan nhất từ Vector DB"""
+        import re
+        # Trích xuất tên gói cước từ câu hỏi (ví dụ: TK135, MXH120, D5, 5G1D, SMAX...)
+        # Pattern tìm các từ có chữ in hoa và số (như TK135, D5) hoặc chuỗi in hoa dài (như SMAX, BIGM)
+        package_match = re.search(r'\b(?:[0-9]*[A-Z]{1,2}[0-9]+[A-Z]*|[A-Z]{3,6})\b', query)
+        
+        where_document = None
+        if package_match:
+            package_name = package_match.group(0)
+            # Loại trừ các từ viết tắt thông thường không phải tên gói cước
+            exclusions = {"SMS", "GB", "MB", "DATA", "HOT", "USD", "VND", "RAG", "API"}
+            if package_name not in exclusions:
+                where_document = {"$contains": package_name}
+                print(f"🔍 Phát hiện từ khóa gói cước '{package_name}', áp dụng bộ lọc ChromaDB...")
+
         results = self.collection.query(
             query_texts=[query],
+            where_document=where_document,
             n_results=n_results
         )
+        
+        # Nếu áp dụng bộ lọc nhưng không tìm thấy kết quả nào, thử tìm kiếm không lọc
+        if where_document and (not results.get('documents') or not results['documents'][0]):
+            print(f"⚠️ Không tìm thấy kết quả chứa '{package_name}' bằng bộ lọc, chuyển sang tìm kiếm ngữ nghĩa thông thường...")
+            results = self.collection.query(
+                query_texts=[query],
+                n_results=n_results
+            )
+            
         return results
 
     def answer_question(self, question):
@@ -131,9 +155,11 @@ Nếu trong ngữ cảnh không chứa thông tin để trả lời câu hỏi, 
 [Câu trả lời của bạn]:"""
 
         # 3. Gọi Gemini API sinh phản hồi
-        # Sử dụng gemini-1.5-flash để phản hồi nhanh, mượt dưới 2 giây
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(prompt)
+        # Sử dụng gemini-flash-latest để tránh lỗi giới hạn quota (429) của các bản preview/2.0
+        response = client.models.generate_content(
+            model="gemini-flash-latest",
+            contents=prompt
+        )
         
         # 4. Trích xuất danh sách nguồn tham khảo không trùng lặp
         unique_sources = []
