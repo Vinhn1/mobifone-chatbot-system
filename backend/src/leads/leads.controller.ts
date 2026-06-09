@@ -1,4 +1,22 @@
-import { Controller } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { LeadsService } from './leads.service';
 
-@Controller('leads')
-export class LeadsController {}
+@Controller('leads') // Định nghĩa route bắt đầu là /leads
+export class LeadsController {
+  constructor(private readonly leadsService: LeadsService) {}
+
+  // POST /leads - Tạo mới Lead
+  @Post()
+  async create(@Body() body: { name?: string; phone: string; interest?: string }) {
+    if (!body.phone) {
+      throw new HttpException('Số điện thoại là bắt buộc!', HttpStatus.BAD_REQUEST);
+    }
+    return await this.leadsService.createLead(body);
+  }
+
+  // GET /leads - Lấy danh sách (Admin Dashboard)
+  @Get()
+  async findAll() {
+    return await this.leadsService.getAllLeads();
+  }
+}
