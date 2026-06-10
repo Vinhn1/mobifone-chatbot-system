@@ -128,7 +128,7 @@ class MobiFoneRAG:
             
         return results
 
-    def answer_question(self, question):
+    def answer_question(self, question, history=None):
         """Truy xuất thông tin liên quan và gửi Gemini sinh câu trả lời"""
         # 1. Lấy ngữ cảnh tương quan
         retrieved = self.retrieve(question, n_results=3)
@@ -148,11 +148,21 @@ Nếu trong ngữ cảnh không chứa thông tin để trả lời câu hỏi, 
 
 [Ngữ cảnh chính thức của MobiFone]:
 {context_text}
+"""
 
-[Câu hỏi của khách hàng]:
+        # Bổ sung lịch sử trò chuyện nếu có
+        if history:
+            prompt += "\n[Lịch sử hội thoại gần đây giữa Khách hàng và Trợ lý ảo]:\n"
+            for msg in history:
+                role_label = "Khách hàng" if msg.get("role") == "user" else "Trợ lý ảo (Bạn)"
+                prompt += f"- {role_label}: {msg.get('message')}\n"
+
+        prompt += f"""
+[Câu hỏi hiện tại của khách hàng]:
 {question}
 
 [Câu trả lời của bạn]:"""
+
 
         # 3. Gọi Gemini API sinh phản hồi
         # Sử dụng gemini-flash-latest để tránh lỗi giới hạn quota (429) của các bản preview/2.0

@@ -8,13 +8,21 @@ app = FastAPI(title="MobiFone AI Service")
 # Khởi tạo RAG bot (chỉ khởi tạo 1 lần khi server start)
 bot = MobiFoneRAG()
 
+from typing import List, Optional
+
 # Định nghĩa schema request/response bằng Pydantic
+class MessageModel(BaseModel):
+    role: str
+    message: str
+
 class ChatRequest(BaseModel):
     message: str
+    history: Optional[List[MessageModel]] = None
 
 class ChatResponse(BaseModel):
     answer: str
     sources: list
+
 
 # Health check endpoint
 @app.get("/health")
@@ -26,8 +34,13 @@ def health_check():
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     try:
-        answer, sources = bot.answer_question(request.message)
+        history_list = []
+        if request.history:
+            history_list = [{"role": msg.role, "message": msg.message} for msg in request.history]
+            
+        answer, sources = bot.answer_question(request.message, history=history_list)
         return ChatResponse(answer=answer, sources=sources)
+
     except Exception as e:
         error_msg = str(e)
         if "503" in error_msg:

@@ -7,12 +7,15 @@ export class ChatController {
    constructor(private readonly chatService: ChatService) {}
 
   @Post() // Định nghĩa route POST /chat
-  async handleChat(@Body('message') message: string) {
+  async handleChat(
+    @Body('message') message: string,
+    @Body('sessionId') sessionId?: string,
+  ) {
     if (!message) {
       throw new HttpException('Tin nhắn không được để trống', HttpStatus.BAD_REQUEST);
     }
     try {
-      const result = await this.chatService.sendMessageToAi(message);
+      const result = await this.chatService.sendMessageToAi(message, sessionId);
       return result;
     } catch (error) {
       throw new HttpException(
@@ -22,3 +25,4 @@ export class ChatController {
     }
   }
 }
+

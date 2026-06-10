@@ -5,6 +5,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ChatModule } from './chat/chat.module';
 import { LeadsModule } from './leads/leads.module';
+import { ChatHistoryModule } from './chat-history/chat-history.module';
 
 @Module({
   imports: [
@@ -34,6 +35,8 @@ import { LeadsModule } from './leads/leads.module';
     ChatModule,
 
     LeadsModule,
+
+    ChatHistoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
