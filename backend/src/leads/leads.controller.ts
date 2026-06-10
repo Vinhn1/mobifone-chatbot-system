@@ -1,5 +1,6 @@
-import { Controller, Post, Get, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { LeadsService } from './leads.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('leads') // Định nghĩa route bắt đầu là /leads
 export class LeadsController {
@@ -16,7 +17,9 @@ export class LeadsController {
 
   // GET /leads - Lấy danh sách (Admin Dashboard)
   @Get()
+  @UseGuards(JwtAuthGuard)
   async findAll() {
     return await this.leadsService.getAllLeads();
   }
 }
+
