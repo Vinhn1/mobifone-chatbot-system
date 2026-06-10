@@ -33,4 +33,11 @@ export class ChatHistoryService {
     // để tin nhắn cũ hiển thị trước, tin nhắn mới hiển thị sau (Thời gian tăng dần)
     return history.reverse();
   }
+
+  // 3. Lấy toàn bộ lịch sử tin nhắn (Dành cho Admin Dashboard)
+  async getAllHistory(): Promise<ChatHistory[]> {
+    return await this.chatHistoryRepository.find({
+      order: { createdAt: 'DESC' },
+    });
+  }
 }

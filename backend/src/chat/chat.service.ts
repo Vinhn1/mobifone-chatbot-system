@@ -72,6 +72,11 @@ export class ChatService {
       throw new Error('Không thể kết nối đến AI Service.');
     }
   }
+
+  // Lấy toàn bộ lịch sử chat cho Admin Dashboard
+  async getAllHistory() {
+    return await this.chatHistoryService.getAllHistory();
+  }
 }
 
 

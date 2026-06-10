@@ -1,5 +1,6 @@
-import { Controller, Post, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { ChatService } from './chat.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 // Định nghĩa route bắt đầu bằng /chat
 @Controller('chat')
@@ -23,6 +24,12 @@ export class ChatController {
         HttpStatus.INTERNAL_SERVER_ERROR
       );
     }
+  }
+
+  @Get('history') // Định nghĩa route GET /chat/history (Admin Dashboard)
+  @UseGuards(JwtAuthGuard)
+  async getHistory() {
+    return await this.chatService.getAllHistory();
   }
 }
 
