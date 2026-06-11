@@ -21,16 +21,16 @@ function Slider({ label, value, min, max, step, onChange, desc }: {
 }) {
   return (
     <div>
-      <div style={{ display: "flex", justifyBetween: "space-between", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
         <div>
-          <span style={{ color: "#E2E8F0", fontSize: 13, fontWeight: 600 }}>{label}</span>
-          {desc && <span style={{ color: "#64748B", fontSize: 11, marginLeft: 6 }}>{desc}</span>}
+          <span style={{ color: "#E2E8F0", fontSize: 13, fontWeight: 700 }}>{label}</span>
+          {desc && <span style={{ color: "#94A3B8", fontSize: 11, marginLeft: 6 }}>{desc}</span>}
         </div>
         <span
           style={{
             background: "rgba(0,180,255,0.15)", border: "1px solid rgba(0,180,255,0.3)",
             borderRadius: 6, padding: "2px 10px",
-            color: "#60B4FF", fontSize: 13, fontWeight: 700,
+            color: "#60B4FF", fontSize: 13, fontWeight: 800,
           }}
         >
           {value}
@@ -71,10 +71,12 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      style={{ background: "none", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "4px 10px", cursor: "pointer", color: "rgba(255,255,255,0.5)", display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontFamily: "'Outfit',sans-serif", transition: "all 0.2s" }}
+      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "5px 12px", cursor: "pointer", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontFamily: "'Outfit',sans-serif", transition: "all 0.2s" }}
+      onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}
+      onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
     >
-      {copied ? <Check size={12} style={{ color: "#22C55E" }} /> : <Copy size={12} />}
-      {copied ? "Copied!" : "Copy"}
+      {copied ? <Check size={12} style={{ color: "#10B981" }} /> : <Copy size={12} />}
+      {copied ? "Copied!" : "Sao chép"}
     </button>
   );
 }
@@ -88,16 +90,14 @@ export function PromptPlaygroundPage() {
   const [topP, setTopP] = useState(0.9);
   const [maxTokens, setMaxTokens] = useState(512);
 
-  // Remaining configuration parameters (to preserve when saving)
   const [otherConfig, setOtherConfig] = useState<any>({});
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
-  const endRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // Session ID for chatbot continuity
   const [sessionId] = useState(() => `playground_${Math.random().toString(36).substring(2, 11)}`);
 
   // Redirect if not admin
@@ -107,7 +107,6 @@ export function PromptPlaygroundPage() {
     }
   }, [user, navigate]);
 
-  // Load active prompt & model config on page mount
   const loadConfig = async () => {
     if (!token) return;
     setLoadingConfig(true);
@@ -139,13 +138,19 @@ export function PromptPlaygroundPage() {
     loadConfig();
   }, [token]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isLoading]);
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: "smooth"
+      });
+    }
+  }, [messages, isLoading]);
 
   const send = async () => {
     const textToSend = input.trim();
     if (!textToSend || isLoading) return;
 
-    // 1. Add user message
     const userMsg: Message = { role: "user", content: textToSend };
     setMessages(prev => [...prev, userMsg]);
     setInput("");
@@ -154,7 +159,6 @@ export function PromptPlaygroundPage() {
     const startTime = Date.now();
 
     try {
-      // 2. Auto-save current playground parameters & system prompt to backend config
       if (token) {
         const configHeaders = {
           headers: { Authorization: `Bearer ${token}` },
@@ -169,7 +173,6 @@ export function PromptPlaygroundPage() {
         await axios.post("http://localhost:3000/chat/config", updatedConfig, configHeaders);
       }
 
-      // 3. Send query to chat API
       const response = await axios.post("http://localhost:3000/chat", {
         message: textToSend,
         sessionId,
@@ -226,34 +229,34 @@ export function PromptPlaygroundPage() {
   }
 
   return (
-    <div style={{ fontFamily: "'Outfit', sans-serif", height: "calc(100vh - 108px)", display: "flex", flexDirection: "column" }}>
+    <div style={{ fontFamily: "'Outfit', sans-serif", height: "calc(100vh - 120px)", display: "flex", flexDirection: "column", gap: 20, paddingBottom: 24 }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, flexShrink: 0 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E2E8F0", paddingBottom: 16 }}>
         <div>
-          <h1 style={{ color: "#0F172A", fontWeight: 800, fontSize: 22, marginBottom: 2 }}>Prompt Playground (Thử nghiệm)</h1>
-          <p style={{ color: "#64748B", fontSize: 14 }}>Nhập prompt, đổi thông số và chat trực tiếp để thử độ chính xác của cơ sở tri thức</p>
+          <h1 style={{ color: "#0F172A", fontWeight: 900, fontSize: 24, margin: 0 }}>Prompt Playground (Thử nghiệm)</h1>
+          <p style={{ color: "#64748B", fontSize: 13, margin: "4px 0 0 0" }}>Kiểm tra khả năng phản hồi của Bot và tối ưu cấu hình RAG prompt trực tiếp</p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 8, padding: "5px 12px" }}>
-            <div style={{ width: 7, height: 7, borderRadius: "50%", background: "#22C55E" }} />
-            <span style={{ color: "#16A34A", fontSize: 12, fontWeight: 600 }}>Chế độ Sandbox</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 10, padding: "6px 14px" }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981" }} />
+            <span style={{ color: "#10B981", fontSize: 12, fontWeight: 700 }}>Chế độ Sandbox</span>
           </div>
           <div
             style={{
               display: "flex", alignItems: "center", gap: 8,
-              background: "white", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "6px 12px",
+              background: "white", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "6px 14px",
             }}
           >
             <Code2 size={14} style={{ color: "#0055A5" }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Qwen-2.5-7B</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "#334155" }}>Qwen-2.5-7B</span>
             <ChevronDown size={13} style={{ color: "#94A3B8" }} />
           </div>
         </div>
       </div>
 
-      {/* Main two-pane layout */}
+      {/* Main layout */}
       <div style={{ display: "grid", gridTemplateColumns: "420px 1fr", gap: 16, flex: 1, overflow: "hidden" }}>
-        {/* LEFT PANE — System prompt + params */}
+        {/* Left config pane */}
         <div
           style={{
             background: "#0A1628",
@@ -262,18 +265,19 @@ export function PromptPlaygroundPage() {
             flexDirection: "column",
             overflow: "hidden",
             border: "1px solid rgba(255,255,255,0.05)",
+            boxShadow: "0 8px 32px rgba(10, 22, 40, 0.15)"
           }}
         >
-          {/* Prompt section header */}
-          <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+          {/* Section header */}
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <Terminal size={15} style={{ color: "#60B4FF" }} />
-              <span style={{ color: "#E2E8F0", fontWeight: 700, fontSize: 14 }}>System Prompt hiện thời</span>
+              <span style={{ color: "#E2E8F0", fontWeight: 800, fontSize: 13, letterSpacing: 0.5 }}>SYSTEM PROMPT</span>
             </div>
             <CopyButton text={systemPrompt} />
           </div>
 
-          {/* Prompt textarea */}
+          {/* Prompt Editor */}
           <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", minHeight: 0 }}>
             <textarea
               value={systemPrompt}
@@ -284,9 +288,9 @@ export function PromptPlaygroundPage() {
                 border: "none",
                 outline: "none",
                 color: "#94D4FF",
-                fontSize: 12.5,
+                fontSize: 13,
                 lineHeight: 1.7,
-                padding: "14px 20px",
+                padding: "16px 20px",
                 resize: "none",
                 fontFamily: "'Courier New', 'Monaco', monospace",
                 overflowY: "auto",
@@ -294,11 +298,11 @@ export function PromptPlaygroundPage() {
             />
           </div>
 
-          {/* Parameters section */}
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "16px 20px 20px", flexShrink: 0, display: "flex", flexDirection: "column", gap: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+          {/* Model Params */}
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "20px", flexShrink: 0, display: "flex", flexDirection: "column", gap: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
               <Sliders size={14} style={{ color: "#60B4FF" }} />
-              <span style={{ color: "#E2E8F0", fontWeight: 700, fontSize: 14 }}>Tham số mô hình</span>
+              <span style={{ color: "#E2E8F0", fontWeight: 800, fontSize: 13, letterSpacing: 0.5 }}>THAM SỐ MÔ HÌNH</span>
             </div>
 
             <Slider label="Temperature" desc="Độ sáng tạo" value={temperature} min={0} max={1} step={0.05} onChange={setTemperature} />
@@ -306,8 +310,8 @@ export function PromptPlaygroundPage() {
 
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ color: "#E2E8F0", fontSize: 13, fontWeight: 600 }}>Max Tokens</span>
-                <span style={{ background: "rgba(0,180,255,0.15)", border: "1px solid rgba(0,180,255,0.3)", borderRadius: 6, padding: "2px 10px", color: "#60B4FF", fontSize: 13, fontWeight: 700 }}>{maxTokens}</span>
+                <span style={{ color: "#E2E8F0", fontSize: 13, fontWeight: 700 }}>Max Tokens</span>
+                <span style={{ background: "rgba(0,180,255,0.15)", border: "1px solid rgba(0,180,255,0.3)", borderRadius: 6, padding: "2px 10px", color: "#60B4FF", fontSize: 13, fontWeight: 800 }}>{maxTokens}</span>
               </div>
               <Slider label="" value={maxTokens} min={128} max={2048} step={64} onChange={setMaxTokens} />
             </div>
@@ -315,65 +319,68 @@ export function PromptPlaygroundPage() {
             <motion.button
               onClick={send}
               disabled={isLoading || !input.trim()}
-              whileHover={!isLoading && input.trim() ? { scale: 1.02 } : {}}
-              whileTap={!isLoading && input.trim() ? { scale: 0.98 } : {}}
+              whileHover={!isLoading && input.trim() ? { scale: 1.01 } : {}}
+              whileTap={!isLoading && input.trim() ? { scale: 0.99 } : {}}
               style={{
-                width: "100%", padding: "11px", borderRadius: 10,
-                background: isLoading || !input.trim() ? "rgba(255,255,255,0.05)" : "linear-gradient(135deg, #F39C12, #FF5722)",
+                width: "100%", padding: "12px", borderRadius: 10,
+                background: isLoading || !input.trim() ? "rgba(255,255,255,0.05)" : "linear-gradient(135deg, #0055A5, #00B4FF)",
                 border: "none",
                 color: isLoading || !input.trim() ? "rgba(255,255,255,0.3)" : "white",
-                fontWeight: 700, fontSize: 14, cursor: isLoading || !input.trim() ? "not-allowed" : "pointer",
+                fontWeight: 800, fontSize: 13, cursor: isLoading || !input.trim() ? "not-allowed" : "pointer",
                 fontFamily: "'Outfit', sans-serif",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                boxShadow: isLoading || !input.trim() ? "none" : "0 4px 16px rgba(243,156,18,0.35)",
+                boxShadow: isLoading || !input.trim() ? "none" : "0 4px 16px rgba(0,85,165,0.25)",
                 transition: "all 0.2s",
+                letterSpacing: 0.5,
               }}
             >
               <Play size={15} />
-              {isLoading ? "Đang chạy..." : "Gửi thử nghiệm"}
+              {isLoading ? "ĐANG CHẠY..." : "THỬ NGHIỆM NGAY"}
             </motion.button>
           </div>
         </div>
 
-        {/* RIGHT PANE — Live chat */}
-        <div style={{ background: "white", borderRadius: 16, border: "1.5px solid #F1F5F9", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
-          {/* Chat header */}
-          <div style={{ padding: "14px 20px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#00B4FF)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* Right Sandbox Chat box */}
+        <div className="admin-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden", background: "white", padding: 0 }}>
+          {/* Header */}
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#00B4FF)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,85,165,0.15)" }}>
                 <Zap size={15} color="white" />
               </div>
               <div>
                 <div style={{ color: "#0F172A", fontWeight: 700, fontSize: 14 }}>Khung Chat Thử Nghiệm</div>
-                <div style={{ color: "#94A3B8", fontSize: 11 }}>Session ID: {sessionId}</div>
+                <div style={{ color: "#94A3B8", fontSize: 11, marginTop: 1 }}>Session ID: {sessionId}</div>
               </div>
             </div>
             <button
               onClick={clearChat}
-              style={{ display: "flex", alignItems: "center", gap: 5, background: "none", border: "1px solid #E2E8F0", borderRadius: 8, padding: "5px 10px", cursor: "pointer", color: "#64748B", fontSize: 12, fontFamily: "'Outfit',sans-serif" }}
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #E2E8F0", borderRadius: 8, padding: "5px 12px", cursor: "pointer", color: "#64748B", fontSize: 12, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}
             >
-              <RotateCcw size={12} /> Clear
+              <RotateCcw size={12} /> Xoá chat
             </button>
           </div>
 
           {/* Messages */}
           <div
+            ref={chatContainerRef}
             style={{
-              flex: 1, overflowY: "auto", padding: "16px",
-              display: "flex", flexDirection: "column", gap: 12,
+              flex: 1, overflowY: "auto", padding: "20px",
+              display: "flex", flexDirection: "column", gap: 14,
+              background: "#FAFBFD"
             }}
           >
             {messages.length === 0 && (
               <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", color: "#94A3B8", padding: "40px" }}>
                 <div style={{ fontSize: 40, marginBottom: 12 }}>🧪</div>
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6, color: "#64748B" }}>Hộp cát (Sandbox) trống</div>
-                <div style={{ fontSize: 13 }}>Nhập câu hỏi bên dưới để kiểm tra khả năng trả lời và trích xuất dữ liệu của AI</div>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: "#64748B" }}>Hộp cát Thử nghiệm Trống</div>
+                <div style={{ fontSize: 13, maxWidth: 360, margin: "0 auto", lineHeight: 1.5 }}>Nhập câu hỏi bất kỳ ở khung bên dưới để AI sử dụng thông tin RAG trả lời theo System Prompt</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginTop: 20 }}>
                   {["Gói cước TK135 có ưu đãi gì?", "eSIM MobiFone đăng ký thế nào?", "Đăng ký chuyển mạng giữ số"].map(s => (
                     <button
                       key={s}
                       onClick={() => { setInput(s); }}
-                      style={{ background: "#F8FAFC", border: "1.5px solid #E2E8F0", borderRadius: 20, padding: "6px 14px", fontSize: 12, fontWeight: 500, cursor: "pointer", color: "#475569", fontFamily: "'Outfit',sans-serif", transition: "all 0.2s" }}
+                      style={{ background: "white", border: "1.5px solid #E2E8F0", borderRadius: 20, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#475569", fontFamily: "'Outfit', sans-serif", transition: "all 0.2s" }}
                       onMouseEnter={e => { const el = e.currentTarget as HTMLButtonElement; el.style.borderColor = "#0055A5"; el.style.color = "#0055A5"; }}
                       onMouseLeave={e => { const el = e.currentTarget as HTMLButtonElement; el.style.borderColor = "#E2E8F0"; el.style.color = "#475569"; }}
                     >
@@ -387,27 +394,27 @@ export function PromptPlaygroundPage() {
             {messages.map((msg, i) => (
               <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", gap: 8, alignItems: "flex-end" }}>
                 {msg.role === "assistant" && (
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#00B4FF)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13 }}>🤖</div>
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#00B4FF)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 12, color: "white", fontWeight: "bold" }}>M</div>
                 )}
                 <div style={{ maxWidth: "75%" }}>
                   <div
                     style={
                       msg.role === "user"
-                        ? { background: "linear-gradient(135deg,#0055A5,#0070D0)", color: "white", borderRadius: "16px 2px 16px 16px", padding: "10px 14px", fontSize: 13.5, lineHeight: 1.55 }
-                        : { background: "#F8FAFC", color: "#1E293B", border: "1px solid #E2E8F0", borderRadius: "2px 16px 16px 16px", padding: "10px 14px", fontSize: 13.5, lineHeight: 1.6 }
+                        ? { background: "linear-gradient(135deg,#0055A5,#0070D0)", color: "white", borderRadius: "14px 2px 14px 14px", padding: "10px 14px", fontSize: 13.5, lineHeight: 1.55, boxShadow: "0 2px 8px rgba(0,85,165,0.15)" }
+                        : { background: "white", color: "#1E293B", border: "1px solid #E2E8F0", borderRadius: "2px 14px 14px 14px", padding: "10px 14px", fontSize: 13.5, lineHeight: 1.55, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }
                     }
                   >
                     {renderContent(msg.content)}
                   </div>
                   {msg.role === "assistant" && (msg.latency || msg.tokens) && (
-                    <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                    <div style={{ display: "flex", gap: 8, marginTop: 4, padding: "0 4px" }}>
                       {msg.latency !== undefined && (
-                        <span style={{ background: "#EFF6FF", color: "#0055A5", border: "1px solid #BFDBFE", borderRadius: 6, padding: "1px 7px", fontSize: 10, fontWeight: 600 }}>
+                        <span style={{ background: "rgba(0, 85, 165, 0.05)", color: "#0055A5", border: "1px solid rgba(0, 85, 165, 0.15)", borderRadius: 6, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>
                           ⚡ {msg.latency}ms
                         </span>
                       )}
                       {msg.tokens !== undefined && (
-                        <span style={{ background: "#F0FDF4", color: "#16A34A", border: "1px solid #BBF7D0", borderRadius: 6, padding: "1px 7px", fontSize: 10, fontWeight: 600 }}>
+                        <span style={{ background: "rgba(16, 185, 129, 0.08)", color: "#10B981", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 6, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>
                           📊 {msg.tokens} tokens
                         </span>
                       )}
@@ -419,19 +426,18 @@ export function PromptPlaygroundPage() {
 
             {isLoading && (
               <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#00B4FF)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>🤖</div>
-                <div style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", borderRadius: "2px 16px 16px 16px", padding: "10px 14px", display: "flex", gap: 5, alignItems: "center" }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#00B4FF)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "white", fontWeight: "bold" }}>M</div>
+                <div style={{ background: "white", border: "1px solid #E2E8F0", borderRadius: "2px 14px 14px 14px", padding: "10px 14px", display: "flex", gap: 5, alignItems: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
                   {[0,1,2].map(i => (
                     <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#0055A5", opacity: 0.5, animation: "bounce-dot 1.2s ease-in-out infinite", animationDelay: `${i * 0.2}s` }} />
                   ))}
                 </div>
               </div>
             )}
-            <div ref={endRef} />
           </div>
 
           {/* Input bar */}
-          <div style={{ padding: "12px 16px", borderTop: "1px solid #F1F5F9", display: "flex", gap: 8, flexShrink: 0 }}>
+          <div style={{ padding: "12px 16px", borderTop: "1px solid #F1F5F9", display: "flex", gap: 8, flexShrink: 0, background: "white" }}>
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
@@ -459,7 +465,7 @@ export function PromptPlaygroundPage() {
                 cursor: input.trim() && !isLoading ? "pointer" : "default",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 flexShrink: 0,
-                boxShadow: input.trim() && !isLoading ? "0 4px 12px rgba(0,85,165,0.35)" : "none",
+                boxShadow: input.trim() && !isLoading ? "0 4px 12px rgba(0,85,165,0.25)" : "none",
                 transition: "all 0.2s",
               }}
             >
