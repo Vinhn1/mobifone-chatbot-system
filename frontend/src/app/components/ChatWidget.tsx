@@ -1,0 +1,624 @@
+import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { X, Send, ExternalLink, ChevronDown, Minimize2, Maximize2, User, Phone, CheckCircle2, Star, Sparkles } from "lucide-react";
+import { RobotAvatar } from "./RobotAvatar";
+import { useAuth } from "../context/AuthContext";
+import axios from "axios";
+
+type Message = {
+  id: number;
+  type: "user" | "bot";
+  text: string;
+  sources?: string[];
+  quickReplies?: string[];
+  leadCapture?: { field: string; label: string };
+};
+
+type RobotState = "idle" | "talking" | "thinking" | "happy";
+
+type LeadData = {
+  name?: string;
+  phone?: string;
+  currentPackage?: string;
+  interest?: string;
+  budget?: string;
+};
+
+const SUGGESTIONS = [
+  "Gói TK135 có gì?", "Đăng ký 5G?", "Xem ưu đãi hot", "Tư vấn gói phù hợp", "Hỗ trợ kỹ thuật",
+];
+
+// Fallback sales-psychology bot responses
+function getSalesResponse(text: string, lead: LeadData, user: any): {
+  text: string; sources?: string[]; quickReplies?: string[]; leadCapture?: { field: string; label: string }; robotState?: RobotState;
+} {
+  const lower = text.toLowerCase();
+  const name = user?.name?.split(" ").pop() || lead.name || "bạn";
+
+  if (lower.includes("tên") || lower.includes("là ")) {
+    const match = text.match(/(?:tên|là)\s+(.+)/i);
+    if (match) return {
+      text: `Chào **${match[1]}**! 🎉 Rất vui được gặp bạn!\n\nTôi là **Mia** — Trợ lý AI MobiFone, chuyên gia tư vấn gói cước hàng đầu 🤖✨\n\nBạn đang sử dụng mạng di động nào? Để tôi tìm gói cước **tiết kiệm & phù hợp nhất** cho bạn nhé!`,
+      quickReplies: ["Đang dùng Viettel", "Đang dùng Vinaphone", "Đang dùng MobiFone"],
+      robotState: "happy",
+    };
+  }
+
+  if (lower.includes("tk135") || lower.includes("135")) return {
+    text: `🔥 **TK135 — GÓI CƯỚC BÁN CHẠY NHẤT MOBIFONE!**\n\n📶 **4GB data tốc độ cao/ngày** (120GB/tháng)\n📞 **Miễn phí hoàn toàn** cuộc gọi nội mạng dưới 10 phút\n📲 **Tặng thêm 20 phút** gọi ngoại mạng mỗi tháng\n🌐 Tự động kết nối mạng **5G siêu tốc**\n💰 Chỉ **135.000đ/tháng**\n\n⚡ Đặc biệt: Hôm nay chỉ còn **12 suất** đăng ký nhận thêm **+10GB data bonus**!\n\nBạn có muốn đăng ký ngay gói cước này để nhận khuyến mại không? 🎁`,
+    sources: ["mobifone.vn/tk135"],
+    quickReplies: ["Đăng ký ngay!", "Xem gói khác", "So sánh với TK99"],
+    robotState: "talking",
+  };
+
+  if (lower.includes("5g") || lower.includes("tốc độ")) return {
+    text: `⚡ **Mạng 5G MobiFone — Trải nghiệm tốc độ ánh sáng!**\n\n🚀 Tốc độ tải thực tế lên tới **1.5 Gbps**\n📡 Phủ sóng diện rộng tại các thành phố lớn\n📶 Không giới hạn data tốc độ cao\n💰 Đa dạng gói cước chỉ từ **99.000đ/tháng**\n\n🎁 Nhận ngay eSIM 5G **miễn phí** khi đăng ký hôm nay!\n\nĐể kích hoạt nhanh, hãy cung cấp số điện thoại của bạn nhé! 📱`,
+    quickReplies: ["Đăng ký eSIM 5G", "Xem vùng phủ sóng", "Gửi số điện thoại"],
+    leadCapture: { field: "phone", label: "Số điện thoại nhận tư vấn" },
+    robotState: "happy",
+  };
+
+  if (lower.includes("khuyến mãi") || lower.includes("ưu đãi") || lower.includes("giảm")) return {
+    text: `🎊 **Cơ hội vàng duy nhất hôm nay!**\n\n🔥 Gói cước TK199 giảm trực tiếp **30%** → chỉ còn **139k/tháng**\n🎁 Đổi eSIM **miễn phí hoàn toàn** trực tuyến\n⭐ Hoàn tiền **20%** khi nạp thẻ qua ứng dụng\n\n💡 Ưu đãi độc quyền: Đăng ký qua Mia được tặng thêm **+5GB data** tốc độ cao!\n\nBạn quan tâm đến ưu đãi nào dưới đây? 🎯`,
+    quickReplies: ["Gói TK199 giảm 30%", "Đổi eSIM miễn phí", "Nạp thẻ nhận hoàn tiền"],
+    robotState: "happy",
+  };
+
+  if (lower.includes("so sánh") || lower.includes("gói nào") || lower.includes("tư vấn")) return {
+    text: `Tuyệt vời! Để tôi gợi ý gói cước tối ưu nhất, bạn vui lòng cho biết **nhu cầu sử dụng chính** của mình nhé:`,
+    quickReplies: ["Xem YouTube/TikTok/Data khủng", "Gọi điện thoại liên lạc", "Cần cả hai cân bằng", "Sử dụng cho công việc/học tập"],
+    robotState: "thinking",
+  };
+
+  if (lower.includes("youtube") || lower.includes("tiktok") || lower.includes("data")) return {
+    text: `📱 Tuyệt vời! Đối với nhu cầu giải trí và xem video liên tục, bạn cần gói cước có **dung lượng lớn & tốc độ ổn định**.\n\n🏆 **Đề xuất tốt nhất dành cho bạn:**\n\n**Gói TK135** — 4GB/ngày, miễn phí data truy cập ứng dụng giải trí chỉ với **4.500đ/ngày**!\n\nBạn có muốn Mia hỗ trợ đăng ký dùng thử 7 ngày miễn phí không? 🎁`,
+    quickReplies: ["Đăng ký ngay", "Tìm hiểu thêm", "Tư vấn gói nhỏ hơn"],
+    robotState: "happy",
+  };
+
+  if (lower.includes("số điện thoại") || lower.includes("đăng ký") || lower.includes("gửi số")) {
+    return {
+      text: `Để hoàn tất thủ tục đăng ký và nhận ưu đãi riêng biệt, vui lòng để lại số điện thoại để chuyên viên hỗ trợ bạn trong 15 phút:`,
+      leadCapture: { field: "phone", label: "Số điện thoại của bạn" },
+      robotState: "talking",
+    };
+  }
+
+  if (lower.match(/^0\d{9}$/)) return {
+    text: `✅ **Mia đã ghi nhận số điện thoại của bạn!**\n\n📞 Chuyên viên tư vấn MobiFone sẽ liên hệ lại với bạn qua số **${text}** trong vòng **15 phút**.\n\n🎁 Quà tặng ưu tiên đi kèm:\n• **Tặng thêm 10GB** data tốc độ cao\n• **Miễn phí** cước phát hành eSIM mới\n\nCảm ơn bạn đã tin tưởng dịch vụ MobiFone! 💙`,
+    quickReplies: ["Xem các gói cước khác", "Trở lại trang chủ"],
+    robotState: "happy",
+  };
+
+  if (lower.includes("hỗ trợ") || lower.includes("kỹ thuật") || lower.includes("sự cố")) return {
+    text: `🔧 Mia rất tiếc vì sự bất tiện bạn đang gặp phải!\n\nĐể được xử lý kỹ thuật lập tức:\n📞 **Tổng đài chăm sóc khách hàng:** 18001090 (Miễn phí)\n🏪 Hoặc ghé cửa hàng MobiFone gần nhất.\n\nBạn có thể mô tả cụ thể sự cố để tôi chuyển thông tin tới đội kỹ thuật nhé!`,
+    quickReplies: ["Mất kết nối Internet", "Không nhận được cuộc gọi", "Lỗi thẻ nạp"],
+    robotState: "thinking",
+  };
+
+  return {
+    text: `Tôi đã nhận được thông tin: "${text}".\n\nLà trợ lý AI thế hệ mới của MobiFone, tôi luôn sẵn sàng tư vấn gói cước, đăng ký sim 5G và xử lý sự cố. Bạn cần hỗ trợ gì thêm không? 😊`,
+    quickReplies: ["Tư vấn gói cước", "Các gói khuyến mãi hot", "Hỗ trợ sự cố"],
+    robotState: "idle",
+  };
+}
+
+function TypingBubble() {
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 8, marginBottom: 14 }}>
+      <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#007FFF)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13 }}>🤖</div>
+      <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px 14px 14px 14px", padding: "12px 16px", display: "flex", gap: 5 }}>
+        {[0,1,2].map(i => (
+          <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#007FFF", animation: "bdot 1.2s ease-in-out infinite", animationDelay: `${i*0.2}s` }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function renderText(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
+    p.startsWith("**") && p.endsWith("**")
+      ? <strong key={i} style={{ fontWeight: 700, color: "white" }}>{p.slice(2,-2)}</strong>
+      : p.split("\n").map((l, j, a) => <span key={`${i}-${j}`}>{l}{j<a.length-1&&<br/>}</span>)
+  );
+}
+
+export function ChatWidget() {
+  const { user } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [minimized, setMinimized] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [robotState, setRobotState] = useState<RobotState>("idle");
+  const [leadData, setLeadData] = useState<LeadData>({});
+  const [unread, setUnread] = useState(1);
+  const [sessionId] = useState(() => `widget_${Math.random().toString(36).substring(2, 11)}`);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  // Lead capture values
+  const [captureValue, setCaptureValue] = useState("");
+
+  // Initial greeting after opening
+  useEffect(() => {
+    if (!open || messages.length > 0) return;
+    const name = user?.name?.split(" ").pop() || "";
+    setTyping(true);
+    setRobotState("talking");
+    setTimeout(() => {
+      setTyping(false);
+      setRobotState("happy");
+      setMessages([{
+        id: 1,
+        type: "bot",
+        text: name
+          ? `Chào mừng **${name}** quay lại với MobiFone! 🎉\n\nHôm nay, bạn có **ưu đãi đặc biệt** dành riêng cho thành viên **${user?.tier}**:\n📶 Gia hạn gói **TK135** → tặng thêm **15GB data**\n⭐ Nhân đôi điểm tích lũy thành viên đến hết tuần này.\n\nBạn cần Mia hỗ trợ tư vấn dịch vụ nào không? 😊`
+          : `Xin chào! Tôi là **Mia** — Trợ lý AI thế hệ mới của MobiFone! 🤖✨\n\n🎁 **Ưu đãi độc quyền hôm nay:** Tặng thêm **10GB** data tốc độ cao khi đăng ký gói cước di động trực tuyến!\n\nBạn tên là gì để tôi dễ dàng xưng hô và tư vấn tốt nhất nhé?`,
+        quickReplies: name
+          ? ["Gia hạn gói cước", "Kiểm tra ưu đãi", "Cần tư vấn thêm"]
+          : ["Tôi tên Nam", "Gọi tôi là Vy", "Không cần giới thiệu"],
+      }]);
+    }, 1200);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, typing, open]);
+
+  const send = async (text: string) => {
+    const textToSend = text.trim();
+    if (!textToSend) return;
+
+    setMessages(prev => [...prev, { id: Date.now(), type: "user", text: textToSend }]);
+    setInput("");
+    setTyping(true);
+    setRobotState("thinking");
+
+    // Update local lead data
+    if (textToSend.match(/^0\d{9}$/)) setLeadData(p => ({ ...p, phone: textToSend }));
+    if (textToSend.toLowerCase().includes("tên") || textToSend.toLowerCase().includes("là ")) {
+      const m = textToSend.match(/(?:tên|là)\s+(.+)/i);
+      if (m) setLeadData(p => ({ ...p, name: m[1] }));
+    }
+
+    try {
+      // Try to get live response from backend
+      const response = await axios.post("http://localhost:3000/chat", {
+        message: textToSend,
+        sessionId,
+      });
+
+      const botAnswer = response.data?.answer || "";
+      const botSources = response.data?.sources || [];
+
+      setTyping(false);
+      setRobotState("talking");
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        type: "bot",
+        text: botAnswer,
+        sources: botSources,
+      }]);
+      setTimeout(() => setRobotState("idle"), 3000);
+    } catch (error) {
+      console.warn("Backend chat offline, using sales fallback logic:", error);
+      setTimeout(() => {
+        const resp = getSalesResponse(textToSend, leadData, user);
+        setTyping(false);
+        setRobotState(resp.robotState || "idle");
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1,
+          type: "bot",
+          text: resp.text,
+          sources: resp.sources,
+          quickReplies: resp.quickReplies,
+          leadCapture: resp.leadCapture,
+        }]);
+        setTimeout(() => setRobotState("idle"), 3000);
+      }, 1000);
+    }
+  };
+
+  const handleOpen = () => {
+    setOpen(true);
+    setUnread(0);
+    setMinimized(false);
+  };
+
+  return (
+    <>
+      <style>{`
+        @keyframes robot-float {
+          0%,100%{transform:translateY(0) rotate(-1deg)}
+          50%{transform:translateY(-8px) rotate(1deg)}
+        }
+        @keyframes radar-ring {
+          0%{transform:scale(1);opacity:0.8}
+          100%{transform:scale(2.2);opacity:0}
+        }
+        @keyframes bdot {
+          0%,80%,100%{transform:translateY(0)}
+          40%{transform:translateY(-6px)}
+        }
+        @keyframes slide-up {
+          from{opacity:0;transform:translateY(20px) scale(0.95)}
+          to{opacity:1;transform:translateY(0) scale(1)}
+        }
+        @keyframes neon-pulse-red {
+          0%,100%{box-shadow:0 0 12px rgba(228,0,43,0.4),0 0 24px rgba(0,85,165,0.2)}
+          50%{box-shadow:0 0 20px rgba(228,0,43,0.7),0 0 40px rgba(0,85,165,0.4)}
+        }
+        .chat-msg-scroll::-webkit-scrollbar{width:4px}
+        .chat-msg-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:2px}
+        .suggest-pills::-webkit-scrollbar{display:none}
+      `}</style>
+
+      {/* Floating robot trigger */}
+      <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000 }}>
+        <AnimatePresence>
+          {!open && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              style={{ position: "relative", cursor: "pointer" }}
+              onClick={handleOpen}
+            >
+              {/* Radar rings */}
+              {[1,2,3].map(n => (
+                <div key={n} style={{
+                  position: "absolute", inset: -(n*12), borderRadius: "50%",
+                  border: `1.5px solid rgba(228,0,43,${0.5-n*0.12})`,
+                  animation: `radar-ring 2.5s ease-out infinite`,
+                  animationDelay: `${n*0.6}s`, pointerEvents: "none",
+                }} />
+              ))}
+
+              {/* Robot trigger button */}
+              <div
+                style={{
+                  width: 76, height: 76, borderRadius: "50%",
+                  background: "linear-gradient(145deg, #001F5E 0%, #0055A5 55%, #E4002B 100%)",
+                  border: "2px solid rgba(255,255,255,0.2)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  animation: "robot-float 3s ease-in-out infinite, neon-pulse-red 2.5s ease-in-out infinite",
+                  position: "relative", overflow: "hidden",
+                }}
+              >
+                {/* Inner glow */}
+                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, rgba(255,255,255,0.25), transparent 60%)" }} />
+                <div style={{ transform: "scale(0.6) translateY(-4px)", zIndex: 1, position: "relative" }}>
+                  <RobotAvatar size={90} state={robotState} />
+                </div>
+              </div>
+
+              {/* Unread badge */}
+              {unread > 0 && (
+                <div style={{ position: "absolute", top: -2, right: -2, width: 22, height: 22, borderRadius: "50%", background: "#E4002B", border: "2px solid white", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 900, boxShadow: "0 4px 10px rgba(228,0,43,0.4)" }}>
+                  {unread}
+                </div>
+              )}
+
+              {/* Tooltip */}
+              <div style={{ position: "absolute", right: 88, top: "50%", transform: "translateY(-50%)", background: "rgba(0,12,30,0.96)", backdropFilter: "blur(16px)", border: "1px solid rgba(228,0,43,0.35)", borderRadius: 14, padding: "10px 16px", whiteSpace: "nowrap", pointerEvents: "none", boxShadow: "0 10px 30px rgba(0,0,0,0.3)" }}>
+                <div style={{ color: "white", fontSize: 13.5, fontWeight: 800, display: "flex", alignItems: "center", gap: 5 }}>
+                  <Sparkles size={13} style={{ color: "#E4002B" }} />
+                  Mia — Trợ lý AI MobiFone
+                </div>
+                <div style={{ color: "#60B4FF", fontSize: 11, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", display: "inline-block", boxShadow: "0 0 6px #22C55E" }} />
+                  Online · Đang có quà tặng 🎁
+                </div>
+                <div style={{ position: "absolute", right: -6, top: "50%", transform: "translateY(-50%)", width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderLeft: "6px solid rgba(0,12,30,0.96)" }} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Chat window */}
+        <AnimatePresence>
+          {open && (
+            <motion.div
+              initial={{ opacity: 0, y: 32, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 32, scale: 0.92 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              style={{
+                width: 385,
+                height: minimized ? "auto" : 630,
+                position: "absolute", bottom: 0, right: 0,
+                borderRadius: "24px 24px 20px 20px",
+                overflow: "hidden",
+                display: "flex", flexDirection: "column",
+                background: "rgba(0,10,25,0.94)",
+                backdropFilter: "blur(28px)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,127,255,0.06), inset 0 1px 0 rgba(255,255,255,0.08)",
+                fontFamily: "'Outfit', sans-serif",
+              }}
+            >
+              {/* Header */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                {/* Robot overflowing */}
+                <div style={{
+                  position: "absolute", top: -30, left: 16, zIndex: 20,
+                  animation: robotState === "talking" ? "robot-float 0.5s ease-in-out infinite alternate" : "robot-float 3s ease-in-out infinite",
+                  filter: "drop-shadow(0 4px 16px rgba(0,85,165,0.4))",
+                }}>
+                  <RobotAvatar size={60} state={robotState} />
+                </div>
+
+                <div style={{
+                  background: "linear-gradient(135deg, #0055A5 0%, #002550 100%)",
+                  borderBottom: "1.5px solid #E4002B", // Brand Red line
+                  padding: "16px 16px 16px 88px",
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}>
+                  <div>
+                    <div style={{ color: "white", fontWeight: 800, fontSize: 16, display: "flex", alignItems: "center", gap: 5 }}>
+                      Mia <span style={{ background: "rgba(228,0,43,0.2)", color: "#FF3B30", fontSize: 9, padding: "2px 6px", borderRadius: 6, fontWeight: 700 }}>AI AGENT</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22C55E", display: "inline-block", boxShadow: "0 0 8px #22C55E", flexShrink: 0 }} />
+                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>
+                        {typing ? "Đang trả lời..." : "Trợ lý ảo MobiFone"}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      onClick={() => setMinimized(p => !p)}
+                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)", transition: "all 0.2s" }}
+                    >
+                      {minimized ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+                    </button>
+                    <button
+                      onClick={() => setOpen(false)}
+                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)", transition: "all 0.2s" }}
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {!minimized && (
+                <>
+                  {/* Messages container */}
+                  <div
+                    className="chat-msg-scroll flex-1 overflow-y-auto"
+                    style={{
+                      padding: "20px 16px 8px",
+                      background: "linear-gradient(180deg, rgba(0,20,50,0.15) 0%, transparent 100%)",
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%230055A5' fill-opacity='0.02'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E")`,
+                    }}
+                  >
+                    {messages.map(msg => (
+                      <div key={msg.id} style={{ marginBottom: 16 }}>
+                        <div style={{ display: "flex", justifyContent: msg.type === "user" ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 10 }}>
+                          {msg.type === "bot" && (
+                            <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#007FFF)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, marginBottom: 2 }}>🤖</div>
+                          )}
+                          <div style={{ maxWidth: "80%" }}>
+                            <div style={msg.type === "user"
+                              ? { background: "linear-gradient(135deg,#0055A5,#007FFF)", color: "white", borderRadius: "16px 4px 16px 16px", padding: "11px 15px", fontSize: 13.5, lineHeight: 1.6, boxShadow: "0 4px 14px rgba(0,85,165,0.25)" }
+                              : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", color: "#E2E8F0", borderRadius: "4px 16px 16px 16px", padding: "11px 15px", fontSize: 13.5, lineHeight: 1.6, backdropFilter: "blur(12px)" }
+                            }>
+                              {renderText(msg.text)}
+
+                              {/* Custom Interactive Lead Capture inside Chat Bubble */}
+                              {msg.type === "bot" && msg.leadCapture && (
+                                <div style={{
+                                  marginTop: 12,
+                                  background: "rgba(0,85,165,0.15)",
+                                  border: "1.5px solid rgba(0,127,255,0.3)",
+                                  borderRadius: 12,
+                                  padding: 12,
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: 8,
+                                }}>
+                                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+                                    <Phone size={10} style={{ color: "#E4002B" }} /> {msg.leadCapture.label}
+                                  </div>
+                                  <div style={{ display: "flex", gap: 6 }}>
+                                    <input
+                                      placeholder="Nhập tại đây..."
+                                      value={captureValue}
+                                      onChange={e => setCaptureValue(e.target.value)}
+                                      onKeyDown={e => { if (e.key === "Enter" && captureValue.trim()) { send(captureValue); setCaptureValue(""); } }}
+                                      style={{
+                                        flex: 1,
+                                        height: 32,
+                                        padding: "0 10px",
+                                        borderRadius: 8,
+                                        border: "1px solid rgba(255,255,255,0.12)",
+                                        background: "rgba(0,0,0,0.2)",
+                                        color: "white",
+                                        fontSize: 12,
+                                        outline: "none",
+                                        fontFamily: "'Outfit',sans-serif"
+                                      }}
+                                    />
+                                    <button
+                                      onClick={() => { if (captureValue.trim()) { send(captureValue); setCaptureValue(""); } }}
+                                      style={{
+                                        height: 32,
+                                        padding: "0 14px",
+                                        background: "linear-gradient(135deg, #E4002B, #FF3B30)",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: 8,
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        cursor: "pointer",
+                                        fontFamily: "'Outfit',sans-serif",
+                                        transition: "all 0.2s"
+                                      }}
+                                    >
+                                      Gửi
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Sources citation */}
+                            {msg.sources && msg.sources.length > 0 && (
+                              <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
+                                {msg.sources.map(s => (
+                                  <span key={s} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(0,85,165,0.2)", color: "#60B4FF", border: "1px solid rgba(0,180,255,0.15)", borderRadius: 20, padding: "2px 8px", fontSize: 10.5, fontWeight: 500 }}>
+                                    <ExternalLink size={8} />{s}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Quick reply buttons */}
+                        {msg.type === "bot" && msg.quickReplies && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10, paddingLeft: 38 }}>
+                            {msg.quickReplies.map(qr => (
+                              <button
+                                key={qr}
+                                onClick={() => send(qr)}
+                                style={{
+                                  background: "rgba(228,0,43,0.08)", // Brand Red transparent accent
+                                  color: "#FF3B30",
+                                  border: "1.5px solid rgba(228,0,43,0.25)",
+                                  borderRadius: 20,
+                                  padding: "6px 14px",
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  fontFamily: "'Outfit',sans-serif",
+                                  transition: "all 0.2s",
+                                  boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
+                                }}
+                                onMouseEnter={e => {
+                                  const el = e.currentTarget as HTMLButtonElement;
+                                  el.style.background = "linear-gradient(135deg, #E4002B, #FF3B30)";
+                                  el.style.color = "white";
+                                  el.style.borderColor = "transparent";
+                                }}
+                                onMouseLeave={e => {
+                                  const el = e.currentTarget as HTMLButtonElement;
+                                  el.style.background = "rgba(228,0,43,0.08)";
+                                  el.style.color = "#FF3B30";
+                                  el.style.borderColor = "rgba(228,0,43,0.25)";
+                                }}
+                              >
+                                {qr}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {typing && <TypingBubble />}
+                    <div ref={endRef} />
+                  </div>
+
+                  {/* Suggestions list */}
+                  <div style={{ background: "rgba(0,5,15,0.7)", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "10px 16px 6px" }}>
+                    <div className="suggest-pills" style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
+                      {SUGGESTIONS.map(s => (
+                        <button
+                          key={s}
+                          onClick={() => send(s)}
+                          style={{
+                            flexShrink: 0,
+                            background: "rgba(255,255,255,0.05)",
+                            color: "rgba(255,255,255,0.6)",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            borderRadius: 20,
+                            padding: "5px 12px",
+                            fontSize: 11.5,
+                            fontWeight: 500,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            transition: "all 0.2s",
+                            fontFamily: "'Outfit',sans-serif"
+                          }}
+                          onMouseEnter={e => {
+                            const el = e.currentTarget as HTMLButtonElement;
+                            el.style.background = "rgba(0,85,165,0.25)";
+                            el.style.borderColor = "#007FFF";
+                            el.style.color = "white";
+                          }}
+                          onMouseLeave={e => {
+                            const el = e.currentTarget as HTMLButtonElement;
+                            el.style.background = "rgba(255,255,255,0.05)";
+                            el.style.borderColor = "rgba(255,255,255,0.08)";
+                            el.style.color = "rgba(255,255,255,0.6)";
+                          }}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Input form */}
+                  <div style={{ background: "rgba(0,5,15,0.85)", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "12px 16px 16px", display: "flex", gap: 8 }}>
+                    <input
+                      value={input}
+                      onChange={e => setInput(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && send(input)}
+                      placeholder="Nhập tin nhắn hoặc số điện thoại..."
+                      style={{
+                        flex: 1,
+                        background: "rgba(255,255,255,0.06)",
+                        border: "1.5px solid rgba(255,255,255,0.08)",
+                        borderRadius: 12,
+                        padding: "10px 14px",
+                        fontSize: 13.5,
+                        outline: "none",
+                        color: "white",
+                        fontFamily: "'Outfit',sans-serif",
+                        transition: "all 0.2s"
+                      }}
+                      onFocus={e => {
+                        e.target.style.borderColor = "#007FFF";
+                        e.target.style.background = "rgba(255,255,255,0.08)";
+                        e.target.style.boxShadow = "0 0 0 3px rgba(0,127,255,0.12)";
+                      }}
+                      onBlur={e => {
+                        e.target.style.borderColor = "rgba(255,255,255,0.08)";
+                        e.target.style.background = "rgba(255,255,255,0.06)";
+                        e.target.style.boxShadow = "none";
+                      }}
+                    />
+                    <motion.button
+                      onClick={() => send(input)}
+                      whileTap={{ scale: 0.9 }}
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: 12,
+                        border: "none",
+                        background: input.trim() ? "linear-gradient(135deg,#E4002B,#FF3B30)" : "rgba(255,255,255,0.06)",
+                        color: input.trim() ? "white" : "rgba(255,255,255,0.25)",
+                        cursor: input.trim() ? "pointer" : "default",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        boxShadow: input.trim() ? "0 4px 16px rgba(228,0,43,0.35)" : "none",
+                        transition: "all 0.25s"
+                      }}
+                    >
+                      <Send size={16} />
+                    </motion.button>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </>
+  );
+}

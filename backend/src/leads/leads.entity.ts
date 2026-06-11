@@ -19,7 +19,11 @@ export class Lead {
   @Column({ nullable: true })
   interest: string;
 
-  // 6. Cột tự động lưu thời gian tạo bản ghi
+  // 6. Trạng thái chăm sóc (Chưa liên hệ, Đang liên hệ, Đã liên hệ, v.v.)
+  @Column({ default: 'Chưa liên hệ' })
+  status: string;
+
+  // 7. Cột tự động lưu thời gian tạo bản ghi
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

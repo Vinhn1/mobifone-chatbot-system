@@ -1,4 +1,5 @@
-import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards, UseInterceptors, UploadedFile, Param, Delete } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -30,6 +31,60 @@ export class ChatController {
   @UseGuards(JwtAuthGuard)
   async getHistory() {
     return await this.chatService.getAllHistory();
+  }
+
+  @Get('config') // Lấy cấu hình RAG (Prompt + Params)
+  @UseGuards(JwtAuthGuard)
+  async getConfig() {
+    try {
+      return await this.chatService.getRagConfig();
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Post('config') // Cập nhật cấu hình RAG
+  @UseGuards(JwtAuthGuard)
+  async updateConfig(@Body() cfg: any) {
+    try {
+      return await this.chatService.updateRagConfig(cfg);
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Get('documents') // Lấy danh sách tài liệu tri thức
+  @UseGuards(JwtAuthGuard)
+  async getDocuments() {
+    try {
+      return await this.chatService.getDocuments();
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Delete('documents/:name') // Xóa tài liệu khỏi tri thức
+  @UseGuards(JwtAuthGuard)
+  async deleteDocument(@Param('name') name: string) {
+    try {
+      return await this.chatService.deleteDocument(name);
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Post('upload') // Tải lên tài liệu mới (PDF, TXT, WORD, EXCEL)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(@UploadedFile() file: any) {
+    if (!file) {
+      throw new HttpException('Vui lòng tải lên 1 file hợp lệ', HttpStatus.BAD_REQUEST);
+    }
+    try {
+      return await this.chatService.uploadDocument(file);
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }
 

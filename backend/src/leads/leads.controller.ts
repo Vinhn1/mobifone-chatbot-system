@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Param, Body, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { LeadsService } from './leads.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -20,6 +20,23 @@ export class LeadsController {
   @UseGuards(JwtAuthGuard)
   async findAll() {
     return await this.leadsService.getAllLeads();
+  }
+
+  // PATCH /leads/:id/status - Cập nhật trạng thái chăm sóc
+  @Patch(':id/status')
+  @UseGuards(JwtAuthGuard)
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string }
+  ) {
+    if (!body.status) {
+      throw new HttpException('Trạng thái là bắt buộc!', HttpStatus.BAD_REQUEST);
+    }
+    try {
+      return await this.leadsService.updateLeadStatus(Number(id), body.status);
+    } catch (error) {
+      throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+    }
   }
 }
 

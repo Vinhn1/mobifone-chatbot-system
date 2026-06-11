@@ -77,6 +77,75 @@ export class ChatService {
   async getAllHistory() {
     return await this.chatHistoryService.getAllHistory();
   }
+
+  // Proxy: Lấy cấu hình RAG Prompt & Parameters từ AI Service
+  async getRagConfig() {
+    const aiServiceUrl = 'http://localhost:8001/config';
+    try {
+      const response = await firstValueFrom(this.httpService.get(aiServiceUrl));
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi lấy cấu hình từ AI Service:', error.message);
+      throw new Error('Không thể kết nối đến AI Service.');
+    }
+  }
+
+  // Proxy: Cập nhật cấu hình RAG Prompt & Parameters sang AI Service
+  async updateRagConfig(cfg: any) {
+    const aiServiceUrl = 'http://localhost:8001/config';
+    try {
+      const response = await firstValueFrom(this.httpService.post(aiServiceUrl, cfg));
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi cập nhật cấu hình sang AI Service:', error.message);
+      throw new Error('Không thể kết nối đến AI Service.');
+    }
+  }
+
+  // Proxy: Lấy danh sách tài liệu từ ChromaDB thông qua AI Service
+  async getDocuments() {
+    const aiServiceUrl = 'http://localhost:8001/documents';
+    try {
+      const response = await firstValueFrom(this.httpService.get(aiServiceUrl));
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi lấy danh sách tài liệu từ AI Service:', error.message);
+      throw new Error('Không thể kết nối đến AI Service.');
+    }
+  }
+
+  // Proxy: Xóa tài liệu khỏi ChromaDB thông qua AI Service
+  async deleteDocument(name: string) {
+    const aiServiceUrl = `http://localhost:8001/documents/${encodeURIComponent(name)}`;
+    try {
+      const response = await firstValueFrom(this.httpService.delete(aiServiceUrl));
+      return response.data;
+    } catch (error) {
+      console.error('Lỗi khi xóa tài liệu từ AI Service:', error.message);
+      throw new Error('Không thể kết nối đến AI Service.');
+    }
+  }
+
+  // Proxy: Tải file tài liệu lên AI Service để nạp vector
+  async uploadDocument(file: any) {
+    const aiServiceUrl = 'http://localhost:8001/upload';
+    
+    // Sử dụng standard Node.js/Web FormData
+    const formData = new FormData();
+    const blob = new Blob([file.buffer], { type: file.mimetype });
+    formData.append('file', blob, file.originalname);
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(aiServiceUrl, formData)
+      );
+      return response.data;
+    } catch (error) {
+      const details = error.response?.data?.detail || error.message;
+      console.error('Lỗi khi gửi file lên AI Service:', details);
+      throw new Error(details);
+    }
+  }
 }
 
 

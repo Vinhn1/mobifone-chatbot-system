@@ -40,3 +40,9 @@ Thumbs.db
 docs
 
 .env
+
+# AI Agent Configuration (AG Kit)
+.agent/
+frontend-demo
+ai-agent/
+ai-agent

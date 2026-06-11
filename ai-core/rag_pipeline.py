@@ -1,5 +1,6 @@
 import os
 import json
+import time
 from google import genai
 import chromadb
 from chromadb.utils import embedding_functions
@@ -100,13 +101,11 @@ class MobiFoneRAG:
         """Tìm kiếm các thông tin liên quan nhất từ Vector DB"""
         import re
         # Trích xuất tên gói cước từ câu hỏi (ví dụ: TK135, MXH120, D5, 5G1D, SMAX...)
-        # Pattern tìm các từ có chữ in hoa và số (như TK135, D5) hoặc chuỗi in hoa dài (như SMAX, BIGM)
         package_match = re.search(r'\b(?:[0-9]*[A-Z]{1,2}[0-9]+[A-Z]*|[A-Z]{3,6})\b', query)
         
         where_document = None
         if package_match:
             package_name = package_match.group(0)
-            # Loại trừ các từ viết tắt thông thường không phải tên gói cước
             exclusions = {"SMS", "GB", "MB", "DATA", "HOT", "USD", "VND", "RAG", "API"}
             if package_name not in exclusions:
                 where_document = {"$contains": package_name}
@@ -120,13 +119,42 @@ class MobiFoneRAG:
         
         # Nếu áp dụng bộ lọc nhưng không tìm thấy kết quả nào, thử tìm kiếm không lọc
         if where_document and (not results.get('documents') or not results['documents'][0]):
-            print(f"⚠️ Không tìm thấy kết quả chứa '{package_name}' bằng bộ lọc, chuyển sang tìm kiếm ngữ nghĩa thông thường...")
+            print(f"⚠️ Không tìm thấy kết quả chứa '{package_name}', chuyển sang tìm kiếm ngữ nghĩa...")
             results = self.collection.query(
                 query_texts=[query],
                 n_results=n_results
             )
             
         return results
+
+    def _call_gemini_with_retry(self, prompt, temperature=0.4, top_p=0.9, max_tokens=512, max_retries=3):
+        """Gọi Gemini API với cơ chế retry tự động khi gặp lỗi 503/429/500"""
+        from google.genai import types
+        config = types.GenerateContentConfig(
+            temperature=temperature,
+            top_p=top_p,
+            max_output_tokens=max_tokens
+        )
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=prompt,
+                    config=config
+                )
+                return response.text
+            except Exception as e:
+                error_msg = str(e)
+                # Nếu là lỗi tạm thời (503, 429, 500) → retry sau delay
+                if any(code in error_msg for code in ["503", "429", "500", "RESOURCE_EXHAUSTED"]):
+                    wait_time = 2 ** attempt  # Exponential backoff: 1s, 2s, 4s
+                    print(f"⚠️ Gemini lỗi tạm thời (lần {attempt+1}/{max_retries}), retry sau {wait_time}s...")
+                    time.sleep(wait_time)
+                else:
+                    # Lỗi khác → raise ngay
+                    raise e
+        # Hết retry → raise
+        raise Exception("Gemini API không phản hồi sau nhiều lần thử. Vui lòng thử lại sau.")
 
     def answer_question(self, question, history=None):
         """Truy xuất thông tin liên quan và gửi Gemini sinh câu trả lời"""
@@ -140,11 +168,38 @@ class MobiFoneRAG:
         else:
             context_text = "\n---\n".join(contexts)
             
-        # 2. Xây dựng Prompt Prompt Engineering chuẩn để bot trả lời đúng nghiệp vụ
-        prompt = f"""Bạn là một trợ lý ảo hỗ trợ tư vấn bán hàng và chăm sóc khách hàng chuyên nghiệp của nhà mạng MobiFone.
-Hãy trả lời câu hỏi của khách hàng một cách thân thiện, lễ phép và CHỈ dựa trên thông tin ngữ cảnh chính thức được cung cấp dưới đây. 
+        # 2. Đọc cấu hình động từ rag_config.json (nếu có)
+        config_path = os.path.join(BASE_DIR, "rag_config.json")
+        system_prompt = (
+            "Bạn là một Trợ lý ảo AI thông minh, hỗ trợ tư vấn bán hàng và chăm sóc khách hàng chuyên nghiệp của nhà mạng MobiFone.\n"
+            "Hãy trả lời câu hỏi của khách hàng một cách lịch sự, thân thiện, súc tích và CHỈ dựa trên thông tin ngữ cảnh chính thức được cung cấp dưới đây.\n\n"
+            "[Nguyên tắc phản hồi]:\n"
+            "1. Sử dụng các ký tự icon (như 🌟, 📦, 📶, 💸, 📝) để phân tách thông tin, giúp người đọc dễ nhìn.\n"
+            "2. Định dạng câu trả lời rõ ràng bằng Markdown (in đậm từ khóa quan trọng, sử dụng danh sách gạch đầu dòng).\n"
+            "3. Nếu trả lời về gói cước di động, hãy nêu bật:\n"
+            "   - 📦 Tên gói cước: (in đậm)\n"
+            "   - 💸 Giá cước & Chu kỳ sử dụng\n"
+            "   - 📶 Ưu đãi Data và Gọi thoại (chi tiết)\n"
+            "   - 📝 Cú pháp đăng ký chuẩn (nếu có trong ngữ cảnh)\n"
+            "4. Nếu ngữ cảnh KHÔNG có thông tin để trả lời câu hỏi, hãy khéo léo xin lỗi và hướng dẫn khách hàng để lại Số điện thoại (SĐT) để nhân viên hỗ trợ trực tiếp gọi lại tư vấn ngay. Tuyệt đối không tự bịa thông tin khác ngoài ngữ cảnh."
+        )
+        temperature = 0.4
+        top_p = 0.9
+        max_tokens = 512
+        
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    cfg = json.load(f)
+                    system_prompt = cfg.get("system_prompt", system_prompt)
+                    temperature = float(cfg.get("temperature", temperature))
+                    top_p = float(cfg.get("top_p", top_p))
+                    max_tokens = int(cfg.get("max_tokens", max_tokens))
+            except Exception as e:
+                print(f"⚠️ Lỗi đọc file cấu hình, sử dụng mặc định: {e}")
 
-Nếu trong ngữ cảnh không chứa thông tin để trả lời câu hỏi, hãy lịch sự xin lỗi và đề xuất khách hàng để lại thông tin số điện thoại (SĐT) để tổng đài viên liên hệ tư vấn trực tiếp cho họ. TUYỆT ĐỐI KHÔNG tự bịa đặt thông tin không có trong ngữ cảnh.
+        # 3. Xây dựng Prompt Engineering chuẩn
+        prompt = f"""{system_prompt}
 
 [Ngữ cảnh chính thức của MobiFone]:
 {context_text}
@@ -163,15 +218,15 @@ Nếu trong ngữ cảnh không chứa thông tin để trả lời câu hỏi, 
 
 [Câu trả lời của bạn]:"""
 
-
-        # 3. Gọi Gemini API sinh phản hồi
-        # Sử dụng gemini-flash-latest để tránh lỗi giới hạn quota (429) của các bản preview/2.0
-        response = client.models.generate_content(
-            model="gemini-flash-latest",
-            contents=prompt
+        # 4. Gọi Gemini API với cơ chế retry tự động và tham số tùy chỉnh
+        answer = self._call_gemini_with_retry(
+            prompt,
+            temperature=temperature,
+            top_p=top_p,
+            max_tokens=max_tokens
         )
         
-        # 4. Trích xuất danh sách nguồn tham khảo không trùng lặp
+        # 5. Trích xuất danh sách nguồn tham khảo không trùng lặp
         unique_sources = []
         for src in sources:
             url = src.get("source_url")
@@ -179,7 +234,7 @@ Nếu trong ngữ cảnh không chứa thông tin để trả lời câu hỏi, 
             if url and url not in [s['url'] for s in unique_sources]:
                 unique_sources.append({"title": title, "url": url})
                 
-        return response.text, unique_sources
+        return answer, unique_sources
 
 # Demo chạy thử nghiệm
 if __name__ == "__main__":
