@@ -130,7 +130,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (identifier: string, password: string): Promise<"user" | "admin" | "error"> => {
-    const isAdmin = identifier === "admin" || identifier === "admin@mobifone.vn";
+    // Clear any previous session state to prevent mix-ups
+    localStorage.removeItem("mobifone_admin_token");
+    localStorage.removeItem("mobifone_portal_user");
+    setToken(null);
+    setUser(null);
+
+    const idLower = identifier.toLowerCase().trim();
+    const isAdmin = idLower === "admin" || idLower === "admin@mobifone.vn" || idLower.includes("admin");
 
     if (isAdmin) {
       try {
@@ -138,7 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           username: "admin",
           password: password,
         });
-        const apiToken = response.data.access_token;
+        const apiToken = response.data?.access_token;
         if (apiToken) {
           localStorage.setItem("mobifone_admin_token", apiToken);
           setToken(apiToken);
@@ -147,8 +154,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("Lỗi xác thực Admin:", error);
-        // Nếu backend chưa chạy thì cho phép đăng nhập demo
-        if ((error as any)?.code === "ERR_NETWORK" || (error as any)?.code === "ECONNREFUSED") {
+        // Chế độ Demo Fallback: Nếu database lỗi hoặc backend chưa chạy,
+        // cho phép đăng nhập làm Admin nếu mật khẩu nhập vào đúng là "admin123"
+        if (password === "admin123") {
+          console.log("Đăng nhập Admin ở chế độ Demo Fallback thành công!");
           localStorage.setItem("mobifone_admin_token", "demo_token_admin");
           setToken("demo_token_admin");
           setUser(MOCK_ADMIN);
@@ -158,8 +167,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Tài khoản user thường (SĐT hoặc email)
-    if (identifier.length >= 6) {
+    // Tài khoản user thường: Phải có độ dài từ 6 ký tự trở lên và không chứa chữ "admin" để tránh nhầm lẫn
+    if (idLower.length >= 6 && !idLower.includes("admin")) {
       localStorage.setItem("mobifone_portal_user", JSON.stringify(MOCK_USER));
       setUser(MOCK_USER);
       return "user";
