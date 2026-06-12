@@ -106,10 +106,12 @@ function getSalesResponse(text: string, lead: LeadData, user: any): {
 function TypingBubble() {
   return (
     <div style={{ display: "flex", alignItems: "flex-end", gap: 8, marginBottom: 14 }}>
-      <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#007FFF)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13 }}>🤖</div>
+      <div style={{ width: 28, height: 28, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <RobotAvatar size={28} state="talking" />
+      </div>
       <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px 14px 14px 14px", padding: "12px 16px", display: "flex", gap: 5 }}>
         {[0,1,2].map(i => (
-          <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#007FFF", animation: "bdot 1.2s ease-in-out infinite", animationDelay: `${i*0.2}s` }} />
+          <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#30B0EB", animation: "bdot 1.2s ease-in-out infinite", animationDelay: `${i*0.2}s` }} />
         ))}
       </div>
     </div>
@@ -245,9 +247,9 @@ export function ChatWidget() {
           from{opacity:0;transform:translateY(20px) scale(0.95)}
           to{opacity:1;transform:translateY(0) scale(1)}
         }
-        @keyframes neon-pulse-red {
-          0%,100%{box-shadow:0 0 12px rgba(228,0,43,0.4),0 0 24px rgba(0,85,165,0.2)}
-          50%{box-shadow:0 0 20px rgba(228,0,43,0.7),0 0 40px rgba(0,85,165,0.4)}
+        @keyframes neon-pulse-blue {
+          0%,100%{box-shadow:0 0 12px rgba(48,176,235,0.4),0 0 24px rgba(29,57,122,0.2)}
+          50%{box-shadow:0 0 20px rgba(48,176,235,0.7),0 0 40px rgba(29,57,122,0.4)}
         }
         .chat-msg-scroll::-webkit-scrollbar{width:4px}
         .chat-msg-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:2px}
@@ -269,7 +271,7 @@ export function ChatWidget() {
               {[1,2,3].map(n => (
                 <div key={n} style={{
                   position: "absolute", inset: -(n*12), borderRadius: "50%",
-                  border: `1.5px solid rgba(228,0,43,${0.5-n*0.12})`,
+                  border: `1.5px solid rgba(48,176,235,${0.5-n*0.12})`,
                   animation: `radar-ring 2.5s ease-out infinite`,
                   animationDelay: `${n*0.6}s`, pointerEvents: "none",
                 }} />
@@ -278,39 +280,35 @@ export function ChatWidget() {
               {/* Robot trigger button */}
               <div
                 style={{
-                  width: 76, height: 76, borderRadius: "50%",
-                  background: "linear-gradient(145deg, #001F5E 0%, #0055A5 55%, #E4002B 100%)",
-                  border: "2px solid rgba(255,255,255,0.2)",
+                  width: 78, height: 78,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  animation: "robot-float 3s ease-in-out infinite, neon-pulse-red 2.5s ease-in-out infinite",
-                  position: "relative", overflow: "hidden",
+                  animation: "robot-float 3s ease-in-out infinite",
+                  position: "relative",
                 }}
               >
-                {/* Inner glow */}
-                <div style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "radial-gradient(circle at 35% 35%, rgba(255,255,255,0.25), transparent 60%)" }} />
-                <div style={{ transform: "scale(0.6) translateY(-4px)", zIndex: 1, position: "relative" }}>
-                  <RobotAvatar size={90} state={robotState} />
+                <div style={{ zIndex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <RobotAvatar size={78} state={robotState} />
                 </div>
               </div>
 
               {/* Unread badge */}
               {unread > 0 && (
-                <div style={{ position: "absolute", top: -2, right: -2, width: 22, height: 22, borderRadius: "50%", background: "#E4002B", border: "2px solid white", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 900, boxShadow: "0 4px 10px rgba(228,0,43,0.4)" }}>
+                <div style={{ position: "absolute", top: -2, right: -2, width: 22, height: 22, borderRadius: "50%", background: "#E4002B", border: "2px solid white", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 900, boxShadow: "0 4px 10px rgba(228,0,43,0.5)" }}>
                   {unread}
                 </div>
               )}
 
               {/* Tooltip */}
-              <div style={{ position: "absolute", right: 88, top: "50%", transform: "translateY(-50%)", background: "rgba(0,12,30,0.96)", backdropFilter: "blur(16px)", border: "1px solid rgba(228,0,43,0.35)", borderRadius: 14, padding: "10px 16px", whiteSpace: "nowrap", pointerEvents: "none", boxShadow: "0 10px 30px rgba(0,0,0,0.3)" }}>
+              <div style={{ position: "absolute", right: 88, top: "50%", transform: "translateY(-50%)", background: "rgba(9,21,44,0.96)", backdropFilter: "blur(16px)", border: "1px solid rgba(48,176,235,0.3)", borderRadius: 14, padding: "10px 16px", whiteSpace: "nowrap", pointerEvents: "none", boxShadow: "0 10px 30px rgba(0,0,0,0.3)" }}>
                 <div style={{ color: "white", fontSize: 13.5, fontWeight: 800, display: "flex", alignItems: "center", gap: 5 }}>
-                  <Sparkles size={13} style={{ color: "#E4002B" }} />
+                  <Sparkles size={13} style={{ color: "#30B0EB" }} />
                   Mia — Trợ lý AI MobiFone
                 </div>
-                <div style={{ color: "#60B4FF", fontSize: 11, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                <div style={{ color: "#87D5F8", fontSize: 11, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", display: "inline-block", boxShadow: "0 0 6px #22C55E" }} />
                   Online · Đang có quà tặng 🎁
                 </div>
-                <div style={{ position: "absolute", right: -6, top: "50%", transform: "translateY(-50%)", width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderLeft: "6px solid rgba(0,12,30,0.96)" }} />
+                <div style={{ position: "absolute", right: -6, top: "50%", transform: "translateY(-50%)", width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderLeft: "6px solid rgba(9,21,44,0.96)" }} />
               </div>
             </motion.div>
           )}
@@ -330,34 +328,34 @@ export function ChatWidget() {
                 position: "absolute", bottom: 0, right: 0,
                 borderRadius: "24px 24px 20px 20px",
                 overflow: "hidden",
-                display: "flex", flexDirection: "column",
+                display: "flex",
+                flexDirection: "column",
                 background: "rgba(0,10,25,0.94)",
                 backdropFilter: "blur(28px)",
                 border: "1px solid rgba(255,255,255,0.08)",
-                boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,127,255,0.06), inset 0 1px 0 rgba(255,255,255,0.08)",
+                boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(48,176,235,0.15), inset 0 1px 0 rgba(255,255,255,0.08)",
                 fontFamily: "'Outfit', sans-serif",
               }}
             >
               {/* Header */}
-              <div style={{ position: "relative", flexShrink: 0 }}>
-                {/* Robot overflowing */}
-                <div style={{
-                  position: "absolute", top: -30, left: 16, zIndex: 20,
-                  animation: robotState === "talking" ? "robot-float 0.5s ease-in-out infinite alternate" : "robot-float 3s ease-in-out infinite",
-                  filter: "drop-shadow(0 4px 16px rgba(0,85,165,0.4))",
-                }}>
-                  <RobotAvatar size={60} state={robotState} />
-                </div>
-
-                <div style={{
-                  background: "linear-gradient(135deg, #0055A5 0%, #002550 100%)",
-                  borderBottom: "1.5px solid #E4002B", // Brand Red line
-                  padding: "16px 16px 16px 88px",
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                }}>
+              <div style={{
+                background: "linear-gradient(135deg, #0D2137 0%, #1D397A 100%)",
+                borderBottom: "1.5px solid #30B0EB",
+                padding: "14px 16px",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                flexShrink: 0
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{
+                    animation: robotState === "talking" ? "robot-float 0.5s ease-in-out infinite alternate" : "robot-float 3s ease-in-out infinite",
+                    flexShrink: 0,
+                    filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.25))",
+                  }}>
+                    <RobotAvatar size={44} state={robotState} />
+                  </div>
                   <div>
                     <div style={{ color: "white", fontWeight: 800, fontSize: 16, display: "flex", alignItems: "center", gap: 5 }}>
-                      Mia <span style={{ background: "rgba(228,0,43,0.2)", color: "#FF3B30", fontSize: 9, padding: "2px 6px", borderRadius: 6, fontWeight: 700 }}>AI AGENT</span>
+                      Mia <span style={{ background: "rgba(48,176,235,0.15)", color: "#30B0EB", fontSize: 9, padding: "2px 6px", borderRadius: 6, fontWeight: 700 }}>AI AGENT</span>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                       <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22C55E", display: "inline-block", boxShadow: "0 0 8px #22C55E", flexShrink: 0 }} />
@@ -366,20 +364,21 @@ export function ChatWidget() {
                       </span>
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button
-                      onClick={() => setMinimized(p => !p)}
-                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)", transition: "all 0.2s" }}
-                    >
-                      {minimized ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
-                    </button>
-                    <button
-                      onClick={() => setOpen(false)}
-                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)", transition: "all 0.2s" }}
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button
+                    onClick={() => setMinimized(p => !p)}
+                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)", transition: "all 0.2s" }}
+                  >
+                    {minimized ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
+                  </button>
+                  <button
+                    onClick={() => setOpen(false)}
+                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)", transition: "all 0.2s" }}
+                  >
+                    <X size={13} />
+                  </button>
                 </div>
               </div>
 
@@ -398,11 +397,13 @@ export function ChatWidget() {
                       <div key={msg.id} style={{ marginBottom: 16 }}>
                         <div style={{ display: "flex", justifyContent: msg.type === "user" ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 10 }}>
                           {msg.type === "bot" && (
-                            <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#007FFF)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, flexShrink: 0, marginBottom: 2 }}>🤖</div>
+                            <div style={{ width: 28, height: 28, flexShrink: 0, marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                              <RobotAvatar size={28} state="idle" />
+                            </div>
                           )}
                           <div style={{ maxWidth: "80%" }}>
                             <div style={msg.type === "user"
-                              ? { background: "linear-gradient(135deg,#0055A5,#007FFF)", color: "white", borderRadius: "16px 4px 16px 16px", padding: "11px 15px", fontSize: 13.5, lineHeight: 1.6, boxShadow: "0 4px 14px rgba(0,85,165,0.25)" }
+                              ? { background: "linear-gradient(135deg,#1D397A,#30B0EB)", color: "white", borderRadius: "16px 4px 16px 16px", padding: "11px 15px", fontSize: 13.5, lineHeight: 1.6, boxShadow: "0 4px 14px rgba(29,57,122,0.3)" }
                               : { background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", color: "#E2E8F0", borderRadius: "4px 16px 16px 16px", padding: "11px 15px", fontSize: 13.5, lineHeight: 1.6, backdropFilter: "blur(12px)" }
                             }>
                               {renderText(msg.text)}
@@ -411,8 +412,8 @@ export function ChatWidget() {
                               {msg.type === "bot" && msg.leadCapture && (
                                 <div style={{
                                   marginTop: 12,
-                                  background: "rgba(0,85,165,0.15)",
-                                  border: "1.5px solid rgba(0,127,255,0.3)",
+                                  background: "rgba(48,176,235,0.08)",
+                                  border: "1.5px solid rgba(48,176,235,0.25)",
                                   borderRadius: 12,
                                   padding: 12,
                                   display: "flex",
@@ -420,7 +421,7 @@ export function ChatWidget() {
                                   gap: 8,
                                 }}>
                                   <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
-                                    <Phone size={10} style={{ color: "#E4002B" }} /> {msg.leadCapture.label}
+                                    <Phone size={10} style={{ color: "#30B0EB" }} /> {msg.leadCapture.label}
                                   </div>
                                   <div style={{ display: "flex", gap: 6 }}>
                                     <input
@@ -446,7 +447,7 @@ export function ChatWidget() {
                                       style={{
                                         height: 32,
                                         padding: "0 14px",
-                                        background: "linear-gradient(135deg, #E4002B, #FF3B30)",
+                                        background: "linear-gradient(135deg, #1D397A, #30B0EB)",
                                         color: "white",
                                         border: "none",
                                         borderRadius: 8,
@@ -468,7 +469,7 @@ export function ChatWidget() {
                             {msg.sources && msg.sources.length > 0 && (
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
                                 {msg.sources.map(s => (
-                                  <span key={s} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(0,85,165,0.2)", color: "#60B4FF", border: "1px solid rgba(0,180,255,0.15)", borderRadius: 20, padding: "2px 8px", fontSize: 10.5, fontWeight: 500 }}>
+                                  <span key={s} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(48,176,235,0.12)", color: "#87D5F8", border: "1px solid rgba(48,176,235,0.15)", borderRadius: 20, padding: "2px 8px", fontSize: 10.5, fontWeight: 500 }}>
                                     <ExternalLink size={8} />{s}
                                   </span>
                                 ))}
@@ -485,9 +486,9 @@ export function ChatWidget() {
                                 key={qr}
                                 onClick={() => send(qr)}
                                 style={{
-                                  background: "rgba(228,0,43,0.08)", // Brand Red transparent accent
-                                  color: "#FF3B30",
-                                  border: "1.5px solid rgba(228,0,43,0.25)",
+                                  background: "rgba(48,176,235,0.08)",
+                                  color: "#30B0EB",
+                                  border: "1.5px solid rgba(48,176,235,0.25)",
                                   borderRadius: 20,
                                   padding: "6px 14px",
                                   fontSize: 12,
@@ -499,15 +500,15 @@ export function ChatWidget() {
                                 }}
                                 onMouseEnter={e => {
                                   const el = e.currentTarget as HTMLButtonElement;
-                                  el.style.background = "linear-gradient(135deg, #E4002B, #FF3B30)";
+                                  el.style.background = "linear-gradient(135deg, #1D397A, #30B0EB)";
                                   el.style.color = "white";
                                   el.style.borderColor = "transparent";
                                 }}
                                 onMouseLeave={e => {
                                   const el = e.currentTarget as HTMLButtonElement;
-                                  el.style.background = "rgba(228,0,43,0.08)";
-                                  el.style.color = "#FF3B30";
-                                  el.style.borderColor = "rgba(228,0,43,0.25)";
+                                  el.style.background = "rgba(48,176,235,0.08)";
+                                  el.style.color = "#30B0EB";
+                                  el.style.borderColor = "rgba(48,176,235,0.25)";
                                 }}
                               >
                                 {qr}
@@ -544,8 +545,8 @@ export function ChatWidget() {
                           }}
                           onMouseEnter={e => {
                             const el = e.currentTarget as HTMLButtonElement;
-                            el.style.background = "rgba(0,85,165,0.25)";
-                            el.style.borderColor = "#007FFF";
+                            el.style.background = "rgba(48,176,235,0.15)";
+                            el.style.borderColor = "#30B0EB";
                             el.style.color = "white";
                           }}
                           onMouseLeave={e => {
@@ -562,7 +563,7 @@ export function ChatWidget() {
                   </div>
 
                   {/* Input form */}
-                  <div style={{ background: "rgba(0,5,15,0.85)", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "12px 16px 16px", display: "flex", gap: 8 }}>
+                  <div style={{ background: "rgba(0,5,15,0.85)", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "12px 16px 16px", display: "flex", gap: 8, borderRadius: "0 0 20px 20px" }}>
                     <input
                       value={input}
                       onChange={e => setInput(e.target.value)}
@@ -581,9 +582,9 @@ export function ChatWidget() {
                         transition: "all 0.2s"
                       }}
                       onFocus={e => {
-                        e.target.style.borderColor = "#007FFF";
+                        e.target.style.borderColor = "#30B0EB";
                         e.target.style.background = "rgba(255,255,255,0.08)";
-                        e.target.style.boxShadow = "0 0 0 3px rgba(0,127,255,0.12)";
+                        e.target.style.boxShadow = "0 0 0 3px rgba(48,176,235,0.15)";
                       }}
                       onBlur={e => {
                         e.target.style.borderColor = "rgba(255,255,255,0.08)";
@@ -599,14 +600,14 @@ export function ChatWidget() {
                         height: 44,
                         borderRadius: 12,
                         border: "none",
-                        background: input.trim() ? "linear-gradient(135deg,#E4002B,#FF3B30)" : "rgba(255,255,255,0.06)",
+                        background: input.trim() ? "linear-gradient(135deg,#1D397A,#30B0EB)" : "rgba(255,255,255,0.06)",
                         color: input.trim() ? "white" : "rgba(255,255,255,0.25)",
                         cursor: input.trim() ? "pointer" : "default",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         flexShrink: 0,
-                        boxShadow: input.trim() ? "0 4px 16px rgba(228,0,43,0.35)" : "none",
+                        boxShadow: input.trim() ? "0 4px 16px rgba(48,176,235,0.35)" : "none",
                         transition: "all 0.25s"
                       }}
                     >
