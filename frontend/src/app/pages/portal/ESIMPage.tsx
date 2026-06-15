@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
-import { Check, Smartphone, QrCode, Download, Wifi, ArrowRight, Zap } from "lucide-react";
+import { Check, Smartphone, QrCode, Download, Wifi, Zap } from "lucide-react";
 
 const STEPS = [
   { icon: QrCode, title: "Chọn gói eSIM", desc: "Chọn gói data phù hợp với nhu cầu của bạn và hoàn tất thanh toán online." },
@@ -13,107 +13,65 @@ const STEPS = [
 const PLANS = [
   { name: "Basic", data: "1GB", days: 7, price: "29.000đ", color: "#64748B", popular: false },
   { name: "Standard", data: "3GB", days: 30, price: "79.000đ", color: "#0055A5", popular: false },
-  { name: "Premium", data: "10GB", days: 30, price: "135.000đ", color: "#F39C12", popular: true },
+  { name: "Premium", data: "10GB", days: 30, price: "135.000đ", color: "#FF9900", popular: true },
   { name: "Unlimited", data: "∞ GB", days: 30, price: "199.000đ", color: "#A855F7", popular: false },
 ];
 
 function PhoneMockup({ activeStep }: { activeStep: number }) {
   return (
-    <div
-      style={{
-        width: 240,
-        height: 440,
-        borderRadius: 36,
-        background: "linear-gradient(145deg, #1A1A2E 0%, #0D0D1A 100%)",
-        border: "8px solid rgba(255,255,255,0.08)",
-        position: "relative",
-        boxShadow: "0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.1)",
-        overflow: "hidden",
-        flexShrink: 0,
-      }}
-    >
+    <div className="w-[240px] h-[440px] rounded-[36px] bg-gradient-to-b from-[#1A1A2E] to-[#0D0D1A] border-8 border-white/5 relative shadow-2xl shrink-0 overflow-hidden">
       {/* Notch */}
-      <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: 80, height: 22, background: "#0D0D1A", borderRadius: "0 0 16px 16px", zIndex: 10 }} />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-[#0D0D1A] rounded-b-2xl z-10" />
 
       {/* Screen content */}
-      <div style={{ position: "absolute", inset: 0, padding: "36px 12px 12px" }}>
+      <div className="absolute inset-0 p-9 pt-10 flex flex-col">
         {/* Status bar */}
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12, padding: "0 4px" }}>
-          <span style={{ color: "white", fontSize: 10, fontWeight: 600 }}>9:41</span>
-          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <Wifi size={10} color="white" />
-            <span style={{ color: "white", fontSize: 10 }}>5G</span>
+        <div className="flex justify-between mb-3 px-1">
+          <span className="text-white text-[9px] font-bold">9:41</span>
+          <div className="flex gap-1 items-center">
+            <Wifi size={10} className="text-white" />
+            <span className="text-white text-[9px] font-bold">5G</span>
           </div>
         </div>
 
         {/* App screen */}
-        <div
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: 16,
-            padding: 12,
-            height: "calc(100% - 36px)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 10,
-          }}
-        >
-          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 9, fontWeight: 600, letterSpacing: 1.5 }}>CÀI ĐẶT · eSIM</div>
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-3 h-[calc(100%-36px)] flex flex-col items-center gap-2.5">
+          <div className="text-white/40 text-[8px] font-bold tracking-widest uppercase">Cài đặt · eSIM</div>
 
           {/* QR code visual */}
-          <div
-            style={{
-              width: 120,
-              height: 120,
-              borderRadius: 12,
-              background: "white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative",
-              boxShadow: "0 0 20px rgba(0,85,165,0.3)",
-            }}
-          >
+          <div className="w-28 h-28 rounded-xl bg-white flex items-center justify-center relative shadow-lg shadow-[#0055A5]/20">
             {/* Fake QR pattern */}
-            <div style={{ width: 90, height: 90, position: "relative" }}>
-              {[0,1,2,3].map(r => [0,1,2,3].map(c => (
-                <div
-                  key={`${r}-${c}`}
-                  style={{
-                    position: "absolute",
-                    left: c * 22,
-                    top: r * 22,
-                    width: 18,
-                    height: 18,
-                    background: (r + c) % 2 === 0 ? "#001F3F" : "transparent",
-                    borderRadius: 2,
-                  }}
-                />
-              )))}
+            <div className="w-20 h-20 relative">
+              {[0, 1, 2, 3].map(r =>
+                [0, 1, 2, 3].map(c => (
+                  <div
+                    key={`${r}-${c}`}
+                    className="absolute rounded-xs"
+                    style={{
+                      left: c * 20,
+                      top: r * 20,
+                      width: 16,
+                      height: 16,
+                      background: (r + c) % 2 === 0 ? "#0B192C" : "transparent",
+                    }}
+                  />
+                ))
+              )}
             </div>
             {/* Scanner line */}
             {activeStep === 2 && (
               <motion.div
-                animate={{ top: [12, 108, 12] }}
+                animate={{ top: [10, 102, 10] }}
                 transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                style={{
-                  position: "absolute",
-                  left: 4,
-                  right: 4,
-                  height: 2,
-                  background: "linear-gradient(90deg, transparent, #00B4FF, transparent)",
-                  boxShadow: "0 0 8px #00B4FF",
-                }}
+                className="absolute left-1 right-1 h-0.5 bg-gradient-to-r from-transparent via-[#00B4FF] to-transparent shadow-[0_0_8px_#00B4FF]"
               />
             )}
           </div>
 
           {activeStep >= 2 && (
-            <div style={{ textAlign: "center" }}>
-              <div style={{ color: "white", fontSize: 11, fontWeight: 600, marginBottom: 2 }}>MobiFone eSIM</div>
-              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 9 }}>Hướng camera vào mã QR</div>
+            <div className="text-center">
+              <div className="text-white text-[10px] font-bold">MobiFone eSIM</div>
+              <div className="text-white/40 text-[8px] mt-0.5">Đang quét mã kích hoạt...</div>
             </div>
           )}
 
@@ -121,28 +79,23 @@ function PhoneMockup({ activeStep }: { activeStep: number }) {
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              style={{
-                width: 36, height: 36, borderRadius: "50%",
-                background: "linear-gradient(135deg, #22C55E, #16A34A)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: "0 0 16px rgba(34,197,94,0.5)",
-              }}
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30"
             >
-              <Check size={18} color="white" />
+              <Check size={14} className="text-white stroke-[3]" />
             </motion.div>
           )}
 
           {activeStep >= 3 && (
-            <div style={{ textAlign: "center" }}>
-              <div style={{ color: "#22C55E", fontSize: 11, fontWeight: 700 }}>Kích hoạt thành công!</div>
-              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, marginTop: 2 }}>MobiFone 5G · Premium 10GB</div>
+            <div className="text-center">
+              <div className="text-emerald-400 text-[10px] font-bold">Thành công!</div>
+              <div className="text-white/40 text-[8px] mt-0.5">MobiFone 5G đã kích hoạt</div>
             </div>
           )}
         </div>
       </div>
 
       {/* Home indicator */}
-      <div style={{ position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", width: 60, height: 3, background: "rgba(255,255,255,0.2)", borderRadius: 2 }} />
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-16 h-0.5 bg-white/20 rounded-full" />
     </div>
   );
 }
@@ -153,82 +106,57 @@ export function ESIMPage() {
   const navigate = useNavigate();
 
   return (
-    <div style={{ fontFamily: "'Outfit', sans-serif", background: "#F8FAFC", minHeight: "100vh" }}>
+    <div className="bg-slate-50 min-h-screen font-outfit">
       {/* Hero */}
-      <section
-        style={{
-          background: "linear-gradient(135deg, #001F3F 0%, #00132A 60%, #0A0A1A 100%)",
-          padding: "120px 0 80px",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ position: "absolute", top: -100, right: -100, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,85,165,0.2) 0%, transparent 70%)", pointerEvents: "none" }} />
-        <div style={{ position: "absolute", bottom: -100, left: 100, width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(243,156,18,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <section className="bg-gradient-to-br from-[#0B192C] via-[#0055A5] to-[#0B192C] py-24 px-6 relative overflow-hidden">
+        {/* Glow effects */}
+        <div className="absolute top-[-100px] right-[-50px] w-96 h-96 rounded-full bg-[radial-gradient(circle,rgba(228,0,43,0.18)_0%,transparent_70%)] pointer-events-none" />
+        <div className="absolute bottom-[-100px] left-[-50px] w-96 h-96 rounded-full bg-[radial-gradient(circle,rgba(0,180,255,0.15)_0%,transparent_70%)] pointer-events-none" />
 
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 40 }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col lg:flex-row items-center gap-12 justify-center">
+            {/* Left Column */}
             <motion.div
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              style={{ textAlign: "center", maxWidth: 600 }}
+              className="text-center lg:text-left max-w-xl"
             >
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(0,180,255,0.12)", border: "1px solid rgba(0,180,255,0.25)", borderRadius: 20, padding: "4px 14px", marginBottom: 18 }}>
-                <Zap size={13} style={{ color: "#60B4FF" }} />
-                <span style={{ color: "#60B4FF", fontSize: 12, fontWeight: 600 }}>Công nghệ eSIM thế hệ mới</span>
+              <div className="inline-flex items-center gap-1.5 bg-[#00B4FF]/12 border border-[#00B4FF]/25 rounded-full px-4 py-1.5 mb-5 shadow-xs">
+                <Zap size={14} className="text-[#00B4FF] animate-pulse" />
+                <span className="text-[#00B4FF] text-xs font-bold uppercase tracking-wider">MobiFone eSIM Thế Hệ Mới</span>
               </div>
-              <h1
-                style={{
-                  color: "white",
-                  fontSize: "clamp(2rem, 5vw, 3.2rem)",
-                  fontWeight: 900,
-                  lineHeight: 1.15,
-                  marginBottom: 16,
-                }}
-              >
+              <h1 className="text-white text-3xl sm:text-5xl font-black tracking-tight mb-5 leading-tight">
                 Kích hoạt eSIM{" "}
-                <span style={{ background: "linear-gradient(90deg, #F39C12, #FF5722)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+                <span className="bg-gradient-to-r from-[#FFD200] to-[#E4002B] bg-clip-text text-transparent">
                   chỉ trong 5 phút
                 </span>
               </h1>
-              <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 16, lineHeight: 1.7, marginBottom: 28 }}>
-                Không cần SIM vật lý. Kích hoạt ngay trên điện thoại của bạn. Hỗ trợ iPhone 12+, Samsung S21+, và hơn 200 dòng máy khác.
+              <p className="text-white/60 text-sm sm:text-base font-medium leading-relaxed mb-8">
+                Bỏ qua SIM vật lý truyền thống. Chọn gói cước, nhận mã QR qua email và quét mã trực tiếp trên điện thoại để trải nghiệm mạng 5G siêu tốc tức thì.
               </p>
-              <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+              <div className="flex flex-wrap gap-3.5 justify-center lg:justify-start">
                 <button
                   onClick={() => document.getElementById("plans")?.scrollIntoView({ behavior: "smooth" })}
-                  style={{
-                    padding: "13px 28px", borderRadius: 12,
-                    background: "linear-gradient(135deg, #F39C12, #FF5722)",
-                    border: "none", color: "white", fontWeight: 700, fontSize: 15,
-                    cursor: "pointer", fontFamily: "'Outfit', sans-serif",
-                    boxShadow: "0 8px 24px rgba(243,156,18,0.4)",
-                  }}
+                  className="px-6 py-3 rounded-xl bg-gradient-to-r from-[#FFD200] to-[#E4002B] text-white border-none font-bold text-sm cursor-pointer shadow-md hover:shadow-lg transition-all active:scale-95"
                 >
                   Xem các gói eSIM
                 </button>
-                <button
-                  style={{
-                    padding: "13px 28px", borderRadius: 12,
-                    background: "transparent", border: "1px solid rgba(255,255,255,0.25)",
-                    color: "white", fontWeight: 600, fontSize: 15,
-                    cursor: "pointer", fontFamily: "'Outfit', sans-serif",
-                  }}
-                >
-                  Kiểm tra tương thích
+                <button className="px-6 py-3 rounded-xl bg-transparent border border-white/20 hover:border-white/30 text-white font-bold text-sm cursor-pointer transition-all">
+                  Kiểm tra tương thích máy
                 </button>
               </div>
             </motion.div>
 
+            {/* Right Column */}
             <motion.div
-              initial={{ opacity: 0, y: 24 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              style={{ display: "flex", gap: 40, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}
+              transition={{ delay: 0.1 }}
+              className="flex flex-col sm:flex-row items-center gap-8 justify-center"
             >
               <PhoneMockup activeStep={activeStep} />
-              {/* Steps */}
-              <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 320 }}>
+              {/* Steps selection list */}
+              <div className="flex flex-col gap-3 max-w-xs w-full">
                 {STEPS.map((s, i) => {
                   const Icon = s.icon;
                   const isActive = i === activeStep;
@@ -237,32 +165,32 @@ export function ESIMPage() {
                     <div
                       key={i}
                       onClick={() => setActiveStep(i)}
-                      style={{
-                        display: "flex", alignItems: "flex-start", gap: 14,
-                        padding: "14px 16px",
-                        borderRadius: 14,
-                        cursor: "pointer",
-                        background: isActive ? "rgba(0,85,165,0.25)" : "rgba(255,255,255,0.03)",
-                        border: `1px solid ${isActive ? "rgba(0,180,255,0.4)" : "rgba(255,255,255,0.06)"}`,
-                        transition: "all 0.2s",
-                      }}
+                      className={`flex items-start gap-3.5 p-4 rounded-2xl cursor-pointer border transition-all duration-200 ${
+                        isActive
+                          ? "bg-white/10 border-[#00B4FF]/40 shadow-lg shadow-[#0055A5]/15"
+                          : "bg-white/3 border-white/5 hover:bg-white/5"
+                      }`}
                     >
                       <div
-                        style={{
-                          width: 36, height: 36, borderRadius: 10,
-                          background: isDone ? "linear-gradient(135deg,#22C55E,#16A34A)" : isActive ? "linear-gradient(135deg,#0055A5,#00B4FF)" : "rgba(255,255,255,0.06)",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          flexShrink: 0,
-                          boxShadow: isActive ? "0 0 16px rgba(0,85,165,0.4)" : "none",
-                        }}
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-white transition-all duration-200 ${
+                          isDone
+                            ? "bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-md shadow-emerald-500/20"
+                            : isActive
+                            ? "bg-gradient-to-br from-[#0055A5] to-[#00B4FF] shadow-md shadow-[#0055A5]/25"
+                            : "bg-white/8 text-white/40"
+                        }`}
                       >
-                        {isDone ? <Check size={16} color="white" /> : <Icon size={16} color={isActive ? "white" : "rgba(255,255,255,0.4)"} />}
+                        {isDone ? <Check size={15} className="stroke-[3]" /> : <Icon size={15} />}
                       </div>
-                      <div>
-                        <div style={{ color: isActive ? "white" : "rgba(255,255,255,0.6)", fontWeight: 600, fontSize: 14, marginBottom: 2 }}>
+                      <div className="min-w-0">
+                        <div className={`font-bold text-sm leading-snug ${isActive ? "text-white" : "text-white/60"}`}>
                           {i + 1}. {s.title}
                         </div>
-                        {isActive && <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, lineHeight: 1.5 }}>{s.desc}</div>}
+                        {isActive && (
+                          <div className="text-white/40 text-xs leading-normal mt-1.5 font-medium">
+                            {s.desc}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -274,69 +202,71 @@ export function ESIMPage() {
       </section>
 
       {/* Plans */}
-      <section id="plans" style={{ padding: "72px 0", background: "#F8FAFC" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <div style={{ color: "#F39C12", fontSize: 12, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", marginBottom: 10 }}>Bảng giá eSIM</div>
-            <h2 style={{ color: "#0F172A", fontSize: "clamp(1.6rem,4vw,2.4rem)", fontWeight: 800, marginBottom: 12 }}>
-              Chọn gói phù hợp với bạn
-            </h2>
-            <p style={{ color: "#64748B", fontSize: 16, maxWidth: 440, margin: "0 auto" }}>
-              Mua và kích hoạt hoàn toàn online. Không cần đến cửa hàng.
+      <section id="plans" className="py-20 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <div className="text-[#FF9900] text-[10px] font-bold tracking-widest uppercase mb-1.5">Bảng giá eSIM</div>
+            <h2 className="text-slate-800 text-2xl sm:text-3xl font-black tracking-tight mb-3">Chọn gói eSIM của bạn</h2>
+            <p className="text-slate-400 text-xs sm:text-sm font-semibold max-w-sm mx-auto">
+              Mua và kích hoạt hoàn toàn trực tuyến. Không thủ tục phức tạp, không cần tới quầy giao dịch.
             </p>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {PLANS.map((plan, i) => (
               <motion.div
                 key={plan.name}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
+                transition={{ delay: i * 0.05 }}
                 onClick={() => setSelectedPlan(i)}
-                style={{
-                  borderRadius: 20,
-                  padding: 24,
-                  cursor: "pointer",
-                  background: selectedPlan === i ? "linear-gradient(145deg, #001F3F, #003466)" : "white",
-                  border: `2px solid ${selectedPlan === i ? plan.color : "#E2E8F0"}`,
-                  boxShadow: selectedPlan === i ? `0 16px 40px ${plan.color}33` : "0 2px 12px rgba(0,0,0,0.04)",
-                  transition: "all 0.3s",
-                  position: "relative",
-                  overflow: "hidden",
-                }}
+                className={`rounded-3xl p-6 cursor-pointer border transition-all duration-300 flex flex-col justify-between ${
+                  selectedPlan === i
+                    ? "bg-[#0B192C] text-white border-[#0055A5] shadow-xl shadow-[#0055A5]/10"
+                    : "bg-white text-slate-800 border-slate-200/60 shadow-xs hover:shadow-md hover:-translate-y-0.5"
+                }`}
               >
-                {plan.popular && (
-                  <div
-                    style={{
-                      position: "absolute", top: 14, right: 14,
-                      background: "linear-gradient(135deg, #F39C12, #FF5722)",
-                      color: "white", borderRadius: 20,
-                      padding: "2px 10px", fontSize: 10, fontWeight: 700,
-                    }}
-                  >
-                    PHỔ BIẾN
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <div
+                      className="font-bold text-[10px] tracking-widest uppercase"
+                      style={{ color: selectedPlan === i ? "#00B4FF" : plan.color }}
+                    >
+                      {plan.name}
+                    </div>
+                    {plan.popular && (
+                      <span className="bg-gradient-to-r from-[#FFD200] to-[#E4002B] text-white text-[8px] font-black tracking-wider uppercase rounded-full px-2 py-0.5 shadow-xs">
+                        Phổ biến
+                      </span>
+                    )}
                   </div>
-                )}
-                <div style={{ color: plan.color, fontWeight: 700, fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>{plan.name.toUpperCase()}</div>
-                <div style={{ color: selectedPlan === i ? "white" : "#0F172A", fontSize: "2rem", fontWeight: 900, lineHeight: 1, marginBottom: 4 }}>{plan.data}</div>
-                <div style={{ color: selectedPlan === i ? "rgba(255,255,255,0.5)" : "#64748B", fontSize: 13, marginBottom: 16 }}>
-                  Hiệu lực {plan.days} ngày
+
+                  <div className="text-3xl font-black tracking-tight mb-1">{plan.data}</div>
+                  <div
+                    className={`text-xs font-semibold mb-4 ${
+                      selectedPlan === i ? "text-white/55" : "text-slate-400"
+                    }`}
+                  >
+                    Hạn sử dụng {plan.days} ngày
+                  </div>
+                  <div
+                    className="text-lg font-black mb-6"
+                    style={{ color: selectedPlan === i ? "#FFD200" : plan.color }}
+                  >
+                    {plan.price}
+                  </div>
                 </div>
-                <div style={{ color: plan.color, fontSize: "1.4rem", fontWeight: 800, marginBottom: 16 }}>{plan.price}</div>
+
                 <button
-                  style={{
-                    width: "100%", padding: "10px", borderRadius: 10,
-                    background: selectedPlan === i ? `linear-gradient(135deg, ${plan.color}, ${plan.color}BB)` : "transparent",
-                    border: `1.5px solid ${plan.color}`,
-                    color: selectedPlan === i ? "white" : plan.color,
-                    fontWeight: 600, fontSize: 14, cursor: "pointer",
-                    fontFamily: "'Outfit', sans-serif", transition: "all 0.2s",
-                  }}
                   onClick={() => navigate("/login")}
+                  className={`w-full py-2.5 rounded-xl font-bold text-xs cursor-pointer transition-all active:scale-95 text-center ${
+                    selectedPlan === i
+                      ? "bg-gradient-to-r from-[#FFD200] to-[#E4002B] text-white border-none shadow-md shadow-red-500/10"
+                      : "bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300"
+                  }`}
                 >
-                  {selectedPlan === i ? "Mua ngay →" : "Chọn gói"}
+                  {selectedPlan === i ? "Mua ngay" : "Chọn gói"}
                 </button>
               </motion.div>
             ))}

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Search, ChevronDown, Phone, MessageSquare, Mail,
-  MapPin, Zap, HelpCircle, Wifi, CreditCard, Smartphone, Globe
+  Search, ChevronDown, HelpCircle, Wifi, CreditCard, Smartphone, Globe, Zap
 } from "lucide-react";
 
 const FAQS: { cat: string; icon: React.ElementType; items: { q: string; a: string }[] }[] = [
@@ -44,48 +43,31 @@ const FAQS: { cat: string; icon: React.ElementType; items: { q: string; a: strin
 ];
 
 const CONTACTS = [
-  { icon: "💬", label: "Chat Zalo", sub: "Phản hồi trong 2 phút", color: "#0068FF", action: "Chat ngay" },
-  { icon: "📞", label: "Hotline 18001090", sub: "24/7 · Miễn phí", color: "#22C55E", action: "Gọi ngay" },
-  { icon: "✉️", label: "Email hỗ trợ", sub: "cskh@mobifone.vn", color: "#F39C12", action: "Gửi email" },
-  { icon: "📍", label: "Cửa hàng gần nhất", sub: "Hơn 500 điểm GD", color: "#A855F7", action: "Tìm đường" },
+  { icon: "💬", label: "Chat Zalo", sub: "Phản hồi trong 2 phút", color: "#0068FF", colorBg: "bg-blue-50", colorBorder: "border-blue-100", action: "Chat ngay" },
+  { icon: "📞", label: "Hotline 18001090", sub: "24/7 · Miễn phí", color: "#10B981", colorBg: "bg-emerald-50", colorBorder: "border-emerald-100", action: "Gọi ngay" },
+  { icon: "✉️", label: "Email hỗ trợ", sub: "cskh@mobifone.vn", color: "#F59E0B", colorBg: "bg-amber-50", colorBorder: "border-amber-100", action: "Gửi email" },
+  { icon: "📍", label: "Cửa hàng gần nhất", sub: "Hơn 500 điểm GD", color: "#8B5CF6", colorBg: "bg-purple-50", colorBorder: "border-purple-100", action: "Tìm đường" },
 ];
 
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
     <div
-      style={{
-        border: "1.5px solid",
-        borderColor: open ? "#0055A5" : "#E2E8F0",
-        borderRadius: 14,
-        overflow: "hidden",
-        transition: "border-color 0.2s",
-        background: "white",
-      }}
+      className={`border rounded-2xl overflow-hidden transition-all duration-200 bg-white ${
+        open ? "border-[#0055A5] shadow-md shadow-[#0055A5]/5" : "border-slate-200/60"
+      }`}
     >
       <button
         onClick={() => setOpen(!open)}
-        style={{
-          width: "100%",
-          padding: "16px 20px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 12,
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          textAlign: "left",
-          fontFamily: "'Outfit', sans-serif",
-        }}
+        className="w-full px-5 py-4 flex items-center justify-between gap-3 bg-transparent border-none cursor-pointer text-left font-outfit"
       >
-        <span style={{ color: "#0F172A", fontWeight: 600, fontSize: 15, flex: 1 }}>{q}</span>
+        <span className="text-slate-800 font-bold text-sm sm:text-base flex-1">{q}</span>
         <motion.div
           animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.25 }}
-          style={{ flexShrink: 0 }}
+          transition={{ duration: 0.2 }}
+          className="shrink-0"
         >
-          <ChevronDown size={18} style={{ color: open ? "#0055A5" : "#94A3B8" }} />
+          <ChevronDown size={18} className={open ? "text-[#0055A5]" : "text-slate-400"} />
         </motion.div>
       </button>
       <AnimatePresence>
@@ -94,20 +76,10 @@ function FAQItem({ q, a }: { q: string; a: string }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-            style={{ overflow: "hidden" }}
+            transition={{ duration: 0.2, ease: "easeInOut" }}
+            className="overflow-hidden"
           >
-            <div
-              style={{
-                padding: "0 20px 18px",
-                color: "#475569",
-                fontSize: 14,
-                lineHeight: 1.7,
-                borderTop: "1px solid #F1F5F9",
-                paddingTop: 14,
-                whiteSpace: "pre-line",
-              }}
-            >
+            <div className="px-5 pb-5 pt-3.5 text-slate-500 text-sm leading-relaxed border-t border-slate-100 bg-slate-50/50 whitespace-pre-line">
               {a}
             </div>
           </motion.div>
@@ -128,60 +100,48 @@ export function SupportPage() {
     : activeFAQs?.items ?? [];
 
   return (
-    <div style={{ fontFamily: "'Outfit', sans-serif", background: "#F8FAFC", minHeight: "100vh" }}>
+    <div className="bg-slate-50 min-h-screen font-outfit">
       {/* Hero */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, #001F3F 0%, #00132A 70%, #0A0A1A 100%)",
-          padding: "100px 0 70px",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ position: "absolute", top: -100, right: -100, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,85,165,0.2) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div className="bg-gradient-to-br from-[#0B192C] via-[#0055A5] to-[#0B192C] py-20 px-6 relative overflow-hidden text-center">
+        {/* Glow Effects */}
+        <div className="absolute top-[-100px] right-[-50px] w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(228,0,43,0.18)_0%,transparent_70%)] pointer-events-none" />
+        <div className="absolute bottom-[-100px] left-[-50px] w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(0,180,255,0.15)_0%,transparent_70%)] pointer-events-none" />
 
-        <div style={{ maxWidth: 700, margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-            <HelpCircle size={40} style={{ color: "#60B4FF", marginBottom: 14 }} />
-            <h1 style={{ color: "white", fontSize: "clamp(1.8rem,5vw,2.8rem)", fontWeight: 900, marginBottom: 12 }}>
+        <div className="relative max-w-2xl mx-auto">
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
+            <HelpCircle size={40} className="text-[#00B4FF] mx-auto mb-4" />
+            <h1 className="text-white text-3xl sm:text-5xl font-black tracking-tight mb-4 leading-tight">
               Chúng tôi có thể{" "}
-              <span style={{ background: "linear-gradient(90deg,#F39C12,#FF5722)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+              <span className="bg-gradient-to-r from-[#FFD200] to-[#E4002B] bg-clip-text text-transparent">
                 giúp gì
               </span>{" "}
               cho bạn?
             </h1>
-            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 16, marginBottom: 28 }}>
-              Tìm câu trả lời nhanh hoặc liên hệ đội ngũ hỗ trợ của chúng tôi
+            <p className="text-white/60 text-sm sm:text-base font-medium max-w-md mx-auto mb-8">
+              Tìm câu trả lời nhanh hoặc liên hệ với đội ngũ chăm sóc khách hàng của MobiFone.
             </p>
 
             {/* Glassy search bar */}
             <div
-              style={{
-                display: "flex", alignItems: "center", gap: 12,
-                background: searchFocused ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.07)",
-                backdropFilter: "blur(20px)",
-                border: `1.5px solid ${searchFocused ? "rgba(0,180,255,0.6)" : "rgba(255,255,255,0.12)"}`,
-                borderRadius: 16, padding: "0 20px", height: 58,
-                boxShadow: searchFocused ? "0 0 0 4px rgba(0,180,255,0.08)" : "none",
-                transition: "all 0.25s",
-              }}
+              className={`flex items-center gap-3 rounded-2xl px-4.5 h-14 transition-all duration-200 border shadow-inner ${
+                searchFocused
+                  ? "bg-white/12 border-[#00B4FF] shadow-[0_0_0_4px_rgba(0,180,255,0.08)]"
+                  : "bg-white/8 border-white/15 focus-within:border-white/30"
+              }`}
             >
-              <Search size={20} style={{ color: searchFocused ? "#60B4FF" : "rgba(255,255,255,0.4)", flexShrink: 0, transition: "color 0.2s" }} />
+              <Search size={18} className={`shrink-0 transition-colors duration-200 ${searchFocused ? "text-[#00B4FF]" : "text-white/40"}`} />
               <input
                 placeholder="Tìm kiếm câu hỏi, hướng dẫn..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
-                style={{
-                  flex: 1, background: "none", border: "none", outline: "none",
-                  color: "white", fontSize: 16, fontFamily: "'Outfit', sans-serif",
-                }}
+                className="flex-1 bg-transparent border-none outline-none text-white text-sm font-semibold placeholder-white/40"
               />
               {search && (
                 <button
                   onClick={() => setSearch("")}
-                  style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: "50%", width: 24, height: 24, cursor: "pointer", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, flexShrink: 0 }}
+                  className="bg-white/10 hover:bg-white/20 border-none rounded-full w-6 h-6 cursor-pointer text-white flex items-center justify-center text-xs shrink-0 transition-colors"
                 >
                   ×
                 </button>
@@ -192,50 +152,32 @@ export function SupportPage() {
       </div>
 
       {/* Contact shortcuts */}
-      <div style={{ background: "white", borderBottom: "1px solid #E2E8F0" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "24px", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14 }}>
+      <div className="bg-white border-b border-slate-200/60 shadow-xs">
+        <div className="max-w-7xl mx-auto px-6 py-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {CONTACTS.map((c, i) => (
             <motion.div
               key={c.label}
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.07 }}
-              style={{
-                display: "flex", alignItems: "center", gap: 14,
-                padding: "16px 18px",
-                borderRadius: 14,
-                border: "1.5px solid #E2E8F0",
-                cursor: "pointer",
-                transition: "all 0.2s",
-                background: "white",
-              }}
-              whileHover={{ borderColor: c.color, boxShadow: `0 4px 20px ${c.color}18`, y: -2 }}
+              transition={{ delay: i * 0.05 }}
+              whileHover={{ scale: 1.015, y: -2 }}
+              className="flex items-center gap-3.5 p-4 rounded-2xl border border-slate-200/60 bg-white cursor-pointer transition-all duration-200 hover:shadow-md hover:border-slate-300"
             >
-              <div
-                style={{
-                  width: 44, height: 44, borderRadius: 12,
-                  background: `${c.color}12`,
-                  border: `1.5px solid ${c.color}25`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 20, flexShrink: 0,
-                }}
-              >
+              <div className={`w-11 h-11 rounded-xl ${c.colorBg} border ${c.colorBorder} flex items-center justify-center text-xl shrink-0`}>
                 {c.icon}
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ color: "#0F172A", fontWeight: 700, fontSize: 14 }}>{c.label}</div>
-                <div style={{ color: "#94A3B8", fontSize: 12 }}>{c.sub}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-slate-800 font-bold text-sm truncate">{c.label}</div>
+                <div className="text-slate-400 text-xs font-semibold truncate mt-0.5">{c.sub}</div>
               </div>
               <button
-                style={{
-                  flexShrink: 0,
-                  padding: "5px 12px", borderRadius: 8,
-                  background: `${c.color}12`,
-                  border: `1px solid ${c.color}30`,
-                  color: c.color,
-                  fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  fontFamily: "'Outfit', sans-serif", whiteSpace: "nowrap",
-                }}
+                className={`shrink-0 px-3 py-1.5 rounded-lg border font-bold text-[10px] uppercase tracking-wider cursor-pointer transition-all duration-200 hover:brightness-95 active:scale-95 ${
+                  c.label === "Chat Zalo"
+                    ? "bg-[#0068FF] text-white border-none shadow-sm shadow-blue-500/10"
+                    : c.label.includes("Hotline")
+                    ? "bg-[#10B981] text-white border-none shadow-sm shadow-emerald-500/10"
+                    : "bg-slate-50 text-slate-600 border-slate-200"
+                }`}
               >
                 {c.action}
               </button>
@@ -245,43 +187,37 @@ export function SupportPage() {
       </div>
 
       {/* FAQ section */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 80px" }}>
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
-          <div style={{ color: "#F39C12", fontSize: 12, fontWeight: 700, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>Câu hỏi thường gặp</div>
-          <h2 style={{ color: "#0F172A", fontSize: "clamp(1.5rem,4vw,2.2rem)", fontWeight: 800 }}>
-            FAQ
-          </h2>
+      <div className="max-w-[760px] mx-auto px-6 py-12 pb-24">
+        <div className="text-center mb-8">
+          <div className="text-[#FF9900] text-[10px] font-bold tracking-widest uppercase mb-1.5">Câu hỏi thường gặp</div>
+          <h2 className="text-slate-800 text-2xl sm:text-3xl font-black tracking-tight">Trả lời nhanh thắc mắc</h2>
         </div>
 
         {!search && (
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap", marginBottom: 32 }}>
+          <div className="flex gap-2 justify-center flex-wrap mb-8">
             {FAQS.map(({ cat, icon: Icon }) => (
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 7,
-                  padding: "8px 18px", borderRadius: 10,
-                  border: `1.5px solid ${activeCategory === cat ? "#0055A5" : "#E2E8F0"}`,
-                  background: activeCategory === cat ? "#EFF6FF" : "white",
-                  color: activeCategory === cat ? "#0055A5" : "#64748B",
-                  fontWeight: 600, fontSize: 14, cursor: "pointer",
-                  fontFamily: "'Outfit', sans-serif", transition: "all 0.2s",
-                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl border font-bold text-xs cursor-pointer transition-all duration-200 ${
+                  activeCategory === cat
+                    ? "border-[#0055A5] bg-[#0055A5]/5 text-[#0055A5]"
+                    : "border-slate-200 bg-white text-slate-500 hover:text-slate-800 hover:border-slate-300"
+                }`}
               >
-                <Icon size={15} />
+                <Icon size={14} />
                 {cat}
               </button>
             ))}
           </div>
         )}
 
-        <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-3.5">
           {filteredFAQs.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "48px 0", color: "#94A3B8" }}>
-              <Search size={40} style={{ marginBottom: 12, opacity: 0.4 }} />
-              <p style={{ fontSize: 16 }}>Không tìm thấy kết quả cho "{search}"</p>
-              <p style={{ fontSize: 14, marginTop: 6 }}>Thử từ khóa khác hoặc liên hệ hỗ trợ trực tiếp.</p>
+            <div className="text-center py-16 bg-white border border-slate-200/50 rounded-3xl text-slate-400">
+              <Search size={36} className="mx-auto mb-3 opacity-40" />
+              <p className="font-bold text-sm">Không tìm thấy kết quả cho "{search}"</p>
+              <p className="text-xs text-slate-400 mt-1">Vui lòng kiểm tra lại từ khóa hoặc đổi chủ đề.</p>
             </div>
           ) : (
             filteredFAQs.map((item, i) => (
@@ -289,7 +225,7 @@ export function SupportPage() {
                 key={i}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
+                transition={{ delay: i * 0.04 }}
               >
                 <FAQItem {...item} />
               </motion.div>
@@ -302,25 +238,21 @@ export function SupportPage() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          style={{
-            marginTop: 48,
-            borderRadius: 20,
-            background: "linear-gradient(135deg, #001F3F 0%, #003466 100%)",
-            padding: "36px",
-            textAlign: "center",
-            boxShadow: "0 8px 32px rgba(0,31,63,0.2)",
-          }}
+          className="mt-14 rounded-3xl bg-gradient-to-br from-[#0B192C] to-[#0055A5] p-8 text-center shadow-lg shadow-[#0055A5]/10 text-white relative overflow-hidden"
         >
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🤖</div>
-          <h3 style={{ color: "white", fontWeight: 800, fontSize: "1.4rem", marginBottom: 8 }}>
-            Vẫn chưa tìm được câu trả lời?
+          {/* Decorative Wave */}
+          <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full bg-white/5 blur-2xl pointer-events-none" />
+
+          <div className="text-3xl mb-3">🤖</div>
+          <h3 className="text-white font-extrabold text-lg sm:text-xl mb-2">
+            Vẫn chưa tìm thấy thông tin bạn cần?
           </h3>
-          <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 15, marginBottom: 20 }}>
-            Trợ lý AI MobiFone sẵn sàng hỗ trợ bạn 24/7. Nhấn vào icon chat ở góc dưới phải để bắt đầu!
+          <p className="text-white/60 text-xs sm:text-sm font-medium max-w-md mx-auto mb-6">
+            Trợ lý AI của MobiFone luôn túc trực 24/7 để trả lời mọi thắc mắc về gói cước, eSIM hoặc các dịch vụ khác. Click bong bóng chat để thử ngay!
           </p>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "rgba(0,180,255,0.15)", border: "1px solid rgba(0,180,255,0.3)", borderRadius: 20, padding: "6px 16px" }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
-            <span style={{ color: "#60B4FF", fontSize: 13, fontWeight: 600 }}>Trợ lý AI đang online</span>
+          <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-4.5 py-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34D399] animate-pulse" />
+            <span className="text-white text-xs font-bold">Trợ lý AI đang online</span>
           </div>
         </motion.div>
       </div>
