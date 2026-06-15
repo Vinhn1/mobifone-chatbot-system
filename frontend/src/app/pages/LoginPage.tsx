@@ -1,33 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { Mail, Lock, Phone, Eye, EyeOff, ArrowRight, CheckCircle2, ChevronLeft, Shield } from "lucide-react";
+import { Lock, Phone, Eye, EyeOff, ArrowRight, CheckCircle2, ChevronLeft, Shield } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { MobiFoneLogo } from "../components/MobiFoneLogo";
 
 type Tab = "login" | "register";
 type Step = 1 | 2 | 3 | 4;
 
-// Brand Button Style
-const BRAND_BTN_STYLE = {
-  width: "100%",
-  padding: "13px",
-  borderRadius: 12,
-  border: "none",
-  background: "linear-gradient(135deg, #E4002B 0%, #FF3B30 100%)", // MobiFone Red Gradient
-  color: "white",
-  fontWeight: 700,
-  fontSize: 15,
-  cursor: "pointer",
-  fontFamily: "'Outfit', sans-serif",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 8,
-  boxShadow: "0 8px 24px rgba(228,0,43,0.3)",
-  transition: "all 0.2s ease",
-};
-
-function DarkInput({ icon: Icon, placeholder, type = "text", value, onChange }: {
+function BrandInput({ icon: Icon, placeholder, type = "text", value, onChange }: {
   icon: React.ElementType; placeholder: string; type?: string; value: string; onChange: (v: string) => void;
 }) {
   const [focused, setFocused] = useState(false);
@@ -35,19 +15,10 @@ function DarkInput({ icon: Icon, placeholder, type = "text", value, onChange }: 
   const isPw = type === "password";
 
   return (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      background: "rgba(255,255,255,0.05)",
-      border: `1.5px solid ${focused ? "#007FFF" : "rgba(255,255,255,0.08)"}`,
-      borderRadius: 12,
-      padding: "0 14px",
-      height: 50,
-      gap: 10,
-      transition: "all 0.2s",
-      boxShadow: focused ? "0 0 0 3px rgba(0,127,255,0.15)" : "none"
-    }}>
-      <Icon size={16} style={{ color: focused ? "#007FFF" : "rgba(255,255,255,0.3)", flexShrink: 0, transition: "color 0.2s" }} />
+    <div className={`flex items-center bg-slate-50 border ${
+      focused ? "border-blue-500 shadow-xs ring-4 ring-blue-500/10" : "border-slate-200"
+    } rounded-xl px-4 h-12 gap-2.5 transition-all duration-200`}>
+      <Icon size={16} className={`shrink-0 transition-colors duration-200 ${focused ? "text-blue-600" : "text-slate-400"}`} />
       <input
         type={isPw && !showPw ? "password" : "text"}
         placeholder={placeholder}
@@ -55,18 +26,14 @@ function DarkInput({ icon: Icon, placeholder, type = "text", value, onChange }: 
         onChange={e => onChange(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        style={{
-          flex: 1,
-          background: "none",
-          border: "none",
-          outline: "none",
-          color: "white",
-          fontSize: 14,
-          fontFamily: "'Outfit', sans-serif"
-        }}
+        className="flex-1 bg-transparent border-none outline-none text-slate-800 text-sm font-semibold placeholder-slate-400"
       />
       {isPw && (
-        <button type="button" onClick={() => setShowPw(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", display: "flex", padding: 0 }}>
+        <button
+          type="button"
+          onClick={() => setShowPw(p => !p)}
+          className="background-none border-none cursor-pointer text-slate-400 hover:text-slate-600 flex p-0"
+        >
           {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
         </button>
       )}
@@ -77,31 +44,34 @@ function DarkInput({ icon: Icon, placeholder, type = "text", value, onChange }: 
 function StepDots({ step }: { step: Step }) {
   const labels = ["Điện thoại", "OTP", "Mật khẩu", "Hoàn tất"];
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, marginBottom: 24 }}>
+    <div className="flex items-center justify-center gap-0 mb-6">
       {labels.map((label, i) => {
-        const n = i + 1; const done = step > n; const active = step === n;
+        const n = i + 1;
+        const done = step > n;
+        const active = step === n;
         return (
-          <div key={n} style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-              <div style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
-                background: done ? "#22C55E" : active ? "linear-gradient(135deg,#E4002B,#FF3B30)" : "rgba(255,255,255,0.06)",
-                border: done ? "2px solid #22C55E" : active ? "none" : "1.5px solid rgba(255,255,255,0.12)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: 11,
-                fontWeight: 700,
-                transition: "all 0.3s"
-              }}>
+          <div key={n} className="flex items-center">
+            <div className="flex flex-col items-center gap-1">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                done
+                  ? "bg-emerald-500 text-white"
+                  : active
+                    ? "bg-gradient-to-br from-red-600 to-red-500 text-white"
+                    : "bg-slate-100 text-slate-400 border border-slate-200"
+              }`}>
                 {done ? <CheckCircle2 size={14} /> : n}
               </div>
-              <span style={{ fontSize: 9, color: active ? "#FF3B30" : "rgba(255,255,255,0.3)", fontWeight: active ? 600 : 400, whiteSpace: "nowrap" }}>{label}</span>
+              <span className={`text-[9px] font-bold uppercase tracking-wider ${
+                active ? "text-red-500" : "text-slate-400"
+              }`}>
+                {label}
+              </span>
             </div>
-            {i < labels.length - 1 && <div style={{ width: 32, height: 1.5, background: done ? "#22C55E" : "rgba(255,255,255,0.08)", margin: "0 4px", marginBottom: 18, transition: "background 0.3s" }} />}
+            {i < labels.length - 1 && (
+              <div className={`w-8 h-[2px] mx-1 mb-4 transition-colors duration-300 ${
+                done ? "bg-emerald-500" : "bg-slate-200"
+              }`} />
+            )}
           </div>
         );
       })}
@@ -117,7 +87,10 @@ function LoginForm() {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    if (!id || !pw) { setError("Vui lòng nhập đầy đủ thông tin"); return; }
+    if (!id || !pw) {
+      setError("Vui lòng nhập đầy đủ thông tin");
+      return;
+    }
     const role = await login(id, pw);
     if (role === "admin") navigate("/admin");
     else if (role === "user") navigate("/dashboard");
@@ -125,54 +98,48 @@ function LoginForm() {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className="flex flex-col gap-4">
       {/* Demo hint */}
-      <div style={{ background: "rgba(0,85,165,0.15)", border: "1px solid rgba(0,85,165,0.3)", borderRadius: 10, padding: "10px 14px" }}>
-        <div style={{ color: "#60B4FF", fontSize: 12, fontWeight: 600, marginBottom: 4 }}>💡 Tài khoản demo</div>
-        <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>
-          <strong style={{ color: "rgba(255,255,255,0.7)" }}>Khách hàng:</strong> 0912345678 / bất kỳ mật khẩu<br />
-          <strong style={{ color: "rgba(255,255,255,0.7)" }}>Admin:</strong> admin hoặc admin@mobifone.vn / <span style={{ color: "#FF3B30", fontWeight: 700 }}>admin123</span>
+      <div className="bg-blue-50/70 border border-blue-100/80 rounded-xl p-3.5">
+        <div className="text-blue-600 text-xs font-extrabold mb-1">💡 Tài khoản demo</div>
+        <div className="text-slate-500 text-[11px] leading-relaxed font-semibold">
+          <strong className="text-slate-700">Khách hàng:</strong> 0912345678 / bất kỳ mật khẩu<br />
+          <strong className="text-slate-700">Admin:</strong> admin hoặc admin@mobifone.vn / <span className="text-red-600 font-bold">admin123</span>
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <DarkInput icon={Phone} placeholder="Số điện thoại hoặc Email" value={id} onChange={setId} />
-        <DarkInput icon={Lock} placeholder="Mật khẩu" type="password" value={pw} onChange={setPw} />
+      <div className="flex flex-col gap-3">
+        <BrandInput icon={Phone} placeholder="Số điện thoại hoặc Email" value={id} onChange={setId} />
+        <BrandInput icon={Lock} placeholder="Mật khẩu" type="password" value={pw} onChange={setPw} />
       </div>
 
-      {error && <div style={{ color: "#FCA5A5", fontSize: 13, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "8px 12px" }}>{error}</div>}
+      {error && (
+        <div className="text-red-600 text-xs bg-red-50 border border-red-100 rounded-lg p-2.5 font-semibold">
+          {error}
+        </div>
+      )}
 
-      <div style={{ display: "flex", justifyContent: "flex-end" }}>
-        <a href="#" style={{ color: "#007FFF", fontSize: 13, textDecoration: "none", fontWeight: 500 }}>Quên mật khẩu?</a>
+      <div className="flex justify-end">
+        <a href="#" className="text-blue-600 hover:text-blue-700 text-xs no-underline font-bold transition-colors">
+          Quên mật khẩu?
+        </a>
       </div>
 
-      <button style={BRAND_BTN_STYLE} onClick={handleLogin}>
+      <button
+        onClick={handleLogin}
+        className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm cursor-pointer shadow-md shadow-red-500/20 hover:shadow-lg hover:shadow-red-500/30 hover:scale-102 active:scale-98 transition-all duration-200 border-none flex items-center justify-center gap-2"
+      >
         Đăng nhập <ArrowRight size={17} />
       </button>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0" }}>
-        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
-        <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 12 }}>hoặc</span>
-        <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.06)" }} />
+      <div className="flex items-center gap-3 my-1">
+        <div className="flex-1 h-[1px] bg-slate-200" />
+        <span className="text-slate-400 text-xs font-semibold">hoặc</span>
+        <div className="flex-1 h-[1px] bg-slate-200" />
       </div>
 
-      <button style={{
-        width: "100%",
-        padding: "11px",
-        borderRadius: 12,
-        background: "rgba(255,255,255,0.04)",
-        border: "1.5px solid rgba(255,255,255,0.08)",
-        color: "rgba(255,255,255,0.7)",
-        fontWeight: 500,
-        fontSize: 14,
-        cursor: "pointer",
-        fontFamily: "'Outfit',sans-serif",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 8
-      }}>
-        <span style={{ fontSize: 16 }}>📱</span> Đăng nhập bằng OTP SMS
+      <button className="w-full py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-all duration-200 flex items-center justify-center gap-2">
+        <span>📱</span> Đăng nhập bằng OTP SMS
       </button>
     </div>
   );
@@ -180,24 +147,22 @@ function LoginForm() {
 
 function OTPBoxes({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
-    <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+    <div className="flex gap-2.5 justify-center">
       {Array(6).fill("").map((_, i) => (
-        <input key={i} maxLength={1} value={value[i] || ""}
-          onChange={e => { const d = value.split(""); d[i] = e.target.value.replace(/\D/, ""); onChange(d.join("").slice(0,6)); }}
-          style={{
-            width: 44,
-            height: 52,
-            borderRadius: 12,
-            textAlign: "center",
-            fontSize: 20,
-            fontWeight: 700,
-            background: value[i] ? "rgba(0,127,255,0.15)" : "rgba(255,255,255,0.04)",
-            border: `1.5px solid ${value[i] ? "#007FFF" : "rgba(255,255,255,0.1)"}`,
-            color: "white",
-            outline: "none",
-            fontFamily: "'Outfit',sans-serif",
-            transition: "all 0.2s"
+        <input
+          key={i}
+          maxLength={1}
+          value={value[i] || ""}
+          onChange={e => {
+            const d = value.split("");
+            d[i] = e.target.value.replace(/\D/, "");
+            onChange(d.join("").slice(0, 6));
           }}
+          className={`w-11 h-13 rounded-xl text-center text-lg font-bold outline-none transition-all duration-200 ${
+            value[i]
+              ? "bg-blue-50 border border-blue-400 text-blue-700"
+              : "bg-slate-50 border border-slate-200 text-slate-800 focus:border-blue-300 focus:bg-white"
+          }`}
         />
       ))}
     </div>
@@ -215,56 +180,82 @@ function RegisterFlow() {
   const navigate = useNavigate();
 
   const pwStrength = password.length === 0 ? 0 : password.length < 6 ? 1 : password.length < 10 ? 2 : password.match(/[A-Z]/) && password.match(/[0-9]/) ? 4 : 3;
-  const strengthColors = ["", "#EF4444", "#F59E0B", "#3B82F6", "#22C55E"];
+  const strengthColors = ["", "bg-red-500", "bg-amber-500", "bg-blue-500", "bg-emerald-500"];
+  const strengthTextColors = ["", "text-red-500", "text-amber-500", "text-blue-500", "text-emerald-500"];
   const strengthLabels = ["", "Yếu", "Trung bình", "Mạnh", "Rất mạnh"];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className="flex flex-col gap-4">
       <StepDots step={step} />
       {step === 1 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, marginBottom: 4 }}>Nhập số điện thoại để nhận mã OTP xác thực</p>
-          <DarkInput icon={Phone} placeholder="Số điện thoại (VD: 0912345678)" value={phone} onChange={setPhone} />
+        <div className="flex flex-col gap-4">
+          <p className="text-slate-500 text-xs sm:text-sm font-semibold mb-1">Nhập số điện thoại để nhận mã OTP xác thực</p>
+          <BrandInput icon={Phone} placeholder="Số điện thoại (VD: 0912345678)" value={phone} onChange={setPhone} />
           <button
-            style={{ ...BRAND_BTN_STYLE, opacity: phone.length >= 10 ? 1 : 0.5, cursor: phone.length >= 10 ? "pointer" : "not-allowed" }}
             disabled={phone.length < 10}
             onClick={() => setStep(2)}
+            className={`w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm shadow-md transition-all duration-200 border-none flex items-center justify-center gap-2 ${
+              phone.length >= 10
+                ? "cursor-pointer opacity-100 hover:shadow-lg shadow-red-500/20 active:scale-98"
+                : "cursor-not-allowed opacity-50"
+            }`}
           >
             Gửi mã OTP <ArrowRight size={17} />
           </button>
         </div>
       )}
       {step === 2 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>Mã OTP đã gửi tới <strong style={{ color: "white" }}>{phone}</strong> — hiệu lực <span style={{ color: "#E4002B", fontWeight: 700 }}>5 phút</span></p>
+        <div className="flex flex-col gap-4">
+          <p className="text-slate-500 text-xs sm:text-sm font-semibold">
+            Mã OTP đã gửi tới <strong className="text-slate-800">{phone}</strong> — hiệu lực <span className="text-red-500 font-extrabold">5 phút</span>
+          </p>
           <OTPBoxes value={otp} onChange={setOtp} />
           <button
-            style={{ ...BRAND_BTN_STYLE, opacity: otp.length === 6 ? 1 : 0.5, cursor: otp.length === 6 ? "pointer" : "not-allowed" }}
             disabled={otp.length !== 6}
             onClick={() => setStep(3)}
+            className={`w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm shadow-md transition-all duration-200 border-none flex items-center justify-center gap-2 ${
+              otp.length === 6
+                ? "cursor-pointer opacity-100 hover:shadow-lg shadow-red-500/20 active:scale-98"
+                : "cursor-not-allowed opacity-50"
+            }`}
           >
             Xác thực OTP <ArrowRight size={17} />
           </button>
-          <button onClick={() => setStep(1)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.4)", fontSize: 13, fontFamily: "'Outfit',sans-serif", display: "flex", alignItems: "center", gap: 4, justifyContent: "center" }}>
+          <button
+            onClick={() => setStep(1)}
+            className="background-none border-none cursor-pointer text-slate-400 hover:text-slate-600 text-xs font-bold flex items-center gap-1 justify-center mt-1"
+          >
             <ChevronLeft size={14} /> Thay đổi số điện thoại
           </button>
         </div>
       )}
       {step === 3 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <DarkInput icon={Lock} placeholder="Mật khẩu mới (ít nhất 8 ký tự)" type="password" value={password} onChange={setPassword} />
+        <div className="flex flex-col gap-4">
+          <BrandInput icon={Lock} placeholder="Mật khẩu mới (ít nhất 6 ký tự)" type="password" value={password} onChange={setPassword} />
           {password.length > 0 && (
             <div>
-              <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
-                {[1,2,3,4].map(n => <div key={n} style={{ flex: 1, height: 3, borderRadius: 2, background: n <= pwStrength ? strengthColors[pwStrength] : "rgba(255,255,255,0.08)", transition: "background 0.3s" }} />)}
+              <div className="flex gap-1 mb-1.5">
+                {[1, 2, 3, 4].map(n => (
+                  <div
+                    key={n}
+                    className={`flex-1 h-[3px] rounded-full transition-colors duration-300 ${
+                      n <= pwStrength ? strengthColors[pwStrength] : "bg-slate-200"
+                    }`}
+                  />
+                ))}
               </div>
-              <span style={{ fontSize: 11, color: strengthColors[pwStrength] }}>Độ mạnh: {strengthLabels[pwStrength]}</span>
+              <span className={`text-[11px] font-bold ${strengthTextColors[pwStrength]}`}>
+                Độ mạnh: {strengthLabels[pwStrength]}
+              </span>
             </div>
           )}
-          <DarkInput icon={Shield} placeholder="Xác nhận mật khẩu" type="password" value={confirmPw} onChange={setConfirmPw} />
-          {regError && <div style={{ color: "#FCA5A5", fontSize: 13, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", borderRadius: 8, padding: "8px 12px" }}>{regError}</div>}
+          <BrandInput icon={Shield} placeholder="Xác nhận mật khẩu" type="password" value={confirmPw} onChange={setConfirmPw} />
+          {regError && (
+            <div className="text-red-600 text-xs bg-red-50 border border-red-100 rounded-lg p-2.5 font-semibold">
+              {regError}
+            </div>
+          )}
           <button
-            style={{ ...BRAND_BTN_STYLE, opacity: password.length >= 6 && password === confirmPw ? 1 : 0.5, cursor: password.length >= 6 && password === confirmPw ? "pointer" : "not-allowed" }}
             disabled={password.length < 6 || password !== confirmPw}
             onClick={async () => {
               setRegError("");
@@ -272,21 +263,29 @@ function RegisterFlow() {
               if (result === "success") setStep(4);
               else setRegError("Đăng ký thất bại. Số điện thoại có thể đã tồn tại.");
             }}
+            className={`w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm shadow-md transition-all duration-200 border-none flex items-center justify-center gap-2 ${
+              password.length >= 6 && password === confirmPw
+                ? "cursor-pointer opacity-100 hover:shadow-lg shadow-red-500/20 active:scale-98"
+                : "cursor-not-allowed opacity-50"
+            }`}
           >
             Tạo tài khoản <ArrowRight size={17} />
           </button>
         </div>
       )}
       {step === 4 && (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, textAlign: "center" }}>
-          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg,#22C55E,#16A34A)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 30px rgba(34,197,94,0.4)" }}>
-            <CheckCircle2 size={36} color="white" />
+        <div className="flex flex-col items-center gap-5 text-center py-2">
+          <div className="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+            <CheckCircle2 size={36} />
           </div>
           <div>
-            <h3 style={{ color: "white", fontWeight: 800, fontSize: 20, marginBottom: 6 }}>Tài khoản đã tạo thành công!</h3>
-            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>Chào mừng bạn đến với MobiFone Portal 🎉</p>
+            <h3 className="text-slate-800 font-extrabold text-xl mb-1">Tài khoản đã tạo thành công!</h3>
+            <p className="text-slate-400 text-sm font-semibold">Chào mừng bạn đến với MobiFone Portal 🎉</p>
           </div>
-          <button style={BRAND_BTN_STYLE} onClick={() => navigate("/dashboard")}>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 text-white font-bold text-sm cursor-pointer shadow-md hover:shadow-lg shadow-red-500/20 active:scale-98 transition-all border-none flex items-center justify-center gap-2"
+          >
             Đến trang của tôi <ArrowRight size={17} />
           </button>
         </div>
@@ -307,63 +306,38 @@ export function LoginPage() {
   }, []);
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "24px",
-      background: "radial-gradient(ellipse at 20% 50%, #0A2A6E 0%, #001330 50%, #000B1E 100%)",
-      position: "relative",
-      overflow: "hidden",
-      fontFamily: "'Outfit', sans-serif"
-    }}>
-      {/* Background orbs */}
-      <div style={{ position: "absolute", top: -200, right: -100, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,85,165,0.2) 0%, transparent 70%)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: -150, left: -100, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(228,0,43,0.1) 0%, transparent 70%)", pointerEvents: "none" }} />
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 relative overflow-hidden font-outfit">
+      {/* Background radial glow orbs */}
+      <div className="absolute -top-[200px] -right-[100px] w-[500px] h-[500px] rounded-full pointer-events-none bg-[radial-gradient(circle,rgba(0,85,165,0.06)_0%,transparent_70%)]" />
+      <div className="absolute -bottom-[150px] -left-[100px] w-[400px] h-[400px] rounded-full pointer-events-none bg-[radial-gradient(circle,rgba(228,0,43,0.04)_0%,transparent_70%)]" />
 
       {/* Back button */}
-      <button onClick={() => navigate("/")} style={{ position: "fixed", top: 24, left: 24, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 10, padding: "8px 14px", color: "rgba(255,255,255,0.6)", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 500, fontFamily: "'Outfit',sans-serif", backdropFilter: "blur(8px)", transition: "all 0.2s" }}>
+      <button
+        onClick={() => navigate("/")}
+        className="fixed top-6 left-6 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-xl px-4 py-2 text-slate-600 hover:text-slate-800 cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-xs transition-all duration-200"
+      >
         <ChevronLeft size={16} /> Trang chủ
       </button>
 
-      <div style={{ display: "flex", gap: 60, alignItems: "center", maxWidth: 860, width: "100%", justifyContent: "center" }}>
+      <div className="flex gap-16 items-center justify-center max-w-[420px] w-full relative z-10">
         {/* Auth card */}
-        <div style={{
-          flex: 1,
-          maxWidth: 400,
-          background: "rgba(255,255,255,0.04)",
-          backdropFilter: "blur(24px)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 24,
-          padding: "32px",
-          boxShadow: "0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)"
-        }}>
+        <div className="w-full bg-white/80 backdrop-blur-xl border border-slate-200/60 rounded-3xl p-8 shadow-xl shadow-slate-200/50">
           {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, justifyContent: "center" }}>
-            <MobiFoneLogo size={36} />
+          <div className="flex justify-center mb-6">
+            <MobiFoneLogo size={36} dark={true} />
           </div>
 
           {/* Tabs */}
-          <div style={{ display: "flex", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 4, marginBottom: 22 }}>
+          <div className="flex bg-slate-100 border border-slate-200/50 rounded-2xl p-1 mb-6">
             {(["login", "register"] as Tab[]).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                style={{
-                  flex: 1,
-                  padding: "9px",
-                  borderRadius: 9,
-                  border: "none",
-                  cursor: "pointer",
-                  fontFamily: "'Outfit',sans-serif",
-                  fontWeight: 600,
-                  fontSize: 14,
-                  transition: "all 0.25s",
-                  background: tab === t ? "rgba(228,0,43,0.15)" : "transparent", // MobiFone Red light background
-                  color: tab === t ? "#FF3B30" : "rgba(255,255,255,0.4)",
-                  boxShadow: tab === t ? "0 2px 8px rgba(228,0,43,0.1)" : "none"
-                }}
+                className={`flex-1 py-2 rounded-xl border-none cursor-pointer font-bold text-xs transition-all duration-250 ${
+                  tab === t
+                    ? "bg-white text-red-600 shadow-xs border border-slate-200/30"
+                    : "text-slate-400 hover:text-slate-700 bg-transparent"
+                }`}
               >
                 {t === "login" ? "Đăng nhập" : "Đăng ký"}
               </button>

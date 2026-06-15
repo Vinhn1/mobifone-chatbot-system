@@ -12,7 +12,9 @@ const NAV_LINKS = [
 ];
 
 const TIER_COLORS = {
-  Silver: "#94A3B8", Gold: "#F59E0B", Diamond: "#8B5CF6",
+  Silver: "text-slate-400",
+  Gold: "text-amber-500",
+  Diamond: "text-purple-500",
 };
 
 export function Navbar() {
@@ -24,15 +26,20 @@ export function Navbar() {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setUserMenuOpen(false);
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const handleLogout = () => { logout(); navigate("/"); setUserMenuOpen(false); };
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+    setUserMenuOpen(false);
+  };
 
-  // Menu items theo role
   const userMenuItems = user?.role === "admin"
     ? [
         { icon: Shield, label: "Admin Dashboard", path: "/admin" },
@@ -44,67 +51,72 @@ export function Navbar() {
         { icon: User, label: "Tài khoản & Bảo mật", path: "/dashboard/profile" },
       ];
 
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    `px-3 py-1.5 rounded-lg no-underline text-xs lg:text-sm font-semibold transition-all duration-300 ${
+      isActive
+        ? "text-blue-600 bg-blue-50/70 border border-blue-100/40 shadow-xs"
+        : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/70"
+    }`;
+
   return (
-    <nav style={{ fontFamily: "'Outfit', sans-serif" }} className="fixed top-0 left-0 right-0 z-50">
-      <div style={{ display: "flex", alignItems: "center", padding: "0 24px", height: 64, background: "rgba(0, 20, 50, 0.8)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid rgba(0,180,255,0.1)", justifyContent: "space-between" }}>
+    <nav className="fixed top-0 left-0 right-0 z-50 font-outfit">
+      <div className="flex items-center px-6 h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/80 justify-between transition-all duration-300">
         {/* Logo */}
-        <Link to="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", flexShrink: 0 }}>
-          <MobiFoneLogo size={32} />
+        <Link to="/" className="flex items-center gap-2 no-underline shrink-0 hover:opacity-95 transition-opacity">
+          <MobiFoneLogo size={32} dark={true} />
         </Link>
 
         {/* Desktop nav */}
-        <div style={{ display: "flex", alignItems: "center", gap: 4 }} className="hidden md:flex">
-          <NavLink to="/" end style={({ isActive }) => ({ padding: "6px 12px", borderRadius: 8, textDecoration: "none", fontSize: 14, fontWeight: 500, color: isActive ? "#60B4FF" : "rgba(255,255,255,0.7)", background: isActive ? "rgba(0,85,165,0.2)" : "transparent", transition: "all 0.2s" })}>
+        <div className="hidden md:flex items-center gap-1">
+          <NavLink to="/" end className={navLinkClass}>
             Trang chủ
           </NavLink>
           {NAV_LINKS.map(({ label, path }) => (
-            <NavLink key={path} to={path} style={({ isActive }) => ({ padding: "6px 12px", borderRadius: 8, textDecoration: "none", fontSize: 14, fontWeight: 500, color: isActive ? "#60B4FF" : "rgba(255,255,255,0.7)", background: isActive ? "rgba(0,85,165,0.2)" : "transparent", transition: "all 0.2s" })}>
+            <NavLink key={path} to={path} className={navLinkClass}>
               {label}
             </NavLink>
           ))}
         </div>
 
         {/* Right actions */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }} className="hidden md:flex">
+        <div className="hidden md:flex items-center gap-3">
           {user ? (
             /* Logged-in user avatar menu */
-            <div ref={userMenuRef} style={{ position: "relative" }}>
+            <div ref={userMenuRef} className="relative">
               <button
                 onClick={() => setUserMenuOpen(p => !p)}
-                style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,255,255,0.06)", border: `1px solid ${user.role === "admin" ? "rgba(243,156,18,0.4)" : "rgba(255,255,255,0.12)"}`, borderRadius: 12, padding: "5px 10px 5px 5px", cursor: "pointer", transition: "all 0.2s" }}
-                onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"}
-                onMouseLeave={e => { if (!userMenuOpen) (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
+                className={`flex items-center gap-2 bg-slate-50/80 hover:bg-slate-100/80 border ${
+                  user.role === "admin" ? "border-amber-200" : "border-slate-200"
+                } rounded-xl p-1.5 pr-3 cursor-pointer transition-all duration-200`}
               >
-                <div style={{ width: 30, height: 30, borderRadius: "50%", background: user.role === "admin" ? "linear-gradient(135deg,#F39C12,#FF5722)" : "linear-gradient(135deg,#0055A5,#F39C12)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 800, boxShadow: `0 0 10px ${TIER_COLORS[user.tier]}44` }}>
-                  {user.role === "admin" ? <Shield size={14} /> : user.name.charAt(0)}
+                <div className={`w-7 h-7 rounded-full ${
+                  user.role === "admin" ? "bg-gradient-to-br from-amber-500 to-red-500" : "bg-gradient-to-br from-blue-600 to-amber-500"
+                } flex items-center justify-center text-white text-xs font-extrabold shadow-xs`}>
+                  {user.role === "admin" ? <Shield size={13} /> : user.name.charAt(0)}
                 </div>
-                <div style={{ textAlign: "left" }}>
-                  <div style={{ color: "white", fontWeight: 700, fontSize: 13, lineHeight: 1.1 }}>{user.name.split(" ").slice(-2).join(" ")}</div>
-                  <div style={{ color: user.role === "admin" ? "#F39C12" : TIER_COLORS[user.tier], fontSize: 10, fontWeight: 600 }}>
-                    {user.role === "admin" ? "⚡ Admin" : `${user.tier} Member`}
+                <div className="text-left">
+                  <div className="text-slate-800 font-bold text-xs leading-none mb-0.5">{user.name.split(" ").slice(-2).join(" ")}</div>
+                  <div className={`text-[9px] font-bold tracking-wide ${user.role === "admin" ? "text-amber-600" : TIER_COLORS[user.tier] || "text-slate-500"}`}>
+                    {user.role === "admin" ? "⚡ ADMIN" : `${user.tier.toUpperCase()} MEMBER`}
                   </div>
                 </div>
-                <ChevronDown size={13} style={{ color: "rgba(255,255,255,0.4)", transform: userMenuOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
+                <ChevronDown size={13} className={`text-slate-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : "rotate-0"}`} />
               </button>
 
               {userMenuOpen && (
-                <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, background: "rgba(0,15,40,0.97)", backdropFilter: "blur(20px)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "6px", minWidth: 200, boxShadow: "0 16px 40px rgba(0,0,0,0.4)", zIndex: 100 }}>
-                  <div style={{ padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)", marginBottom: 4 }}>
-                    <div style={{ color: "white", fontWeight: 700, fontSize: 14 }}>{user.name}</div>
-                    <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>{user.email || user.phone}</div>
+                <div className="absolute top-[calc(100%+8px)] right-0 bg-white border border-slate-200/60 rounded-2xl p-1.5 min-w-[210px] shadow-xl z-100 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="p-3 border-b border-slate-100 mb-1">
+                    <div className="text-slate-800 font-bold text-sm">{user.name}</div>
+                    <div className="text-slate-400 text-xs truncate">{user.email || user.phone}</div>
                     {user.role === "admin" ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-                        <div style={{ width: 16, height: 16, borderRadius: 4, background: "rgba(243,156,18,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <span style={{ color: "#F39C12", fontSize: 8 }}>★</span>
-                        </div>
-                        <span style={{ color: "#F39C12", fontSize: 11, fontWeight: 700 }}>Quản trị viên hệ thống</span>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">★ Quản trị viên</span>
                       </div>
                     ) : (
-                      <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-                        <div style={{ width: 16, height: 16, borderRadius: 4, background: `${TIER_COLORS[user.tier]}20`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <span style={{ color: TIER_COLORS[user.tier], fontSize: 8 }}>★</span>
-                        </div>
-                        <span style={{ color: TIER_COLORS[user.tier], fontSize: 11, fontWeight: 700 }}>{user.tier} · {user.points.toLocaleString()} điểm</span>
+                      <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200/60">{user.tier}</span>
+                        <span>·</span>
+                        <span className="font-semibold text-slate-600">{user.points.toLocaleString()} điểm</span>
                       </div>
                     )}
                   </div>
@@ -112,20 +124,22 @@ export function Navbar() {
                   {userMenuItems.map(item => {
                     const Icon = item.icon;
                     return (
-                      <button key={item.label} onClick={() => { navigate(item.path); setUserMenuOpen(false); }}
-                        style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 9, border: "none", background: "transparent", color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'Outfit',sans-serif", transition: "all 0.15s", textAlign: "left" }}
-                        onMouseEnter={e => { const el = e.currentTarget as HTMLButtonElement; el.style.background = "rgba(255,255,255,0.06)"; el.style.color = "white"; }}
-                        onMouseLeave={e => { const el = e.currentTarget as HTMLButtonElement; el.style.background = "transparent"; el.style.color = "rgba(255,255,255,0.7)"; }}
+                      <button
+                        key={item.label}
+                        onClick={() => { navigate(item.path); setUserMenuOpen(false); }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border-none bg-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50 text-xs font-semibold cursor-pointer transition-all duration-150 text-left"
                       >
-                        <Icon size={14} style={{ flexShrink: 0 }} /> {item.label}
+                        <Icon size={14} className="shrink-0 text-slate-400" /> {item.label}
                       </button>
                     );
                   })}
 
-                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 4, paddingTop: 4 }}>
-                    <button onClick={handleLogout}
-                      style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 9, border: "none", background: "transparent", color: "#FCA5A5", fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "'Outfit',sans-serif", textAlign: "left" }}>
-                      <LogOut size={14} /> Đăng xuất
+                  <div className="border-t border-slate-100 mt-1 pt-1">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl border-none bg-transparent text-red-500 hover:bg-red-50 text-xs font-semibold cursor-pointer transition-all duration-150 text-left"
+                    >
+                      <LogOut size={14} className="shrink-0" /> Đăng xuất
                     </button>
                   </div>
                 </div>
@@ -134,15 +148,15 @@ export function Navbar() {
           ) : (
             /* Guest buttons */
             <>
-              <button onClick={() => navigate("/login")} style={{ padding: "7px 16px", borderRadius: 9, background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "white", cursor: "pointer", fontSize: 14, fontWeight: 500, fontFamily: "'Outfit',sans-serif", transition: "all 0.2s" }}
-                onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)"}
-                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "transparent"}
+              <button
+                onClick={() => navigate("/login")}
+                className="px-4 py-2 rounded-xl bg-transparent border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 cursor-pointer text-sm font-semibold transition-all duration-200"
               >
                 Đăng nhập
               </button>
-              <button onClick={() => navigate("/login?tab=register")} style={{ padding: "7px 18px", borderRadius: 9, background: "linear-gradient(135deg,#F39C12,#FF5722)", border: "none", color: "white", cursor: "pointer", fontSize: 14, fontWeight: 600, fontFamily: "'Outfit',sans-serif", boxShadow: "0 4px 16px rgba(243,156,18,0.35)", transition: "transform 0.2s" }}
-                onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.04)"}
-                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"}
+              <button
+                onClick={() => navigate("/login?tab=register")}
+                className="px-4.5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white cursor-pointer text-sm font-bold border-none shadow-md shadow-red-500/20 hover:shadow-lg hover:shadow-red-500/30 active:scale-95 transition-all duration-200"
               >
                 Đăng ký
               </button>
@@ -151,34 +165,57 @@ export function Navbar() {
         </div>
 
         {/* Mobile toggle */}
-        <button className="md:hidden" onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", color: "white", display: "flex", alignItems: "center" }}>
+        <button
+          className="md:hidden text-slate-700 hover:text-slate-950 cursor-pointer focus:outline-none"
+          onClick={() => setMenuOpen(!menuOpen)}
+        >
           {menuOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       </div>
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div style={{ background: "rgba(0,15,35,0.97)", backdropFilter: "blur(20px)", padding: "12px 20px 20px", borderBottom: "1px solid rgba(0,85,165,0.2)" }}>
+        <div className="md:hidden bg-white/95 backdrop-blur-md px-6 py-4 border-b border-slate-200/80 shadow-lg animate-in slide-in-from-top duration-300">
           {[{ label: "Trang chủ", path: "/" }, ...NAV_LINKS].map(({ label, path }) => (
-            <Link key={path} to={path} onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "10px 0", color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: 15, fontWeight: 500, borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+            <Link
+              key={path}
+              to={path}
+              onClick={() => setMenuOpen(false)}
+              className="block py-3 text-sm font-semibold border-b border-slate-100 text-slate-600 hover:text-slate-950 no-underline"
+            >
               {label}
             </Link>
           ))}
-          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+          <div className="flex gap-3 mt-5">
             {user ? (
               <>
                 <button
                   onClick={() => { navigate(user.role === "admin" ? "/admin" : "/dashboard"); setMenuOpen(false); }}
-                  style={{ flex: 1, padding: "10px", borderRadius: 10, background: "rgba(0,85,165,0.3)", border: "1px solid rgba(0,85,165,0.4)", color: "#60B4FF", cursor: "pointer", fontSize: 14, fontWeight: 600, fontFamily: "'Outfit',sans-serif" }}
+                  className="flex-1 py-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 cursor-pointer text-sm font-bold text-center"
                 >
                   {user.role === "admin" ? "Admin Dashboard" : "Dashboard"}
                 </button>
-                <button onClick={() => { handleLogout(); setMenuOpen(false); }} style={{ flex: 1, padding: "10px", borderRadius: 10, background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.3)", color: "#FCA5A5", cursor: "pointer", fontSize: 14, fontWeight: 600, fontFamily: "'Outfit',sans-serif" }}>Đăng xuất</button>
+                <button
+                  onClick={() => { handleLogout(); setMenuOpen(false); }}
+                  className="flex-1 py-2.5 rounded-xl bg-red-50 border border-red-200 text-red-500 cursor-pointer text-sm font-bold"
+                >
+                  Đăng xuất
+                </button>
               </>
             ) : (
               <>
-                <button onClick={() => { navigate("/login"); setMenuOpen(false); }} style={{ flex: 1, padding: "10px", borderRadius: 10, background: "transparent", border: "1px solid rgba(255,255,255,0.2)", color: "white", cursor: "pointer", fontSize: 14, fontWeight: 500, fontFamily: "'Outfit',sans-serif" }}>Đăng nhập</button>
-                <button onClick={() => { navigate("/login?tab=register"); setMenuOpen(false); }} style={{ flex: 1, padding: "10px", borderRadius: 10, background: "linear-gradient(135deg,#F39C12,#FF5722)", border: "none", color: "white", cursor: "pointer", fontSize: 14, fontWeight: 600, fontFamily: "'Outfit',sans-serif" }}>Đăng ký</button>
+                <button
+                  onClick={() => { navigate("/login"); setMenuOpen(false); }}
+                  className="flex-1 py-2.5 rounded-xl bg-transparent border border-slate-200 text-slate-700 cursor-pointer text-sm font-semibold"
+                >
+                  Đăng nhập
+                </button>
+                <button
+                  onClick={() => { navigate("/login?tab=register"); setMenuOpen(false); }}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-500 border-none text-white cursor-pointer text-sm font-bold shadow-md shadow-red-500/20"
+                >
+                  Đăng ký
+                </button>
               </>
             )}
           </div>

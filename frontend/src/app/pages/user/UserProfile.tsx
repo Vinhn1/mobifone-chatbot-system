@@ -4,25 +4,28 @@ import { User, Mail, Phone, MapPin, Calendar, Lock, Bell, Shield, Camera, Check,
 import { useAuth } from "../../context/AuthContext";
 
 const TIER_STYLE = {
-  Silver: { bg: "linear-gradient(135deg,#94A3B8,#64748B)", text: "white", shadow: "0 4px 16px rgba(100,116,139,0.4)" },
-  Gold: { bg: "linear-gradient(135deg,#F59E0B,#D97706)", text: "white", shadow: "0 4px 16px rgba(245,158,11,0.4)" },
-  Diamond: { bg: "linear-gradient(135deg,#8B5CF6,#6D28D9)", text: "white", shadow: "0 4px 16px rgba(139,92,246,0.4)" },
+  Silver: "bg-slate-50 text-slate-600 border-slate-200/60 shadow-xs",
+  Gold: "bg-amber-50 text-amber-700 border-amber-200/60 shadow-xs shadow-amber-500/5",
+  Diamond: "bg-purple-50 text-purple-700 border-purple-200/60 shadow-xs shadow-purple-500/5",
 };
 
 function InfoRow({ icon: Icon, label, value, editable = false, onEdit }: {
   icon: React.ElementType; label: string; value: string; editable?: boolean; onEdit?: () => void;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 0", borderBottom: "1px solid #F1F5F9" }}>
-      <div style={{ width: 36, height: 36, borderRadius: 10, background: "#F8FAFC", border: "1px solid #E2E8F0", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-        <Icon size={16} style={{ color: "#64748B" }} />
+    <div className="flex items-center gap-3.5 py-4 border-b border-slate-100 font-outfit">
+      <div className="w-9 h-9 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-center shrink-0">
+        <Icon size={16} className="text-slate-400" />
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ color: "#94A3B8", fontSize: 11, fontWeight: 600, marginBottom: 1 }}>{label.toUpperCase()}</div>
-        <div style={{ color: "#0F172A", fontWeight: 600, fontSize: 14 }}>{value}</div>
+      <div className="flex-1">
+        <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-0.5">{label}</div>
+        <div className="text-slate-800 font-bold text-sm">{value}</div>
       </div>
       {editable && (
-        <button onClick={onEdit} style={{ color: "#0055A5", fontSize: 13, fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontFamily: "'Outfit',sans-serif" }}>
+        <button
+          onClick={onEdit}
+          className="text-[#0055A5] hover:text-[#00448A] text-xs font-bold bg-transparent border-none cursor-pointer transition-colors"
+        >
           Sửa
         </button>
       )}
@@ -31,7 +34,7 @@ function InfoRow({ icon: Icon, label, value, editable = false, onEdit }: {
 }
 
 export function UserProfile() {
-  const { user, updateUser } = useAuth();
+  const { user } = useAuth();
   const [tab, setTab] = useState<"info" | "security" | "notifications">("info");
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -40,7 +43,7 @@ export function UserProfile() {
     sms: true, email: true, promo: true, renewal: true, news: false, security: true
   });
   const tier = user?.tier ?? "Silver";
-  const tierStyle = TIER_STYLE[tier];
+  const tierClass = TIER_STYLE[tier] || TIER_STYLE.Silver;
 
   const handleSave = () => {
     setSaved(true);
@@ -49,78 +52,74 @@ export function UserProfile() {
   };
 
   return (
-    <div style={{ fontFamily: "'Outfit',sans-serif", maxWidth: 800, margin: "0 auto" }}>
+    <div className="max-w-[760px] mx-auto font-outfit">
       {/* Profile header */}
       <motion.div
-        initial={{ opacity: 0, y: -16 }}
+        initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
-        style={{ background: "white", borderRadius: 20, padding: 24, border: "1.5px solid #E2E8F0", marginBottom: 20, display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}
+        className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm shadow-slate-200/30 mb-6 flex flex-wrap items-center gap-5"
       >
-        <div style={{ position: "relative" }}>
-          <div
-            style={{
-              width: 80, height: 80, borderRadius: "50%",
-              background: "linear-gradient(135deg,#0055A5,#F39C12)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "white", fontSize: 28, fontWeight: 900,
-              boxShadow: "0 4px 20px rgba(0,85,165,0.3)",
-              border: "3px solid white",
-            }}
-          >
+        <div className="relative">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#0055A5] to-[#E4002B] flex items-center justify-center text-white text-2xl font-black shadow-md shadow-[#0055A5]/25 border-4 border-white">
             {user?.name?.charAt(0)}
           </div>
-          <button
-            style={{
-              position: "absolute", bottom: -2, right: -2,
-              width: 26, height: 26, borderRadius: "50%",
-              background: "#0055A5", border: "2px solid white",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              cursor: "pointer",
-            }}
-          >
-            <Camera size={12} color="white" />
+          <button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#0055A5] hover:bg-[#00448A] border-2 border-white flex items-center justify-center cursor-pointer transition-all">
+            <Camera size={12} className="text-white" />
           </button>
         </div>
 
-        <div style={{ flex: 1 }}>
-          <div style={{ color: "#0F172A", fontSize: "1.3rem", fontWeight: 900, marginBottom: 4 }}>{user?.name}</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ background: tierStyle.bg, ...{ color: tierStyle.text }, borderRadius: 20, padding: "3px 12px", fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, boxShadow: tierStyle.shadow }}>
-              <Star size={11} /> {tier} Member
+        <div className="flex-1 min-w-[200px]">
+          <h2 className="text-slate-800 text-xl font-black tracking-tight mb-1">{user?.name}</h2>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold border ${tierClass}`}>
+              <Star size={11} className="fill-current" /> {tier} Member
             </span>
-            <span style={{ color: "#94A3B8", fontSize: 13 }}>Tham gia từ {user?.joinDate}</span>
+            <span className="text-slate-400 text-xs font-medium">Tham gia từ {user?.joinDate}</span>
           </div>
-          <div style={{ color: "#64748B", fontSize: 13, marginTop: 4 }}>ID: {user?.id} · Gói: {user?.package}</div>
+          <div className="text-slate-500 text-xs font-semibold mt-1.5">
+            ID: <span className="text-slate-700 font-bold">{user?.id}</span> · Gói: <span className="text-slate-700 font-bold">{user?.package}</span>
+          </div>
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
-          <div style={{ background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 12, padding: "10px 16px", textAlign: "center" }}>
-            <div style={{ color: "#16A34A", fontWeight: 800, fontSize: "1.2rem" }}>{user?.points?.toLocaleString()}</div>
-            <div style={{ color: "#22C55E", fontSize: 11 }}>Điểm thưởng</div>
+        <div className="flex gap-2.5">
+          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2.5 text-center min-w-[90px]">
+            <div className="text-emerald-700 font-extrabold text-lg leading-none mb-1">{user?.points?.toLocaleString()}</div>
+            <div className="text-emerald-600 text-[10px] font-bold uppercase tracking-wider">Điểm thưởng</div>
           </div>
-          <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 12, padding: "10px 16px", textAlign: "center" }}>
-            <div style={{ color: "#0055A5", fontWeight: 800, fontSize: "1.2rem" }}>{user?.balance?.toLocaleString("vi-VN")}đ</div>
-            <div style={{ color: "#0055A5", fontSize: 11 }}>Số dư</div>
+          <div className="bg-blue-50 border border-blue-100 rounded-2xl px-4 py-2.5 text-center min-w-[90px]">
+            <div className="text-[#0055A5] font-extrabold text-lg leading-none mb-1">{user?.balance?.toLocaleString("vi-VN")}đ</div>
+            <div className="text-[#0055A5]/70 text-[10px] font-bold uppercase tracking-wider">Số dư</div>
           </div>
         </div>
       </motion.div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 4, background: "white", border: "1.5px solid #E2E8F0", borderRadius: 12, padding: 4, marginBottom: 20, width: "fit-content" }}>
+      <div className="flex bg-slate-100 border border-slate-200/50 rounded-2xl p-1 mb-6 w-fit">
         {[
           { key: "info", label: "👤 Thông tin" },
           { key: "security", label: "🔒 Bảo mật" },
           { key: "notifications", label: "🔔 Thông báo" },
         ].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key as typeof tab)}
-            style={{ padding: "8px 18px", borderRadius: 9, border: "none", background: tab === t.key ? "#0055A5" : "transparent", color: tab === t.key ? "white" : "#64748B", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit',sans-serif", transition: "all 0.2s" }}>
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key as typeof tab)}
+            className={`px-4.5 py-2 rounded-xl border-none font-bold text-xs cursor-pointer transition-all duration-200 ${
+              tab === t.key
+                ? "bg-white text-[#0055A5] shadow-xs border border-slate-200/30"
+                : "text-slate-500 hover:text-slate-800 bg-transparent"
+            }`}
+          >
             {t.label}
           </button>
         ))}
       </div>
 
       {tab === "info" && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ background: "white", borderRadius: 20, padding: 24, border: "1.5px solid #E2E8F0" }}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm shadow-slate-200/30"
+        >
           <InfoRow icon={User} label="Họ và tên" value={user?.name ?? ""} editable onEdit={() => { setEditing("name"); setEditValue(user?.name ?? ""); }} />
           <InfoRow icon={Phone} label="Số điện thoại" value={user?.phone ?? ""} />
           <InfoRow icon={Mail} label="Email" value={user?.email ?? ""} editable onEdit={() => { setEditing("email"); setEditValue(user?.email ?? ""); }} />
@@ -129,22 +128,29 @@ export function UserProfile() {
 
           {editing && (
             <motion.div
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              style={{ marginTop: 16, padding: 16, background: "#F8FAFC", borderRadius: 12, border: "1.5px solid #BFDBFE" }}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-5 p-4 bg-slate-50 border border-slate-200 rounded-2xl"
             >
-              <label style={{ color: "#64748B", fontSize: 12, fontWeight: 600, display: "block", marginBottom: 6 }}>
-                CHỈNH SỬA {editing.toUpperCase()}
+              <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-2">
+                Chỉnh sửa {editing === "name" ? "Họ và tên" : editing === "email" ? "Email" : editing === "dob" ? "Ngày sinh" : "Địa chỉ"}
               </label>
-              <div style={{ display: "flex", gap: 10 }}>
+              <div className="flex gap-2.5">
                 <input
                   value={editValue}
                   onChange={e => setEditValue(e.target.value)}
-                  style={{ flex: 1, border: "1.5px solid #BFDBFE", borderRadius: 10, padding: "9px 14px", fontSize: 14, outline: "none", color: "#0F172A", fontFamily: "'Outfit',sans-serif", background: "white" }}
+                  className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all"
                 />
-                <button onClick={handleSave} style={{ padding: "9px 20px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#0055A5,#00B4FF)", color: "white", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit',sans-serif" }}>
+                <button
+                  onClick={handleSave}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#0055A5] to-blue-500 text-white font-bold text-sm cursor-pointer shadow-md shadow-[#0055A5]/20 border-none transition-all active:scale-95"
+                >
                   Lưu
                 </button>
-                <button onClick={() => setEditing(null)} style={{ padding: "9px 14px", borderRadius: 10, border: "1.5px solid #E2E8F0", background: "white", color: "#64748B", fontWeight: 600, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit',sans-serif" }}>
+                <button
+                  onClick={() => setEditing(null)}
+                  className="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-slate-600 font-bold text-sm cursor-pointer transition-all"
+                >
                   Huỷ
                 </button>
               </div>
@@ -152,7 +158,11 @@ export function UserProfile() {
           )}
 
           {saved && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 6, color: "#16A34A", background: "#F0FDF4", border: "1px solid #BBF7D0", borderRadius: 10, padding: "8px 14px" }}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="mt-4 flex items-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 text-xs font-bold"
+            >
               <Check size={14} /> Đã lưu thay đổi thành công!
             </motion.div>
           )}
@@ -160,29 +170,37 @@ export function UserProfile() {
       )}
 
       {tab === "security" && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col gap-3"
+        >
           {[
-            { icon: Lock, title: "Đổi mật khẩu", desc: "Cập nhật mật khẩu đăng nhập", color: "#0055A5" },
-            { icon: Shield, title: "Xác thực 2 lớp (2FA)", desc: "Bảo vệ tài khoản bằng OTP SMS", color: "#22C55E", badge: "Đã bật" },
-            { icon: Phone, title: "Đổi số điện thoại xác thực", desc: "Cập nhật số điện thoại nhận OTP", color: "#F39C12" },
+            { icon: Lock, title: "Đổi mật khẩu", desc: "Cập nhật mật khẩu đăng nhập của bạn", color: "#0055A5", colorBg: "bg-blue-50/70", colorBorder: "border-blue-100" },
+            { icon: Shield, title: "Xác thực hai lớp (2FA)", desc: "Bảo vệ an toàn bằng OTP qua SMS", color: "#10B981", colorBg: "bg-emerald-50", colorBorder: "border-emerald-100", badge: "Đã kích hoạt" },
+            { icon: Phone, title: "Đổi số điện thoại liên kết", desc: "Thay đổi số điện thoại dùng để xác thực", color: "#E4002B", colorBg: "bg-red-50", colorBorder: "border-red-100" },
           ].map(s => {
             const Icon = s.icon;
             return (
-              <div key={s.title} style={{ background: "white", borderRadius: 14, padding: "16px 20px", border: "1.5px solid #E2E8F0", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", transition: "all 0.2s" }}
-                onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.borderColor = s.color}
-                onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.borderColor = "#E2E8F0"}
+              <div
+                key={s.title}
+                className="bg-white border border-slate-200/60 hover:border-slate-300 rounded-2xl p-4.5 flex items-center gap-4 cursor-pointer transition-all duration-200 shadow-xs hover:shadow-md"
               >
-                <div style={{ width: 40, height: 40, borderRadius: 10, background: `${s.color}12`, border: `1.5px solid ${s.color}25`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div className={`w-10 h-10 rounded-xl ${s.colorBg} border ${s.colorBorder} flex items-center justify-center shrink-0`}>
                   <Icon size={18} style={{ color: s.color }} />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ color: "#0F172A", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 8 }}>
+                <div className="flex-1">
+                  <div className="text-slate-800 font-bold text-sm flex items-center gap-2">
                     {s.title}
-                    {s.badge && <span style={{ background: "#DCFCE7", color: "#16A34A", borderRadius: 6, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>{s.badge}</span>}
+                    {s.badge && (
+                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                        {s.badge}
+                      </span>
+                    )}
                   </div>
-                  <div style={{ color: "#94A3B8", fontSize: 13 }}>{s.desc}</div>
+                  <div className="text-slate-400 text-xs font-medium mt-0.5">{s.desc}</div>
                 </div>
-                <ChevronRight size={16} style={{ color: "#CBD5E1" }} />
+                <ChevronRight size={15} className="text-slate-300" />
               </div>
             );
           })}
@@ -190,42 +208,39 @@ export function UserProfile() {
       )}
 
       {tab === "notifications" && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ background: "white", borderRadius: 20, padding: 24, border: "1.5px solid #E2E8F0" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm shadow-slate-200/30"
+        >
+          <div className="flex flex-col gap-1.5">
             {[
-              { key: "sms", label: "Thông báo SMS", desc: "Nhận tin nhắn về giao dịch và dịch vụ" },
-              { key: "email", label: "Thông báo Email", desc: "Hóa đơn, báo cáo sử dụng hàng tháng" },
-              { key: "promo", label: "Ưu đãi và khuyến mãi", desc: "Flash deals, gói cước mới, quà tặng" },
-              { key: "renewal", label: "Nhắc gia hạn", desc: "Thông báo trước khi gói cước hết hạn 7 ngày" },
-              { key: "news", label: "Tin tức MobiFone", desc: "Sản phẩm mới, sự kiện, và bản tin" },
-              { key: "security", label: "Cảnh báo bảo mật", desc: "Đăng nhập lạ, thay đổi mật khẩu" },
+              { key: "sms", label: "Thông báo SMS", desc: "Nhận tin nhắn về biến động số dư và giao dịch" },
+              { key: "email", label: "Thông báo Email", desc: "Hóa đơn điện tử, báo cáo chi tiết hàng tháng" },
+              { key: "promo", label: "Ưu đãi và khuyến mãi", desc: "Nhận thông tin Flash deals, gói cước mới hấp dẫn" },
+              { key: "renewal", label: "Nhắc nhở gia hạn", desc: "Nhắc hạn thanh toán gói cước trước 7 ngày" },
+              { key: "news", label: "Tin tức MobiFone", desc: "Tin công nghệ, nâng cấp mạng 5G và dịch vụ mới" },
+              { key: "security", label: "Cảnh báo bảo mật", desc: "Thông báo đăng nhập thiết bị lạ, đổi mật khẩu" },
             ].map(n => (
-              <div key={n.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 0", borderBottom: "1px solid #F8FAFC" }}>
-                <div>
-                  <div style={{ color: "#0F172A", fontWeight: 600, fontSize: 14 }}>{n.label}</div>
-                  <div style={{ color: "#94A3B8", fontSize: 13 }}>{n.desc}</div>
+              <div key={n.key} className="flex items-center justify-between py-3.5 border-b border-slate-50 last:border-none">
+                <div className="pr-4">
+                  <div className="text-slate-800 font-bold text-sm mb-0.5">{n.label}</div>
+                  <div className="text-slate-400 text-xs font-medium">{n.desc}</div>
                 </div>
                 <button
                   onClick={() => setNotifications(p => ({ ...p, [n.key]: !p[n.key as keyof typeof p] }))}
-                  style={{
-                    width: 46, height: 26, borderRadius: 13, border: "none", cursor: "pointer",
-                    background: notifications[n.key as keyof typeof notifications] ? "#0055A5" : "#E2E8F0",
-                    position: "relative", transition: "background 0.2s",
-                    flexShrink: 0,
-                  }}
+                  className={`w-11 h-6 rounded-full cursor-pointer relative transition-colors duration-200 shrink-0 border-none outline-none ${
+                    notifications[n.key as keyof typeof notifications] ? "bg-[#0055A5]" : "bg-slate-200"
+                  }`}
                 >
-                  <div style={{
-                    width: 20, height: 20, borderRadius: "50%", background: "white",
-                    position: "absolute", top: 3,
-                    left: notifications[n.key as keyof typeof notifications] ? 23 : 3,
-                    transition: "left 0.2s",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.15)",
-                  }} />
+                  <div className={`w-5 h-5 rounded-full bg-white shadow-md absolute top-0.5 transition-all duration-200 ${
+                    notifications[n.key as keyof typeof notifications] ? "left-[22px]" : "left-0.5"
+                  }`} />
                 </button>
               </div>
             ))}
           </div>
-          <button style={{ marginTop: 20, width: "100%", padding: "12px", borderRadius: 12, border: "none", background: "linear-gradient(135deg,#0055A5,#00B4FF)", color: "white", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "'Outfit',sans-serif", boxShadow: "0 4px 16px rgba(0,85,165,0.3)" }}>
+          <button className="mt-6 w-full py-3 rounded-xl bg-gradient-to-r from-[#0055A5] to-blue-500 hover:from-blue-500 hover:to-[#0055A5] text-white font-bold text-sm cursor-pointer shadow-md shadow-[#0055A5]/20 hover:shadow-lg transition-all border-none active:scale-98">
             Lưu cài đặt thông báo
           </button>
         </motion.div>
