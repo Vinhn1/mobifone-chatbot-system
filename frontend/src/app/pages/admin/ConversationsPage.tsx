@@ -21,11 +21,11 @@ type Conversation = {
   transcript: { role: "bot" | "user"; text: string; time: string }[];
 };
 
-const STATUS_CFG: Record<ConvStatus, { label: string; color: string; bg: string; border: string; icon: React.ElementType }> = {
-  resolved: { label: "Đã xử lý", color: "#10B981", bg: "rgba(16, 185, 129, 0.08)", border: "rgba(16, 185, 129, 0.2)", icon: CheckCircle2 },
-  escalated: { label: "Cần hỗ trợ", color: "#EF4444", bg: "rgba(239, 68, 68, 0.08)", border: "rgba(239, 68, 68, 0.2)", icon: AlertCircle },
-  active: { label: "Đang chat", color: "#0055A5", bg: "rgba(0, 85, 165, 0.08)", border: "rgba(0, 85, 165, 0.2)", icon: MessageSquare },
-  abandoned: { label: "Rời cuộc chat", color: "#64748B", bg: "rgba(100, 116, 139, 0.08)", border: "rgba(100, 116, 139, 0.2)", icon: X },
+const STATUS_CFG: Record<ConvStatus, { label: string; badgeClass: string; icon: React.ElementType }> = {
+  resolved: { label: "Đã xử lý", badgeClass: "bg-emerald-50 border border-emerald-100 text-emerald-600", icon: CheckCircle2 },
+  escalated: { label: "Cần hỗ trợ", badgeClass: "bg-rose-50 border border-rose-100 text-rose-600", icon: AlertCircle },
+  active: { label: "Đang chat", badgeClass: "bg-blue-50 border border-blue-200 text-[#0055A5]", icon: MessageSquare },
+  abandoned: { label: "Rời cuộc chat", badgeClass: "bg-slate-50 border border-slate-200 text-slate-500", icon: X },
 };
 
 function extractPhone(text: string): string | undefined {
@@ -202,63 +202,50 @@ export function ConversationsPage() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80vh", gap: 12, color: "#64748B" }}>
-        <Activity size={32} style={{ animation: "spin 2s linear infinite", color: "#0055A5" }} />
-        <span style={{ fontWeight: 600 }}>Đang đồng bộ hội thoại bot từ backend...</span>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+      <div className="flex flex-col items-center justify-center h-[75vh] gap-3 text-slate-400 font-outfit">
+        <Activity size={32} className="animate-spin text-[#0055A5]" />
+        <span className="font-bold text-sm">Đang đồng bộ hội thoại bot từ backend...</span>
       </div>
     );
   }
 
   return (
-    <div style={{ fontFamily: "'Outfit', sans-serif", display: "flex", flexDirection: "column", gap: 20, height: "100%", paddingBottom: 24 }}>
+    <div className="font-outfit flex flex-col gap-5 h-[calc(100vh-130px)] pb-6">
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E2E8F0", paddingBottom: 16 }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200/60 pb-5 gap-4">
         <div>
-          <h1 style={{ color: "#0F172A", fontWeight: 900, fontSize: 24, margin: 0 }}>Lịch sử Đối thoại</h1>
-          <p style={{ color: "#64748B", fontSize: 13, margin: "4px 0 0 0" }}>Bản ghi chi tiết các cuộc trò chuyện và thông tin tự động phân đoạn bởi AI</p>
+          <h1 className="text-[#0F172A] font-black text-xl tracking-tight">Lịch sử Đối thoại</h1>
+          <p className="text-slate-400 text-xs font-semibold mt-0.5">Bản ghi chi tiết các cuộc trò chuyện và thông tin tự động phân đoạn bởi AI</p>
         </div>
         <button
           onClick={loadHistory}
-          className="gradient-btn-primary"
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "8px 16px", borderRadius: 10,
-            fontSize: 13, fontWeight: 700, cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(0, 85, 165, 0.2)"
-          }}
+          className="gradient-btn-primary flex items-center gap-2 px-5 py-2.5 text-xs font-bold shadow-md shadow-blue-500/10 cursor-pointer"
         >
           Làm Mới Dữ Liệu
         </button>
       </div>
 
       {/* Filters & Tabs */}
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "white", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "0 14px", height: 40, flex: 1, minWidth: 200 }}>
-          <Search size={14} style={{ color: "#94A3B8" }} />
-          <input placeholder="Tìm kiếm theo khách hàng hoặc Intent..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ background: "none", border: "none", outline: "none", fontSize: 13, color: "#334155", flex: 1, fontFamily: "'Outfit', sans-serif" }} />
+      <div className="flex gap-3 flex-wrap items-center">
+        <div className="flex items-center gap-2 bg-white border border-slate-200/60 rounded-xl px-4.5 h-10 flex-1 min-w-[200px]">
+          <Search size={14} className="text-slate-400" />
+          <input
+            placeholder="Tìm kiếm theo khách hàng hoặc Intent..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="background-transparent border-none outline-none text-xs font-semibold text-slate-600 flex-1 font-outfit"
+          />
         </div>
-        <div style={{ display: "flex", gap: 4, background: "rgba(241, 245, 249, 0.8)", border: "1px solid #E2E8F0", borderRadius: 10, padding: 3 }}>
+        <div className="flex gap-1 bg-slate-100/80 border border-slate-200/50 rounded-xl p-1 shrink-0">
           {(["all", "active", "resolved", "escalated", "abandoned"] as const).map(s => (
-            <button key={s} onClick={() => setStatusFilter(s)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 8,
-                border: "none",
-                background: statusFilter === s ? "#0055A5" : "transparent",
-                color: statusFilter === s ? "white" : "#64748B",
-                fontWeight: 700,
-                fontSize: 12,
-                cursor: "pointer",
-                fontFamily: "'Outfit', sans-serif",
-                transition: "all 0.2s"
-              }}
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-lg border-none text-[11px] font-black tracking-wide cursor-pointer transition-all duration-200 ${
+                statusFilter === s
+                  ? "bg-[#0055A5] text-white shadow-xs"
+                  : "bg-transparent text-slate-500 hover:text-slate-700"
+              }`}
             >
               {s === "all" ? "Tất cả" : STATUS_CFG[s].label}
             </button>
@@ -266,11 +253,11 @@ export function ConversationsPage() {
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 16, flex: 1, overflow: "hidden" }}>
+      <div className="flex gap-5 flex-1 min-h-0 overflow-hidden">
         {/* Conversation List */}
-        <div style={{ flex: selected ? "0 0 420px" : 1, display: "flex", flexDirection: "column", gap: 10, overflowY: "auto", paddingRight: 4 }}>
+        <div className={`flex flex-col gap-3.5 overflow-y-auto pr-1 ${selected ? "w-[400px] shrink-0" : "flex-1"}`}>
           {filtered.length === 0 ? (
-            <div style={{ padding: 48, background: "white", borderRadius: 14, textAlign: "center", border: "1.5px dashed #E2E8F0", color: "#64748B" }}>
+            <div className="py-12 bg-white rounded-2xl text-center border border-dashed border-slate-200 text-slate-400 text-xs font-semibold">
               Không tìm thấy phiên hội thoại nào hợp lệ.
             </div>
           ) : (
@@ -281,56 +268,63 @@ export function ConversationsPage() {
               return (
                 <motion.div
                   key={conv.id}
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                   onClick={() => setSelected(isSelected ? null : conv)}
-                  style={{
-                    background: "white",
-                    borderRadius: 14,
-                    padding: 16,
-                    border: `1.5px solid ${isSelected ? "#0055A5" : "#F1F5F9"}`,
-                    cursor: "pointer",
-                    transition: "all 0.2s",
-                    boxShadow: isSelected ? "0 4px 20px rgba(0, 85, 165, 0.1)" : "0 1px 4px rgba(0, 0, 0, 0.02)"
-                  }}
-                  whileHover={{ y: -1, boxShadow: "0 4px 16px rgba(0,0,0,0.04)" }}
+                  className={`bg-white rounded-2xl p-4.5 border transition-all duration-200 cursor-pointer ${
+                    isSelected
+                      ? "border-[#0055A5] bg-[#0055A5]/[0.02] shadow-md shadow-blue-500/[0.04]"
+                      : "border-slate-100 hover:border-slate-200 hover:shadow-xs"
+                  }`}
+                  whileHover={{ y: -1 }}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: conv.status === "active" ? "linear-gradient(135deg, #0055A5, #00B4FF)" : "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center", color: conv.status === "active" ? "white" : "#64748B", fontSize: 13, fontWeight: 900, flexShrink: 0, position: "relative" }}>
+                  <div className="flex justify-between items-start gap-2 mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-black shrink-0 relative ${
+                        conv.status === "active"
+                          ? "bg-gradient-to-br from-[#0055A5] to-[#00B4FF] text-white"
+                          : "bg-slate-100 text-slate-500"
+                      }`}>
                         {conv.user.charAt(0)}
-                        {conv.status === "active" && <div style={{ position: "absolute", bottom: -1, right: -1, width: 10, height: 10, borderRadius: "50%", background: "#10B981", border: "2px solid white" }} />}
+                        {conv.status === "active" && (
+                          <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white animate-pulse" />
+                        )}
                       </div>
                       <div>
-                        <div style={{ color: "#0F172A", fontWeight: 700, fontSize: 14 }}>{conv.user}</div>
-                        <div style={{ color: "#94A3B8", fontSize: 11 }}>{conv.phone} · {conv.startTime}</div>
+                        <div className="text-slate-800 font-bold text-xs">{conv.user}</div>
+                        <div className="text-slate-400 text-[10px] font-semibold mt-0.5">{conv.phone} · {conv.startTime}</div>
                       </div>
                     </div>
-                    <span style={{ background: st.bg, color: st.color, border: `1px solid ${st.border}`, borderRadius: 8, padding: "2px 8px", fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", gap: 3 }}>
-                      <StIcon size={10} /> {st.label.toUpperCase()}
+                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold flex items-center gap-1 uppercase tracking-wide ${st.badgeClass}`}>
+                      <StIcon size={10} /> {st.label}
                     </span>
                   </div>
 
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-                    <span style={{ background: "rgba(0, 85, 165, 0.05)", color: "#0055A5", border: "1px solid rgba(0, 85, 165, 0.15)", borderRadius: 6, padding: "2px 8px", fontSize: 11, fontWeight: 700 }}>{conv.intent}</span>
-                    <span style={{ background: "#F8FAFC", color: "#64748B", borderRadius: 6, padding: "2px 8px", fontSize: 11 }}>{conv.messages} tin · {conv.duration}</span>
+                  <div className="flex gap-2 flex-wrap mb-3 font-semibold text-[10px]">
+                    <span className="bg-blue-50/70 border border-blue-100 text-[#0055A5] rounded-md px-2 py-0.5">{conv.intent}</span>
+                    <span className="bg-slate-50 border border-slate-200 text-slate-500 rounded-md px-2 py-0.5">
+                      {conv.messages} tin · {conv.duration}
+                    </span>
                   </div>
 
                   {/* Extracted data pills */}
                   {Object.values(conv.extractedData).some(v => v !== undefined) && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                      {conv.extractedData.name && <span style={{ background: "rgba(16, 185, 129, 0.08)", color: "#10B981", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 6, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>✓ TÊN</span>}
-                      {conv.extractedData.phone && <span style={{ background: "rgba(16, 185, 129, 0.08)", color: "#10B981", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 6, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>✓ SĐT</span>}
-                      {conv.extractedData.package && <span style={{ background: "rgba(245, 158, 11, 0.08)", color: "#D97706", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: 6, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>📦 {conv.extractedData.package}</span>}
-                      {conv.extractedData.budget && <span style={{ background: "rgba(16, 185, 129, 0.08)", color: "#065F46", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 6, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>💰 {conv.extractedData.budget}</span>}
+                    <div className="flex flex-wrap gap-1.5 mb-3.5">
+                      {conv.extractedData.name && <span className="bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-md px-1.5 py-0.5 text-[9px] font-bold">✓ TÊN</span>}
+                      {conv.extractedData.phone && <span className="bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-md px-1.5 py-0.5 text-[9px] font-bold">✓ SĐT</span>}
+                      {conv.extractedData.package && <span className="bg-amber-50 border border-amber-100 text-amber-700 rounded-md px-1.5 py-0.5 text-[9px] font-bold">📦 {conv.extractedData.package}</span>}
+                      {conv.extractedData.budget && <span className="bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-md px-1.5 py-0.5 text-[9px] font-bold">💰 {conv.extractedData.budget}</span>}
                     </div>
                   )}
 
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                      <TrendingUp size={12} style={{ color: conv.leadScore > 80 ? "#10B981" : conv.leadScore > 50 ? "#F59E0B" : "#94A3B8" }} />
-                      <span style={{ color: conv.leadScore > 80 ? "#10B981" : conv.leadScore > 50 ? "#F59E0B" : "#94A3B8", fontSize: 12, fontWeight: 800 }}>Lead Score: {conv.leadScore}</span>
+                  <div className="flex justify-between items-center pt-2 border-t border-slate-100/60">
+                    <div className="flex items-center gap-1.5">
+                      <TrendingUp size={12} className={conv.leadScore > 80 ? "text-emerald-500" : conv.leadScore > 50 ? "text-amber-500" : "text-slate-400"} />
+                      <span className={`text-[10px] font-black tracking-wide ${
+                        conv.leadScore > 80 ? "text-emerald-500" : conv.leadScore > 50 ? "text-amber-500" : "text-slate-400"
+                      }`}>
+                        LEAD SCORE: {conv.leadScore}
+                      </span>
                     </div>
-                    <ChevronRight size={14} style={{ color: "#CBD5E1" }} />
+                    <ChevronRight size={14} className="text-slate-300" />
                   </div>
                 </motion.div>
               );
@@ -342,23 +336,30 @@ export function ConversationsPage() {
         <AnimatePresence>
           {selected && (
             <motion.div
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
-              className="admin-card"
-              style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", background: "white", padding: 0 }}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="flex-1 bg-white rounded-3xl border border-slate-200/60 shadow-xs flex flex-col overflow-hidden min-h-0"
             >
               {/* Panel header */}
-              <div style={{ padding: "16px 20px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+              <div className="px-6 py-4.5 border-b border-slate-100 flex justify-between items-center shrink-0">
                 <div>
-                  <div style={{ color: "#0F172A", fontWeight: 800, fontSize: 16 }}>Chi tiết đối thoại — {selected.user}</div>
-                  <div style={{ color: "#94A3B8", fontSize: 11, wordBreak: "break-all", marginTop: 2 }}>Phiên ID: {selected.id}</div>
+                  <div className="text-slate-800 font-extrabold text-sm">Chi tiết đối thoại — {selected.user}</div>
+                  <div className="text-slate-400 text-[10px] font-bold mt-0.5">Phiên ID: {selected.id}</div>
                 </div>
-                <div style={{ display: "flex", gap: 8 }}>
+                <div className="flex gap-2 items-center">
                   {selected.phone !== "—" && (
-                    <a href={`tel:${selected.phone}`} className="gradient-btn-primary" style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 14px", textDecoration: "none", fontSize: 12, fontWeight: 700 }}>
+                    <a
+                      href={`tel:${selected.phone}`}
+                      className="gradient-btn-primary flex items-center gap-1.5 px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-decoration-none"
+                    >
                       <Phone size={12} /> Gọi ngay
                     </a>
                   )}
-                  <button onClick={() => setSelected(null)} style={{ background: "#F1F5F9", border: "1px solid #E2E8F0", borderRadius: 10, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748B", transition: "all 0.2s" }} onMouseEnter={e => e.currentTarget.style.background = "#E2E8F0"} onMouseLeave={e => e.currentTarget.style.background = "#F1F5F9"}>
+                  <button
+                    onClick={() => setSelected(null)}
+                    className="bg-slate-100 hover:bg-slate-200 border-none rounded-xl w-8 h-8 flex items-center justify-center cursor-pointer text-slate-500 transition-colors"
+                  >
                     <X size={14} />
                   </button>
                 </div>
@@ -366,13 +367,15 @@ export function ConversationsPage() {
 
               {/* Extracted data */}
               {Object.values(selected.extractedData).some(v => v !== undefined) && (
-                <div style={{ padding: "14px 20px", background: "rgba(16, 185, 129, 0.03)", borderBottom: "1px solid rgba(16, 185, 129, 0.1)" }}>
-                  <div style={{ color: "#10B981", fontSize: 11, fontWeight: 800, letterSpacing: 0.5, marginBottom: 8 }}>DỮ LIỆU KHAI THÁC AI</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <div className="px-6 py-4 bg-emerald-500/5 border-b border-emerald-100 flex flex-col gap-2 shrink-0">
+                  <div className="text-emerald-700 text-[9px] font-black tracking-widest uppercase">Dữ liệu khai thác AI</div>
+                  <div className="flex flex-wrap gap-2">
                     {Object.entries(selected.extractedData).map(([k, v]) => v && (
-                      <div key={k} style={{ background: "white", border: "1px solid rgba(16, 185, 129, 0.15)", borderRadius: 10, padding: "6px 12px", boxShadow: "0 1px 2px rgba(0,0,0,0.01)" }}>
-                        <div style={{ color: "#94A3B8", fontSize: 9, fontWeight: 800 }}>{k.toUpperCase() === "PACKAGE" ? "GÓI DỊCH VỤ" : k.toUpperCase() === "BUDGET" ? "NGÂN SÁCH" : k.toUpperCase()}</div>
-                        <div style={{ color: "#0F172A", fontWeight: 700, fontSize: 13, marginTop: 2 }}>{v}</div>
+                      <div key={k} className="bg-white border border-emerald-100 rounded-xl px-3 py-1.5 shadow-xs">
+                        <div className="text-slate-400 text-[9px] font-black tracking-wider uppercase">
+                          {k.toUpperCase() === "PACKAGE" ? "GÓI DỊCH VỤ" : k.toUpperCase() === "BUDGET" ? "NGÂN SÁCH" : k.toUpperCase()}
+                        </div>
+                        <div className="text-slate-800 font-extrabold text-xs mt-0.5">{v}</div>
                       </div>
                     ))}
                   </div>
@@ -380,18 +383,29 @@ export function ConversationsPage() {
               )}
 
               {/* Messages Container */}
-              <div style={{ flex: 1, overflowY: "auto", padding: "20px", display: "flex", flexDirection: "column", gap: 14, background: "#FAFBFD" }}>
+              <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4.5 bg-slate-50/50">
                 {selected.transcript.map((msg, i) => {
                   const isUser = msg.role === "user";
                   return (
-                    <div key={i} style={{ display: "flex", justifyContent: isUser ? "flex-end" : "flex-start", gap: 8, alignItems: "flex-end" }}>
-                      {!isUser && <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg, #0055A5, #00B4FF)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, flexShrink: 0, color: "white", fontWeight: "bold" }}>M</div>}
-                      <div style={{ maxWidth: "75%" }}>
-                        <div style={isUser
-                          ? { background: "linear-gradient(135deg, #0055A5, #0070D0)", color: "white", borderRadius: "14px 2px 14px 14px", padding: "10px 14px", fontSize: 13, lineHeight: 1.55, boxShadow: "0 2px 8px rgba(0,85,165,0.15)" }
-                          : { background: "white", color: "#1E293B", border: "1px solid #E2E8F0", borderRadius: "2px 14px 14px 14px", padding: "10px 14px", fontSize: 13, lineHeight: 1.55, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }
-                        }>{msg.text}</div>
-                        <div style={{ color: "#94A3B8", fontSize: 10, marginTop: 4, textAlign: isUser ? "right" : "left", padding: "0 4px" }}>{msg.time}</div>
+                    <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"} gap-2.5 items-end`}>
+                      {!isUser && (
+                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0055A5] to-[#00B4FF] flex items-center justify-center text-xs text-white font-black shrink-0 shadow-xs">
+                          M
+                        </div>
+                      )}
+                      <div className="max-w-[75%]">
+                        <div className={`p-3.5 text-xs leading-relaxed shadow-xs ${
+                          isUser
+                            ? "bg-gradient-to-br from-[#0055A5] to-[#0070D0] text-white rounded-2xl rounded-tr-xs"
+                            : "bg-white text-slate-700 border border-slate-200/60 rounded-2xl rounded-tl-xs"
+                        }`}>
+                          {msg.text}
+                        </div>
+                        <div className={`text-slate-400 text-[9px] font-semibold mt-1 px-1 ${
+                          isUser ? "text-right" : "text-left"
+                        }`}>
+                          {msg.time}
+                        </div>
                       </div>
                     </div>
                   );

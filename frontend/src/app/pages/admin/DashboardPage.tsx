@@ -11,7 +11,7 @@ function Spark({ data, color }: { data: number[]; color: string }) {
   const W = 100, H = 36;
   const pts = data.map((v, i) => `${(i / (data.length - 1)) * W},${H - ((v - min) / range) * H}`).join(" ");
   return (
-    <svg width={W} height={H} style={{ overflow: "visible" }}>
+    <svg width={W} height={H} className="overflow-visible">
       <defs>
         <linearGradient id={`g${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.4" />
@@ -25,9 +25,9 @@ function Spark({ data, color }: { data: number[]; color: string }) {
 }
 
 const SCORES: Record<string, { bg: string; color: string; border: string; label: string }> = {
-  hot: { bg: "rgba(239, 68, 68, 0.08)", color: "#EF4444", border: "rgba(239, 68, 68, 0.2)", label: "🔥 NÓNG HỔI" },
-  warm: { bg: "rgba(245, 158, 11, 0.08)", color: "#F59E0B", border: "rgba(245, 158, 11, 0.2)", label: "☀ ẤM ÁP" },
-  cold: { bg: "rgba(59, 130, 246, 0.08)", color: "#3B82F6", border: "rgba(59, 130, 246, 0.2)", label: "❄ LẠNH LẼO" },
+  hot: { bg: "bg-red-50/70 text-red-600 border-red-100", color: "#EF4444", border: "rgba(239, 68, 68, 0.2)", label: "🔥 Nóng hổi" },
+  warm: { bg: "bg-amber-50/70 text-amber-600 border-amber-100", color: "#F59E0B", border: "rgba(245, 158, 11, 0.2)", label: "☀️ Ấm áp" },
+  cold: { bg: "bg-blue-50/70 text-blue-600 border-blue-100", color: "#3B82F6", border: "rgba(59, 130, 246, 0.2)", label: "❄️ Lạnh lẽo" },
 };
 
 interface Lead {
@@ -126,7 +126,7 @@ export function DashboardPage() {
       count,
       pct: totalLeads > 0 ? Math.round((count / totalLeads) * 100) : 0,
       color: pkg === "TK135" ? "#F59E0B"
-        : pkg === "TK199" ? "#A855F7"
+        : pkg === "TK199" ? "#8B5CF6"
         : pkg === "eSIM Premium" ? "#0055A5"
         : pkg === "MAX299" ? "#EF4444"
         : pkg === "TK79" ? "#10B981" : "#64748B"
@@ -157,7 +157,6 @@ export function DashboardPage() {
     { stage: "Thành công (Ký HĐ)", count: Math.round(totalLeads * 0.15), color: "#10B981", value: `${((potentialRevenueVND * 0.15) / 1000000).toFixed(1)}M` },
   ];
 
-  // Latest 5 leads formatted
   const formatPhone = (phone: string) => {
     if (!phone) return "";
     const cleaned = phone.replace(/\s/g, "");
@@ -194,40 +193,34 @@ export function DashboardPage() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80vh", gap: 12, color: "#64748B" }}>
-        <Activity size={32} style={{ animation: "spin 2s linear infinite", color: "#0055A5" }} />
-        <span style={{ fontWeight: 600 }}>Đang phân tích dữ liệu bán hàng...</span>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+      <div className="flex flex-col items-center justify-center h-[75vh] gap-3 text-slate-400 font-outfit">
+        <Activity size={32} className="animate-spin text-[#0055A5]" />
+        <span className="font-bold text-sm">Đang phân tích dữ liệu bán hàng...</span>
       </div>
     );
   }
 
   return (
-    <div style={{ fontFamily: "'Outfit', sans-serif", display: "flex", flexDirection: "column", gap: 24, paddingBottom: 40 }}>
+    <div className="font-outfit flex flex-col gap-6 pb-10">
       {/* Header section with telemetry */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E2E8F0", paddingBottom: 16 }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200/60 pb-5 gap-4">
         <div>
-          <h1 style={{ color: "#0F172A", fontWeight: 900, fontSize: 24, margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+          <h1 className="text-[#0F172A] font-black text-2xl tracking-tight">
             Giám Sát Doanh Thu & Phễu Bán Hàng
           </h1>
-          <p style={{ color: "#64748B", fontSize: 13, margin: "4px 0 0 0" }}>Báo cáo hiệu quả tư vấn tự động của Trợ lý ảo Mia AI và đa kênh viễn thông</p>
+          <p className="text-slate-400 text-xs font-semibold mt-1">Báo cáo hiệu quả tư vấn tự động của Trợ lý ảo Mia AI và đa kênh viễn thông</p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 10, padding: "8px 14px" }}>
-            <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981", boxShadow: "0 0 8px #10B981", display: "inline-block", animation: "pulse 2.5s infinite" }} />
-            <span style={{ color: "#065F46", fontSize: 12, fontWeight: 700 }}>Mia AI Core Active</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl px-3.5 py-1.5 shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10B981] animate-pulse" />
+            <span className="text-emerald-700 text-xs font-bold">Mia AI Core Active</span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#F1F5F9", borderRadius: 10, padding: "6px 12px", border: "1px solid #E2E8F0" }}>
-            <Calendar size={14} style={{ color: "#64748B" }} />
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-1.5">
+            <Calendar size={13} className="text-slate-400" />
             <select
               value={period}
               onChange={(e) => setPeriod(e.target.value)}
-              style={{ border: "none", outline: "none", fontSize: 12, fontWeight: 700, color: "#334155", background: "transparent", cursor: "pointer", fontFamily: "'Outfit', sans-serif" }}
+              className="border-none outline-none text-xs font-bold text-slate-600 bg-transparent cursor-pointer font-outfit"
             >
               <option>Hôm nay</option>
               <option>7 ngày qua</option>
@@ -238,36 +231,41 @@ export function DashboardPage() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 18 }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {kpiData.map((k, i) => {
           const Icon = k.icon;
           return (
             <motion.div
               key={k.title}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08, type: "spring", stiffness: 100 }}
-              className="admin-card"
-              style={{ padding: 22, display: "flex", flexDirection: "column", gap: 16 }}
+              transition={{ delay: i * 0.05 }}
+              className="bg-white rounded-3xl p-5 border border-slate-200/60 shadow-xs flex flex-col gap-4 hover:shadow-md transition-all duration-300"
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div className="flex justify-between items-start">
                 <div>
-                  <div style={{ color: "#94A3B8", fontSize: 11, fontWeight: 800, letterSpacing: 1, marginBottom: 6 }}>{k.title.toUpperCase()}</div>
-                  <div style={{ color: "#0F172A", fontSize: "2.1rem", fontWeight: 900, lineHeight: 1, letterSpacing: -0.5 }}>{k.value}</div>
+                  <div className="text-slate-400 text-[10px] font-bold tracking-widest uppercase mb-1.5">{k.title}</div>
+                  <div className="text-slate-800 text-2xl font-black tracking-tight">{k.value}</div>
                 </div>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: `${k.color}10`, border: `1px solid ${k.color}25`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Icon size={20} style={{ color: k.color }} />
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center border shrink-0"
+                  style={{
+                    backgroundColor: `${k.color}08`,
+                    borderColor: `${k.color}18`,
+                  }}
+                >
+                  <Icon size={18} style={{ color: k.color }} />
                 </div>
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: "1px dashed #F1F5F9", paddingTop: 12 }}>
+              <div className="flex justify-between items-end border-t border-slate-100 border-dashed pt-3.5">
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
-                    {k.up ? <TrendingUp size={12} style={{ color: "#10B981" }} /> : <TrendingDown size={12} style={{ color: "#EF4444" }} />}
-                    <span style={{ color: k.up ? "#10B981" : "#EF4444", fontSize: 12, fontWeight: 700 }}>{k.change}</span>
+                  <div className="flex items-center gap-1 mb-0.5">
+                    {k.up ? <TrendingUp size={11} className="text-emerald-500" /> : <TrendingDown size={11} className="text-red-500" />}
+                    <span className={`text-xs font-bold ${k.up ? "text-emerald-500" : "text-red-500"}`}>{k.change}</span>
                   </div>
-                  <div style={{ color: "#94A3B8", fontSize: 11 }}>{k.sub}</div>
+                  <div className="text-slate-400 text-[10px] font-semibold">{k.sub}</div>
                 </div>
-                <div style={{ paddingBottom: 4 }}>
+                <div className="pb-1">
                   <Spark data={k.data} color={k.color} />
                 </div>
               </div>
@@ -278,98 +276,95 @@ export function DashboardPage() {
 
       {/* Main Stats / Funnel Pipeline section */}
       <motion.div
-        initial={{ opacity: 0, y: 16 }}
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-        className="admin-card"
-        style={{ padding: 24 }}
+        transition={{ delay: 0.2 }}
+        className="bg-white rounded-3xl p-6 border border-slate-200/60 shadow-xs hover:shadow-md transition-all duration-300"
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
           <div>
-            <div style={{ color: "#0F172A", fontWeight: 800, fontSize: 16, display: "flex", alignItems: "center", gap: 6 }}>
-              <Zap size={16} style={{ color: "#F59E0B" }} />
+            <div className="text-slate-800 font-extrabold text-base flex items-center gap-2">
+              <Zap size={16} className="text-amber-500 fill-amber-500" />
               Phễu Chuyển Đổi & Ước Lượng Dòng Tiền Viễn Thông
             </div>
-            <div style={{ color: "#94A3B8", fontSize: 12, marginTop: 4 }}>Tiến trình khách hàng từ bước làm quen với Bot đến khi đăng ký gói cước thành công</div>
+            <div className="text-slate-400 text-xs font-semibold mt-0.5">Tiến trình khách hàng từ bước làm quen với Bot đến khi đăng ký gói cước thành công</div>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
+          <button
             onClick={() => navigate("/admin/leads")}
-            className="gradient-btn-primary"
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 16px", fontSize: 12 }}
+            className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-gradient-to-r from-[#0055A5] to-[#003B75] text-white border-none font-bold text-xs cursor-pointer shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0"
           >
             Quản lý Leads <ArrowRight size={13} />
-          </motion.button>
+          </button>
         </div>
-        
-        <div style={{ display: "flex", gap: 16, alignItems: "flex-end", background: "rgba(248, 250, 252, 0.5)", padding: "24px 20px", borderRadius: 20, border: "1px solid #F1F5F9" }}>
+
+        <div className="flex flex-col md:flex-row gap-5 items-stretch bg-slate-50/40 p-5 rounded-2xl border border-slate-100/60">
           {pipelineData.map((s, i) => (
-            <div key={s.stage} style={{ flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-                <span style={{ color: "#0F172A", fontSize: 15, fontWeight: 900 }}>{s.count}</span>
-                <span style={{ color: "#64748B", fontSize: 10, fontWeight: 600 }}>tương tác</span>
+            <div key={s.stage} className="flex-1 flex flex-col justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200/40 shadow-xs">
+              <div className="flex justify-between items-start">
+                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">{s.stage}</span>
+                <span className="text-slate-800 text-sm font-black">{s.count}</span>
               </div>
-              <div style={{ position: "relative", width: "100%" }}>
-                <motion.div
-                  initial={{ height: 0 }}
-                  animate={{ height: 50 + Math.min(s.count * 1.8, 140) }}
-                  transition={{ duration: 0.9, delay: i * 0.08, ease: "easeOut" }}
-                  style={{
-                    borderRadius: "10px 10px 6px 6px",
-                    background: `linear-gradient(180deg, ${s.color}, ${s.color}88)`,
-                    width: "100%",
-                    boxShadow: `0 4px 14px ${s.color}20`,
-                    display: "flex",
-                    alignItems: "flex-end",
-                    justifyContent: "center",
-                    paddingBottom: 10
-                  }}
-                >
-                  <span style={{ color: "white", fontSize: 10, fontWeight: 800, opacity: 0.9 }}>{(s.count / (totalSessions || 1) * 100).toFixed(0)}%</span>
-                </motion.div>
+              <div>
+                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-2">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(s.count / (totalSessions || 1)) * 100}%` }}
+                    transition={{ duration: 0.8, delay: i * 0.05 }}
+                    className="h-full rounded-full"
+                    style={{ background: s.color }}
+                  />
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-bold">
+                  <span className="text-slate-400">Tỷ lệ:</span>
+                  <span style={{ color: s.color }}>
+                    {((s.count / (totalSessions || 1)) * 100).toFixed(0)}%
+                  </span>
+                </div>
               </div>
-              <div style={{ textAlign: "center", minHeight: 32 }}>
-                <div style={{ color: "#334155", fontSize: 12, fontWeight: 700, lineHeight: 1.3 }}>{s.stage}</div>
-                {s.value !== "—" && <div style={{ color: s.color, fontSize: 11, fontWeight: 800, marginTop: 2 }}>{s.value}đ</div>}
-              </div>
+              {s.value !== "—" && (
+                <div className="border-t border-slate-100 pt-2 flex justify-between items-center text-[10px] font-black">
+                  <span className="text-slate-400">Dòng tiền tiềm năng:</span>
+                  <span style={{ color: s.color }}>{s.value}đ</span>
+                </div>
+              )}
             </div>
           ))}
         </div>
       </motion.div>
 
       {/* Bottom Row: Recent Leads & Top Packages */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 20 }}>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         {/* Leads Table */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="admin-card"
-          style={{ overflow: "hidden" }}
+          transition={{ delay: 0.25 }}
+          className="xl:col-span-2 bg-white rounded-3xl border border-slate-200/60 shadow-xs overflow-hidden hover:shadow-md transition-all duration-300"
         >
-          <div style={{ padding: "20px 24px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
             <div>
-              <div style={{ color: "#0F172A", fontWeight: 800, fontSize: 15 }}>Khách hàng tiềm năng mới</div>
-              <div style={{ color: "#94A3B8", fontSize: 11, marginTop: 2 }}>Cập nhật liên tục từ chatbot RAG</div>
+              <div className="text-slate-800 font-extrabold text-base">Khách hàng tiềm năng mới</div>
+              <div className="text-slate-400 text-xs font-semibold mt-0.5">Cập nhật liên tục từ chatbot RAG</div>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(0, 85, 165, 0.08)", border: "1px solid rgba(0, 85, 165, 0.15)", borderRadius: 8, padding: "4px 10px" }}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0055A5", animation: "pulse 2s infinite" }} />
-              <span style={{ color: "#0055A5", fontSize: 11, fontWeight: 700 }}>Real-time</span>
+            <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0055A5] animate-pulse" />
+              <span className="text-[#0055A5] text-[10px] font-bold">Thời gian thực</span>
             </div>
           </div>
-          
+
           {latestLeads.length === 0 ? (
-            <div style={{ padding: "50px", textAlign: "center", color: "#64748B" }}>
+            <div className="p-12 text-center text-slate-400 text-sm font-bold">
               Chưa có cuộc trò chuyện hoàn tất để xuất thông tin khách hàng.
             </div>
           ) : (
-            <div className="custom-scrollbar" style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
                 <thead>
-                  <tr style={{ background: "#F8FAFC", borderBottom: "1px solid #F1F5F9" }}>
-                    {["Khách hàng", "Gói cước quan tâm", "Lead Score", "Phân loại", "Thời gian", ""].map(h => (
-                      <th key={h} style={{ padding: "12px 20px", color: "#64748B", fontSize: 10, fontWeight: 800, letterSpacing: 0.5 }}>{h.toUpperCase()}</th>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    {["Khách hàng", "Gói quan tâm", "Độ nóng", "Phân loại", "Thời gian", ""].map(h => (
+                      <th key={h} className="px-5 py-3.5 text-slate-400 font-extrabold text-[10px] tracking-wider">
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
@@ -379,60 +374,50 @@ export function DashboardPage() {
                     return (
                       <tr
                         key={i}
-                        style={{ borderBottom: "1px solid #F8FAFC", transition: "background 0.2s" }}
-                        onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = "rgba(0, 85, 165, 0.01)"}
-                        onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = "transparent"}
+                        className="border-b border-slate-100/80 hover:bg-slate-50/30 transition-colors duration-150"
                       >
-                        <td style={{ padding: "14px 20px", whiteSpace: "nowrap" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg, #0055A5, #E4002B)`, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 12, fontWeight: 800, flexShrink: 0 }}>
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0055A5] to-[#E4002B] flex items-center justify-center text-white text-xs font-extrabold shrink-0 shadow-xs">
                               {l.name.charAt(0)}
                             </div>
                             <div>
-                              <div style={{ color: "#0F172A", fontWeight: 700, fontSize: 13 }}>{l.name}</div>
-                              <div style={{ color: "#64748B", fontSize: 11 }}>{l.phone}</div>
+                              <div className="text-slate-800 font-bold text-xs">{l.name}</div>
+                              <div className="text-slate-400 text-[10px] font-bold mt-0.5">{l.phone}</div>
                             </div>
                           </div>
                         </td>
-                        <td style={{ padding: "14px 20px" }}>
-                          <span style={{ background: "rgba(0, 85, 165, 0.05)", color: "#0055A5", border: "1px solid rgba(0, 85, 165, 0.15)", borderRadius: 8, padding: "4px 10px", fontSize: 11, fontWeight: 700 }}>
+                        <td className="px-5 py-3.5">
+                          <span className="bg-[#0055A5]/5 text-[#0055A5] border border-[#0055A5]/10 rounded-lg px-2.5 py-1 text-[10px] font-bold">
                             {l.pkg}
                           </span>
                         </td>
-                        <td style={{ padding: "14px 20px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <div style={{ width: 44, height: 5, borderRadius: 3, background: "#E2E8F0", overflow: "hidden" }}>
-                              <div style={{ height: "100%", width: `${l.score}%`, background: l.score > 80 ? "#10B981" : l.score > 60 ? "#F59E0B" : "#3B82F6", borderRadius: 3 }} />
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-2">
+                            <div className="w-12 bg-slate-100 h-1 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full"
+                                style={{
+                                  width: `${l.score}%`,
+                                  backgroundColor: l.score > 80 ? "#10B981" : l.score > 60 ? "#F59E0B" : "#3B82F6",
+                                }}
+                              />
                             </div>
-                            <span style={{ color: "#1E293B", fontSize: 12, fontWeight: 700 }}>{l.score}</span>
+                            <span className="text-slate-700 font-extrabold text-xs">{l.score}</span>
                           </div>
                         </td>
-                        <td style={{ padding: "14px 20px" }}>
-                          <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, borderRadius: 8, padding: "3px 8px", fontSize: 10, fontWeight: 800, letterSpacing: 0.3 }}>
+                        <td className="px-5 py-3.5">
+                          <span className={`inline-block border rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${s.bg}`}>
                             {s.label}
                           </span>
                         </td>
-                        <td style={{ padding: "14px 20px", color: "#94A3B8", fontSize: 12 }}>{l.time} trước</td>
-                        <td style={{ padding: "14px 20px" }}>
+                        <td className="px-5 py-3.5 text-slate-400 text-xs font-semibold">{l.time} trước</td>
+                        <td className="px-5 py-3.5 text-right">
                           <a
                             href={`tel:${l.phone}`}
-                            style={{
-                              display: "inline-flex",
-                              textDecoration: "none",
-                              alignItems: "center",
-                              gap: 4,
-                              background: "linear-gradient(135deg, #0055A5, #0077D5)",
-                              borderRadius: 8,
-                              padding: "6px 12px",
-                              color: "white",
-                              fontSize: 11,
-                              fontWeight: 700,
-                              cursor: "pointer",
-                              fontFamily: "'Outfit', sans-serif",
-                              boxShadow: "0 4px 12px rgba(0, 85, 165, 0.2)"
-                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#0055A5] to-[#004B91] hover:from-[#004B91] hover:to-[#0055A5] text-white font-bold text-[10px] tracking-wider uppercase cursor-pointer transition-all hover:scale-102 active:scale-98 shadow-xs border-none"
                           >
-                            <Phone size={11} /> Gọi
+                            <Phone size={10} /> Gọi ngay
                           </a>
                         </td>
                       </tr>
@@ -446,37 +431,37 @@ export function DashboardPage() {
 
         {/* Package Interest distribution */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-          className="admin-card"
-          style={{ padding: 22 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white rounded-3xl border border-slate-200/60 shadow-xs p-6 hover:shadow-md transition-all duration-300"
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-            <Award size={16} style={{ color: "#E4002B" }} />
-            <div style={{ color: "#0F172A", fontWeight: 800, fontSize: 14 }}>Gói Cước Ưa Chuộng Nhất</div>
+          <div className="flex items-center gap-2 mb-1">
+            <Award size={16} className="text-[#E4002B]" />
+            <div className="text-slate-800 font-extrabold text-base">Gói Cước Ưa Chuộng Nhất</div>
           </div>
-          <div style={{ color: "#94A3B8", fontSize: 12, marginBottom: 20 }}>Tỷ lệ quan tâm đăng ký từ phễu RAG</div>
-          
+          <div className="text-slate-400 text-xs font-semibold mb-6">Tỷ lệ quan tâm đăng ký từ phễu RAG</div>
+
           {topIntents.length === 0 ? (
-            <div style={{ padding: "30px 0", textAlign: "center", color: "#64748B" }}>Chưa có đủ dữ liệu.</div>
+            <div className="py-8 text-center text-slate-400 text-sm font-bold">Chưa có đủ dữ liệu.</div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="flex flex-col gap-4">
               {topIntents.map(it => (
-                <div key={it.pkg} style={{ background: "rgba(248, 250, 252, 0.5)", border: "1px solid #F1F5F9", borderRadius: 14, padding: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ color: "#1E293B", fontSize: 13, fontWeight: 700 }}>{it.pkg}</span>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                      <span style={{ color: "#64748B", fontSize: 12 }}>{it.count} khách</span>
-                      <span style={{ color: it.color, fontSize: 12, fontWeight: 800 }}>{it.pct}%</span>
+                <div key={it.pkg} className="bg-slate-50/40 border border-slate-100/80 rounded-2xl p-4 transition-colors hover:bg-slate-50/80">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-slate-700 font-bold text-xs">{it.pkg}</span>
+                    <div className="flex gap-2 items-center">
+                      <span className="text-slate-400 text-[10px] font-semibold">{it.count} khách</span>
+                      <span className="text-xs font-black" style={{ color: it.color }}>{it.pct}%</span>
                     </div>
                   </div>
-                  <div style={{ height: 6, borderRadius: 3, background: "#E2E8F0", overflow: "hidden" }}>
+                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${it.pct}%` }}
-                      transition={{ duration: 0.8, ease: "easeOut", delay: 0.4 }}
-                      style={{ height: "100%", borderRadius: 3, background: it.color }}
+                      transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: it.color }}
                     />
                   </div>
                 </div>
@@ -485,14 +470,6 @@ export function DashboardPage() {
           )}
         </motion.div>
       </div>
-      
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.6; transform: scale(0.95); }
-        }
-      `}</style>
     </div>
   );
 }
-

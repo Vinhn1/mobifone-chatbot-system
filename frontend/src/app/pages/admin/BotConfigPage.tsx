@@ -33,8 +33,17 @@ const LEAD_FIELDS = [
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <button onClick={() => onChange(!value)} style={{ width: 44, height: 24, borderRadius: 12, border: "none", cursor: "pointer", background: value ? "#0055A5" : "#E2E8F0", position: "relative", transition: "background 0.2s" }}>
-      <div style={{ width: 18, height: 18, borderRadius: "50%", background: "white", position: "absolute", top: 3, left: value ? 23 : 3, transition: "left 0.2s", boxShadow: "0 1px 4px rgba(0,0,0,0.15)" }} />
+    <button
+      onClick={() => onChange(!value)}
+      className={`w-11 h-6 rounded-full border-none cursor-pointer relative transition-all duration-200 ease-in-out outline-none ${
+        value ? "bg-[#0055A5]" : "bg-slate-200"
+      }`}
+    >
+      <div
+        className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-all duration-200 ease-in-out shadow-xs ${
+          value ? "left-6" : "left-1"
+        }`}
+      />
     </button>
   );
 }
@@ -65,7 +74,7 @@ export function BotConfigPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // Mock states for behavior triggers and lead fields (preserved for aesthetic layouts)
+  // Mock states for behavior triggers and lead fields
   const [fields, setFields] = useState(LEAD_FIELDS);
   const [settings, setSettings] = useState({
     urgencyMode: true,
@@ -160,32 +169,24 @@ export function BotConfigPage() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80vh", gap: 12, color: "#64748B" }}>
-        <Activity size={32} style={{ animation: "spin 2s linear infinite", color: "#0055A5" }} />
-        <span style={{ fontWeight: 600 }}>Đang tải cấu hình Mia AI...</span>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+      <div className="flex flex-col items-center justify-center h-[75vh] gap-3 text-slate-400 font-outfit">
+        <Activity size={32} className="animate-spin text-[#0055A5]" />
+        <span className="font-bold text-sm">Đang tải cấu hình Mia AI...</span>
       </div>
     );
   }
 
   return (
-    <div style={{ fontFamily: "'Outfit',sans-serif", display: "flex", flexDirection: "column", gap: 24, paddingBottom: 40 }}>
+    <div className="font-outfit flex flex-col gap-6 pb-12">
       {/* Upper Action Bar */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E2E8F0", paddingBottom: 16 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: "linear-gradient(135deg, #0055A5, #E4002B)", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}>
-              <Bot size={22} />
-            </div>
-            <div>
-              <h1 style={{ color: "#0F172A", fontWeight: 900, fontSize: 22, margin: 0 }}>Cấu hình Mia AI Agent</h1>
-              <p style={{ color: "#64748B", fontSize: 13, margin: 0 }}>Hệ sinh thái Tri thức RAG & Tích hợp Kênh Phân phối Viễn thông MobiFone</p>
-            </div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200/60 pb-5 gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0055A5] to-[#E4002B] flex items-center justify-center text-white shadow-md shadow-blue-500/10">
+            <Bot size={22} />
+          </div>
+          <div>
+            <h1 className="text-[#0F172A] font-black text-xl tracking-tight">Cấu hình Mia AI Agent</h1>
+            <p className="text-slate-400 text-xs font-semibold mt-0.5">Hệ sinh thái Tri thức RAG & Tích hợp Kênh Phân phối Viễn thông MobiFone</p>
           </div>
         </div>
         <motion.button
@@ -193,81 +194,80 @@ export function BotConfigPage() {
           disabled={saving}
           whileHover={{ scale: 1.02, y: -1 }}
           whileTap={{ scale: 0.98 }}
-          className="gradient-btn-primary"
-          style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 24px", fontSize: 14, boxShadow: "0 8px 20px rgba(0, 85, 165, 0.25)" }}
+          className="gradient-btn-primary flex items-center gap-2 px-6 py-3 text-xs font-black tracking-wider uppercase shadow-lg shadow-blue-500/20"
         >
           {saved ? (
-            <><Check size={16} /> Đã lưu cấu hình!</>
+            <><Check size={14} /> Đã lưu cấu hình!</>
           ) : saving ? (
-            <><Activity size={16} style={{ animation: "spin 1.5s linear infinite" }} /> Đang lưu...</>
+            <><Activity size={14} className="animate-spin" /> Đang lưu...</>
           ) : (
-            <><Save size={16} /> Lưu Thay đổi</>
+            <><Save size={14} /> Lưu Thay đổi</>
           )}
         </motion.button>
       </div>
 
       {/* Main Configurations Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1.20fr", gap: 20 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* LEFT COLUMN: Bot Core Brain & Parameters */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div className="flex flex-col gap-5">
           {/* Persona Avatar Live Card */}
-          <div style={{ background: "linear-gradient(135deg, #0A1628, #0B2545)", borderRadius: 24, padding: 26, border: "1px solid rgba(0, 180, 255, 0.2)", display: "flex", flexDirection: "column", alignItems: "center", gap: 20, boxShadow: "0 10px 30px rgba(10, 22, 40, 0.3)" }}>
-            <div style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: 800, letterSpacing: 2 }}>MIA LIVE CORE AGENT</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(34, 197, 94, 0.15)", borderRadius: 10, padding: "4px 10px", border: "1px solid rgba(34, 197, 94, 0.3)" }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 8px #22C55E", display: "inline-block" }} />
-                <span style={{ color: "#22C55E", fontSize: 11, fontWeight: 700 }}>Trực Tuyến</span>
+          <div className="bg-gradient-to-br from-[#0A1628] to-[#0B2545] rounded-3xl p-6.5 border border-[#00B4FF]/20 flex flex-col items-center gap-5 shadow-xl shadow-slate-950/20">
+            <div className="w-full flex justify-between items-center">
+              <span className="text-white/40 text-[9px] font-black tracking-widest uppercase">Mia Live Core Agent</span>
+              <div className="flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 rounded-lg px-2.5 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#22C55E]" />
+                <span className="text-emerald-400 text-[10px] font-bold">Trực Tuyến</span>
               </div>
             </div>
             
             <motion.div
-              animate={{ y: [-5, 5, -5] }}
+              animate={{ y: [-4, 4, -4] }}
               transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              style={{ filter: "drop-shadow(0 12px 30px rgba(0, 180, 255, 0.4))", margin: "10px 0" }}
+              className="filter drop-shadow-[0_12px_24px_rgba(0,180,255,0.3)] my-2"
             >
               <RobotAvatar size={105} state="happy" />
             </motion.div>
 
-            <div style={{ textAlign: "center" }}>
-              <div style={{ color: "white", fontWeight: 900, fontSize: 20, letterSpacing: 0.5 }}>Mia AI Chatbot</div>
-              <div style={{ color: "#38BDF8", fontSize: 13, fontWeight: 600, marginTop: 4 }}>Chuyên Viên Tư Vấn Viễn Thông MobiFone</div>
+            <div className="text-center">
+              <div className="text-white font-black text-lg tracking-wide">Mia AI Chatbot</div>
+              <div className="text-[#38BDF8] text-xs font-bold mt-1">Chuyên Viên Tư Vấn Viễn Thông MobiFone</div>
             </div>
 
-            <div style={{ display: "flex", gap: 8, width: "100%", marginTop: 6 }}>
+            <div className="flex gap-2 w-full mt-1.5">
               {[
-                { label: "Mô hình Core LLM", value: "Qwen 2.5 (14B)", color: "#38BDF8" },
-                { label: "Nhiệt độ (Temp)", value: temperature.toString(), color: "#FB923C" },
-                { label: "Max Tokens", value: maxTokens.toString(), color: "#4ADE80" },
+                { label: "Mô hình Core LLM", value: "Qwen 2.5 (14B)", color: "text-[#38BDF8]" },
+                { label: "Nhiệt độ (Temp)", value: temperature.toString(), color: "text-amber-400" },
+                { label: "Max Tokens", value: maxTokens.toString(), color: "text-emerald-400" },
               ].map(s => (
-                <div key={s.label} style={{ flex: 1, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "12px 8px", textAlign: "center", backdropFilter: "blur(4px)" }}>
-                  <div style={{ color: s.color, fontWeight: 900, fontSize: "1.1rem", marginBottom: 2 }}>{s.value}</div>
-                  <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: 600 }}>{s.label.toUpperCase()}</div>
+                <div key={s.label} className="flex-1 bg-white/5 border border-white/5 rounded-2xl py-3 px-1 text-center backdrop-blur-xs">
+                  <div className={`font-black text-sm mb-0.5 ${s.color}`}>{s.value}</div>
+                  <div className="text-white/45 text-[9px] font-bold tracking-wider uppercase">{s.label}</div>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Model AI Parameters Sliders */}
-          <div className="admin-card" style={{ padding: 24 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <Zap size={16} style={{ color: "#0055A5" }} />
-              <div style={{ color: "#0F172A", fontWeight: 800, fontSize: 16 }}>Tham số mô hình AI</div>
+          <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap size={16} className="text-[#0055A5]" />
+              <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Tham số mô hình AI</div>
             </div>
-            <p style={{ color: "#64748B", fontSize: 12, margin: "0 0 20px 0" }}>Hiệu chỉnh tính sáng tạo và khối lượng từ ngữ phản hồi tối đa của Agent</p>
+            <p className="text-slate-400 text-xs font-semibold mb-6">Hiệu chỉnh tính sáng tạo và khối lượng từ ngữ phản hồi tối đa của Agent</p>
             
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <div className="flex flex-col gap-5">
               {/* Temperature */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>
+                <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
                   <span>Nhiệt độ (Temperature)</span>
-                  <span style={{ color: "#0055A5", background: "#EFF6FF", border: "1px solid #BFDBFE", padding: "2px 8px", borderRadius: 6 }}>{temperature}</span>
+                  <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{temperature}</span>
                 </div>
                 <input
                   type="range" min="0" max="1" step="0.1"
                   value={temperature} onChange={e => setTemperature(parseFloat(e.target.value))}
-                  style={{ width: "100%", accentColor: "#0055A5", cursor: "pointer" }}
+                  className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
                 />
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94A3B8", marginTop: 4 }}>
+                <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-2">
                   <span>Chính xác & Logic (0.1)</span>
                   <span>Sáng tạo & Đa dạng (1.0)</span>
                 </div>
@@ -275,27 +275,27 @@ export function BotConfigPage() {
 
               {/* Top P */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>
+                <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
                   <span>Độ chọn lọc từ ngữ (Top P)</span>
-                  <span style={{ color: "#0055A5", background: "#EFF6FF", border: "1px solid #BFDBFE", padding: "2px 8px", borderRadius: 6 }}>{topP}</span>
+                  <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{topP}</span>
                 </div>
                 <input
                   type="range" min="0.1" max="1.0" step="0.05"
                   value={topP} onChange={e => setTopP(parseFloat(e.target.value))}
-                  style={{ width: "100%", accentColor: "#0055A5", cursor: "pointer" }}
+                  className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
                 />
               </div>
 
               {/* Max Tokens */}
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, color: "#334155", marginBottom: 8 }}>
+                <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
                   <span>Giới hạn từ tối đa (Max Tokens)</span>
-                  <span style={{ color: "#0055A5", background: "#EFF6FF", border: "1px solid #BFDBFE", padding: "2px 8px", borderRadius: 6 }}>{maxTokens} từ</span>
+                  <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{maxTokens} từ</span>
                 </div>
                 <input
                   type="range" min="64" max="1024" step="64"
                   value={maxTokens} onChange={e => setMaxTokens(parseInt(e.target.value))}
-                  style={{ width: "100%", accentColor: "#0055A5", cursor: "pointer" }}
+                  className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
                 />
               </div>
             </div>
@@ -303,25 +303,25 @@ export function BotConfigPage() {
         </div>
 
         {/* RIGHT COLUMN: Connection Channels & Strategy */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div className="flex flex-col gap-5">
           {/* Telecom Channels Hub */}
-          <div className="admin-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
+          <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs flex flex-col gap-4">
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <MessageSquare size={16} style={{ color: "#E4002B" }} />
-                <div style={{ color: "#0F172A", fontWeight: 800, fontSize: 16 }}>Kênh truyền thông & Webhook</div>
+              <div className="flex items-center gap-2 mb-1">
+                <MessageSquare size={16} className="text-[#E4002B]" />
+                <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Kênh truyền thông & Webhook</div>
               </div>
-              <p style={{ color: "#64748B", fontSize: 12, margin: 0 }}>Kết nối chatbot với các kênh chính thống của MobiFone</p>
+              <p className="text-slate-400 text-xs font-semibold">Kết nối chatbot với các kênh chính thống của MobiFone</p>
             </div>
 
             {/* Facebook Connection Card */}
-            <div style={{ border: "1px solid #E2E8F0", borderRadius: 16, padding: 18, background: fbEnabled ? "#F8FAFC" : "white", transition: "all 0.2s" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: "#E8F0FE", display: "flex", alignItems: "center", justifyContent: "center", color: "#1877F2", fontSize: 18, fontWeight: 900 }}>f</div>
+            <div className={`border rounded-2xl p-4.5 transition-all duration-200 ${fbEnabled ? "border-[#0055A5]/35 bg-slate-50/50" : "border-slate-200 bg-white"}`}>
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-[#1877F2] font-black text-lg">f</div>
                   <div>
-                    <div style={{ color: "#0F172A", fontWeight: 700, fontSize: 14 }}>Tích hợp Facebook Messenger</div>
-                    <div style={{ color: "#94A3B8", fontSize: 11 }}>Đồng bộ chatbot vào Fanpage của MobiFone</div>
+                    <div className="text-slate-800 font-bold text-xs">Tích hợp Facebook Messenger</div>
+                    <div className="text-slate-400 text-[10px] font-semibold mt-0.5">Đồng bộ chatbot vào Fanpage của MobiFone</div>
                   </div>
                 </div>
                 <Toggle value={fbEnabled} onChange={setFbEnabled} />
@@ -333,42 +333,42 @@ export function BotConfigPage() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    style={{ display: "flex", flexDirection: "column", gap: 12, overflow: "hidden", borderTop: "1px solid #F1F5F9", paddingTop: 12 }}
+                    className="flex flex-col gap-3.5 overflow-hidden border-t border-slate-100 pt-3.5"
                   >
                     <div>
-                      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <label style={{ fontSize: 11, fontWeight: 700, color: "#64748B" }}>VERIFY TOKEN WEBHOOK</label>
+                      <div className="flex justify-between mb-1.5">
+                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">Verify Token Webhook</label>
                         <span
                           onClick={() => { navigator.clipboard.writeText(fbVerifyToken); alert("Đã copy Verify Token!"); }}
-                          style={{ color: "#0055A5", fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}
+                          className="text-[#0055A5] text-[10px] font-bold cursor-pointer hover:underline"
                         >
                           Sao chép
                         </span>
                       </div>
                       <input
                         type="text" value={fbVerifyToken} onChange={e => setFbVerifyToken(e.target.value)}
-                        placeholder="Nhập verify token tự định nghĩa để verify với Facebook..."
-                        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #CBD5E1", borderRadius: 8, padding: "8px 12px", fontSize: 12, outline: "none", color: "#334155", fontFamily: "monospace" }}
+                        placeholder="Nhập verify token tự định nghĩa..."
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: 11, fontWeight: 700, color: "#64748B", display: "block", marginBottom: 4 }}>PAGE ACCESS TOKEN (TOKEN CỦA TRANG)</label>
-                      <div style={{ display: "flex", alignItems: "center", border: "1px solid #CBD5E1", borderRadius: 8, padding: "0 10px", background: "white" }}>
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Page Access Token</label>
+                      <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
                         <input
                           type={showFbSecret ? "text" : "password"} value={fbPageToken} onChange={e => setFbPageToken(e.target.value)}
                           placeholder="Nhập token dài từ Facebook Developer portal (EAA...)"
-                          style={{ flex: 1, border: "none", outline: "none", padding: "8px 0", fontSize: 12, color: "#334155", fontFamily: "monospace" }}
+                          className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
                         />
-                        <button type="button" onClick={() => setShowFbSecret(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", display: "flex", padding: 0 }}>
+                        <button type="button" onClick={() => setShowFbSecret(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
                           {showFbSecret ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                       </div>
                     </div>
-                    <div style={{ background: "#EFF6FF", border: "1.5px dashed #BFDBFE", borderRadius: 10, padding: "10px 12px", fontSize: 11, color: "#1E40AF", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span>🔗 Callback URL: <strong>http://localhost:3000/facebook/webhook</strong></span>
+                    <div className="bg-blue-50/70 border border-dashed border-blue-200 rounded-xl p-3 text-xs text-blue-700 flex justify-between items-center gap-2">
+                      <span className="font-semibold truncate">🔗 URL: <strong className="font-bold">http://localhost:3000/facebook/webhook</strong></span>
                       <button
                         onClick={() => { navigator.clipboard.writeText("http://localhost:3000/facebook/webhook"); alert("Đã copy URL Facebook Webhook!"); }}
-                        style={{ background: "#DBEAFE", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#1E40AF", cursor: "pointer" }}
+                        className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg px-3 py-1 text-[10px] font-black text-blue-800 cursor-pointer shrink-0"
                       >
                         Copy URL
                       </button>
@@ -379,13 +379,13 @@ export function BotConfigPage() {
             </div>
 
             {/* Zalo Connection Card */}
-            <div style={{ border: "1px solid #E2E8F0", borderRadius: 16, padding: 18, background: zaloEnabled ? "#F8FAFC" : "white", transition: "all 0.2s" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 10, background: "#E0F2FE", display: "flex", alignItems: "center", justifyContent: "center", color: "#0284C7", fontSize: 16, fontWeight: 900 }}>Z</div>
+            <div className={`border rounded-2xl p-4.5 transition-all duration-200 ${zaloEnabled ? "border-[#0055A5]/35 bg-slate-50/50" : "border-slate-200 bg-white"}`}>
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-sky-50 flex items-center justify-center text-[#0284C7] font-black text-lg">Z</div>
                   <div>
-                    <div style={{ color: "#0F172A", fontWeight: 700, fontSize: 14 }}>Tích hợp Zalo Official Account</div>
-                    <div style={{ color: "#94A3B8", fontSize: 11 }}>Cấu hình webhook phản hồi Zalo OA</div>
+                    <div className="text-slate-800 font-bold text-xs">Tích hợp Zalo Official Account</div>
+                    <div className="text-slate-400 text-[10px] font-semibold mt-0.5">Cấu hình webhook phản hồi Zalo OA</div>
                   </div>
                 </div>
                 <Toggle value={zaloEnabled} onChange={setZaloEnabled} />
@@ -397,34 +397,34 @@ export function BotConfigPage() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    style={{ display: "flex", flexDirection: "column", gap: 12, overflow: "hidden", borderTop: "1px solid #F1F5F9", paddingTop: 12 }}
+                    className="flex flex-col gap-3.5 overflow-hidden border-t border-slate-100 pt-3.5"
                   >
                     <div>
-                      <label style={{ fontSize: 11, fontWeight: 700, color: "#64748B", display: "block", marginBottom: 4 }}>ZALO APP ID</label>
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo App ID</label>
                       <input
                         type="text" value={zaloAppId} onChange={e => setZaloAppId(e.target.value)}
                         placeholder="Mã ID ứng dụng Zalo..."
-                        style={{ width: "100%", boxSizing: "border-box", border: "1px solid #CBD5E1", borderRadius: 8, padding: "8px 12px", fontSize: 12, outline: "none", color: "#334155" }}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: 11, fontWeight: 700, color: "#64748B", display: "block", marginBottom: 4 }}>ZALO APP SECRET KEY</label>
-                      <div style={{ display: "flex", alignItems: "center", border: "1px solid #CBD5E1", borderRadius: 8, padding: "0 10px", background: "white" }}>
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo App Secret Key</label>
+                      <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
                         <input
                           type={showZaloSecret ? "text" : "password"} value={zaloSecretKey} onChange={e => setZaloSecretKey(e.target.value)}
                           placeholder="Secret Key cấp từ Zalo Developer..."
-                          style={{ flex: 1, border: "none", outline: "none", padding: "8px 0", fontSize: 12, color: "#334155", fontFamily: "monospace" }}
+                          className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
                         />
-                        <button type="button" onClick={() => setShowZaloSecret(p => !p)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94A3B8", display: "flex", padding: 0 }}>
+                        <button type="button" onClick={() => setShowZaloSecret(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
                           {showZaloSecret ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                       </div>
                     </div>
-                    <div style={{ background: "#EFF6FF", border: "1.5px dashed #BFDBFE", borderRadius: 10, padding: "10px 12px", fontSize: 11, color: "#1E40AF", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span>🔗 Callback URL: <strong>http://localhost:3000/zalo/webhook</strong></span>
+                    <div className="bg-blue-50/70 border border-dashed border-blue-200 rounded-xl p-3 text-xs text-blue-700 flex justify-between items-center gap-2">
+                      <span className="font-semibold truncate">🔗 URL: <strong className="font-bold">http://localhost:3000/zalo/webhook</strong></span>
                       <button
                         onClick={() => { navigator.clipboard.writeText("http://localhost:3000/zalo/webhook"); alert("Đã copy URL Zalo Webhook!"); }}
-                        style={{ background: "#DBEAFE", border: "none", borderRadius: 6, padding: "4px 8px", fontSize: 10, fontWeight: 700, color: "#1E40AF", cursor: "pointer" }}
+                        className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg px-3 py-1 text-[10px] font-black text-blue-800 cursor-pointer shrink-0"
                       >
                         Copy URL
                       </button>
@@ -436,14 +436,14 @@ export function BotConfigPage() {
           </div>
 
           {/* Sales Psychological Strategy Triggers */}
-          <div className="admin-card" style={{ padding: 24 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-              <Target size={16} style={{ color: "#E4002B" }} />
-              <div style={{ color: "#0F172A", fontWeight: 800, fontSize: 16 }}>Kỹ thuật chốt đơn AI (Sales Strategy)</div>
+          <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs">
+            <div className="flex items-center gap-2 mb-1">
+              <Target size={16} className="text-[#E4002B]" />
+              <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Kỹ thuật chốt đơn AI (Sales Strategy)</div>
             </div>
-            <p style={{ color: "#64748B", fontSize: 12, margin: "0 0 16px 0" }}>Kích hoạt các kỹ năng tâm lý tiếp cận khách hàng tự động</p>
+            <p className="text-slate-400 text-xs font-semibold mb-5">Kích hoạt các kỹ năng tâm lý tiếp cận khách hàng tự động</p>
             
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <div className="flex flex-col gap-4">
               {[
                 { key: "urgencyMode", icon: Clock, label: "Tạo cảm giác khẩn cấp (Scarcity)", desc: "Ví dụ: \"Chỉ còn 3 suất khuyến mãi cuối cùng\"" },
                 { key: "socialProof", icon: Star, label: "Bằng chứng cộng đồng (Social Proof)", desc: "Ví dụ: \"23,000 người đã tin dùng và đăng ký\"" },
@@ -452,14 +452,14 @@ export function BotConfigPage() {
               ].map(item => {
                 const Icon = item.icon;
                 return (
-                  <div key={item.key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 8, background: "#F1F5F9", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Icon size={14} style={{ color: "#0055A5" }} />
+                  <div key={item.key} className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                        <Icon size={14} className="text-[#0055A5]" />
                       </div>
                       <div>
-                        <div style={{ color: "#334155", fontWeight: 700, fontSize: 13 }}>{item.label}</div>
-                        <div style={{ color: "#64748B", fontSize: 11 }}>{item.desc}</div>
+                        <div className="text-slate-700 font-bold text-xs">{item.label}</div>
+                        <div className="text-slate-400 text-[10px] font-semibold mt-0.5">{item.desc}</div>
                       </div>
                     </div>
                     <Toggle value={settings[item.key as keyof typeof settings]} onChange={v => setSettings(p => ({ ...p, [item.key]: v }))} />
@@ -472,31 +472,29 @@ export function BotConfigPage() {
       </div>
 
       {/* LOWER SECTION: Lead Capture Fields & Persona Workspace */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1.3fr", gap: 20 }}>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Lead Capture Fields Config */}
-        <div className="admin-card" style={{ padding: 24 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-            <Shield size={16} style={{ color: "#0055A5" }} />
-            <div style={{ color: "#0F172A", fontWeight: 800, fontSize: 16 }}>Dữ liệu phễu cần thu thập</div>
+        <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs">
+          <div className="flex items-center gap-2 mb-1">
+            <Shield size={16} className="text-[#0055A5]" />
+            <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Dữ liệu phễu cần thu thập</div>
           </div>
-          <p style={{ color: "#64748B", fontSize: 12, margin: "0 0 16px 0" }}>Mia AI sẽ khéo léo lấy các thông tin này trong cuộc trò chuyện tự nhiên</p>
+          <p className="text-slate-400 text-xs font-semibold mb-5">Mia AI sẽ khéo léo lấy các thông tin này trong cuộc trò chuyện tự nhiên</p>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="flex flex-col gap-2.5">
             {fields.map((f, i) => (
               <div
                 key={f.key}
-                style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  background: f.active ? "rgba(0, 85, 165, 0.03)" : "#F8FAFC",
-                  border: `1.5px solid ${f.active ? "#93C5FD" : "#E2E8F0"}`,
-                  borderRadius: 12, padding: "10px 14px",
-                  transition: "all 0.2s"
-                }}
+                className={`flex items-center gap-3 border rounded-2xl px-4 py-3 transition-all duration-200 ${
+                  f.active ? "bg-[#0055A5]/3 border-[#0055A5]/25" : "bg-slate-50 border-slate-200/60"
+                }`}
               >
-                <div style={{ width: 22, height: 22, borderRadius: "50%", background: f.active ? "#0055A5" : "#94A3B8", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ color: "white", fontSize: 10, fontWeight: 900 }}>{f.priority}</span>
+                <div className={`w-5.5 h-5.5 rounded-full flex items-center justify-center shrink-0 text-white text-[10px] font-black ${
+                  f.active ? "bg-[#0055A5]" : "bg-slate-400"
+                }`}>
+                  {f.priority}
                 </div>
-                <div style={{ flex: 1, color: "#334155", fontWeight: 700, fontSize: 13 }}>{f.label}</div>
+                <div className="flex-1 text-slate-700 font-bold text-xs">{f.label}</div>
                 <Toggle value={f.active} onChange={v => setFields(prev => prev.map((fi, idx) => idx === i ? { ...fi, active: v } : fi))} />
               </div>
             ))}
@@ -504,40 +502,28 @@ export function BotConfigPage() {
         </div>
 
         {/* System Prompt Workspace */}
-        <div style={{ background: "#0E1B2E", borderRadius: 24, padding: 24, border: "1px solid rgba(0, 180, 255, 0.15)", display: "flex", flexDirection: "column", gap: 14, boxShadow: "0 10px 30px rgba(14, 27, 46, 0.2)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="lg:col-span-7 bg-[#0E1B2E] rounded-3xl p-6 border border-[#00B4FF]/15 flex flex-col gap-4 shadow-xl shadow-slate-950/20">
+          <div className="flex justify-between items-center gap-4">
             <div>
-              <div style={{ color: "white", fontWeight: 900, fontSize: 16 }}>RAG System Persona System Prompt</div>
-              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 2 }}>Định dạng tính cách, luật tương tác và hành vi chốt đơn viễn thông</div>
+              <div className="text-white font-extrabold text-sm">RAG System Persona System Prompt</div>
+              <div className="text-white/40 text-xs font-semibold mt-0.5">Định dạng tính cách, luật tương tác và hành vi chốt đơn viễn thông</div>
             </div>
             <button
               onClick={handleReset}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.06)", color: "white", fontSize: 11, fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.12)"}
-              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.06)"}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white text-[10px] font-bold transition-all cursor-pointer"
             >
-              <RefreshCw size={12} /> Khôi phục mặc định
+              <RefreshCw size={11} /> Khôi phục mặc định
             </button>
           </div>
           
-          <div style={{ position: "relative", width: "100%" }}>
+          <div className="relative w-full">
             <textarea
               value={persona}
               onChange={e => setPersona(e.target.value)}
               rows={12}
-              style={{
-                width: "100%", boxSizing: "border-box",
-                background: "rgba(10, 22, 40, 0.6)",
-                border: "1px solid rgba(56, 189, 248, 0.3)",
-                borderRadius: 14, padding: "16px 18px",
-                fontSize: 13, color: "#38BDF8",
-                fontFamily: "'Fira Code', 'Courier New', monospace",
-                resize: "vertical", outline: "none",
-                lineHeight: 1.6,
-                boxShadow: "inset 0 2px 8px rgba(0,0,0,0.5)"
-              }}
+              className="w-full box-border bg-[#0A1628]/60 border border-[#38BDF8]/30 rounded-2xl p-4 text-xs text-[#38BDF8] font-mono resize-y outline-none leading-relaxed shadow-inner"
             />
-            <div style={{ position: "absolute", bottom: 10, right: 10, color: "rgba(255,255,255,0.25)", fontSize: 10, pointerEvents: "none", fontWeight: 600 }}>
+            <div className="absolute bottom-3 right-4 text-white/30 text-[9px] pointer-events-none font-bold">
               UTF-8 Mode · {persona.length} kí tự
             </div>
           </div>

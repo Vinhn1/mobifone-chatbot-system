@@ -20,46 +20,25 @@ function Slider({ label, value, min, max, step, onChange, desc }: {
   onChange: (v: number) => void; desc?: string;
 }) {
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+    <div className="flex flex-col gap-2">
+      <div className="flex justify-between items-center">
         <div>
-          <span style={{ color: "#E2E8F0", fontSize: 13, fontWeight: 700 }}>{label}</span>
-          {desc && <span style={{ color: "#94A3B8", fontSize: 11, marginLeft: 6 }}>{desc}</span>}
+          <span className="text-slate-200 text-xs font-bold">{label}</span>
+          {desc && <span className="text-slate-500 text-[10px] ml-2 font-medium">{desc}</span>}
         </div>
-        <span
-          style={{
-            background: "rgba(0,180,255,0.15)", border: "1px solid rgba(0,180,255,0.3)",
-            borderRadius: 6, padding: "2px 10px",
-            color: "#60B4FF", fontSize: 13, fontWeight: 800,
-          }}
-        >
+        <span className="bg-[#00B4FF]/12 border border-[#00B4FF]/25 rounded-md px-2 py-0.5 text-[#00B4FF] text-xs font-black">
           {value}
         </span>
       </div>
-      <div style={{ position: "relative", height: 6 }}>
-        <div style={{ position: "absolute", inset: 0, borderRadius: 3, background: "rgba(255,255,255,0.08)" }} />
-        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 3, background: "linear-gradient(90deg,#0055A5,#00B4FF)", width: `${((value - min) / (max - min)) * 100}%` }} />
+      <div className="relative flex items-center h-5">
         <input
-          type="range" min={min} max={max} step={step} value={value}
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
           onChange={e => onChange(Number(e.target.value))}
-          style={{
-            position: "absolute", inset: 0, opacity: 0, cursor: "pointer", width: "100%",
-            margin: 0, padding: 0,
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            left: `${((value - min) / (max - min)) * 100}%`,
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-            width: 16, height: 16,
-            borderRadius: "50%",
-            background: "white",
-            border: "2px solid #0055A5",
-            boxShadow: "0 0 8px rgba(0,85,165,0.4)",
-            pointerEvents: "none",
-          }}
+          className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#00B4FF] outline-none"
         />
       </div>
     </div>
@@ -71,11 +50,9 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: "5px 12px", cursor: "pointer", color: "rgba(255,255,255,0.6)", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontFamily: "'Outfit',sans-serif", transition: "all 0.2s" }}
-      onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.1)"}
-      onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.05)"}
+      className="bg-white/5 border border-white/10 hover:bg-white/10 text-white/60 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer"
     >
-      {copied ? <Check size={12} style={{ color: "#10B981" }} /> : <Copy size={12} />}
+      {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
       {copied ? "Copied!" : "Sao chép"}
     </button>
   );
@@ -205,7 +182,7 @@ export function PromptPlaygroundPage() {
   function renderContent(text: string) {
     return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => {
       if (part.startsWith("**") && part.endsWith("**")) {
-        return <strong key={i}>{part.slice(2, -2)}</strong>;
+        return <strong key={i} className="font-extrabold">{part.slice(2, -2)}</strong>;
       }
       return part.split("\n").map((line, j, arr) => (
         <span key={`${i}-${j}`}>{line}{j < arr.length - 1 && <br />}</span>
@@ -215,103 +192,70 @@ export function PromptPlaygroundPage() {
 
   if (loadingConfig) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80vh", gap: 12, color: "#64748B" }}>
-        <Activity size={32} style={{ animation: "spin 2s linear infinite", color: "#0055A5" }} />
-        <span style={{ fontWeight: 600 }}>Khởi chạy Prompt Playground...</span>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+      <div className="flex flex-col items-center justify-center h-[75vh] gap-3 text-slate-400 font-outfit">
+        <Activity size={32} className="animate-spin text-[#0055A5]" />
+        <span className="font-bold text-sm">Khởi chạy Prompt Playground...</span>
       </div>
     );
   }
 
   return (
-    <div style={{ fontFamily: "'Outfit', sans-serif", height: "calc(100vh - 120px)", display: "flex", flexDirection: "column", gap: 20, paddingBottom: 24 }}>
+    <div className="font-outfit h-[calc(100vh-130px)] flex flex-col gap-5 pb-8">
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #E2E8F0", paddingBottom: 16 }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200/60 pb-5 gap-4">
         <div>
-          <h1 style={{ color: "#0F172A", fontWeight: 900, fontSize: 24, margin: 0 }}>Prompt Playground (Thử nghiệm)</h1>
-          <p style={{ color: "#64748B", fontSize: 13, margin: "4px 0 0 0" }}>Kiểm tra khả năng phản hồi của Bot và tối ưu cấu hình RAG prompt trực tiếp</p>
+          <h1 className="text-[#0F172A] font-black text-2xl tracking-tight">Prompt Playground (Thử nghiệm)</h1>
+          <p className="text-slate-400 text-xs font-semibold mt-1">Kiểm tra khả năng phản hồi của Bot và tối ưu cấu hình RAG prompt trực tiếp</p>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 10, padding: "6px 14px" }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10B981" }} />
-            <span style={{ color: "#10B981", fontSize: 12, fontWeight: 700 }}>Chế độ Sandbox</span>
+        <div className="flex gap-2.5 items-center">
+          <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-xl px-3.5 py-1.5 shadow-xs">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-emerald-700 text-xs font-bold">Chế độ Sandbox</span>
           </div>
-          <div
-            style={{
-              display: "flex", alignItems: "center", gap: 8,
-              background: "white", border: "1.5px solid #E2E8F0", borderRadius: 10, padding: "6px 14px",
-            }}
-          >
-            <Code2 size={14} style={{ color: "#0055A5" }} />
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#334155" }}>Qwen-2.5-7B</span>
-            <ChevronDown size={13} style={{ color: "#94A3B8" }} />
+          <div className="flex items-center gap-2 bg-white border border-slate-200/60 rounded-xl px-3.5 py-1.5 cursor-pointer hover:border-slate-300">
+            <Code2 size={13} className="text-[#0055A5]" />
+            <span className="text-xs font-bold text-slate-600">Qwen-2.5-7B</span>
+            <ChevronDown size={12} className="text-slate-400" />
           </div>
         </div>
       </div>
 
       {/* Main layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "420px 1fr", gap: 16, flex: 1, overflow: "hidden" }}>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 min-h-0">
         {/* Left config pane */}
-        <div
-          style={{
-            background: "#0A1628",
-            borderRadius: 16,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            border: "1px solid rgba(255,255,255,0.05)",
-            boxShadow: "0 8px 32px rgba(10, 22, 40, 0.15)"
-          }}
-        >
+        <div className="lg:col-span-4 bg-[#0A1628] rounded-3xl flex flex-col overflow-hidden border border-white/5 shadow-xl shadow-slate-900/10 min-h-0">
           {/* Section header */}
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Terminal size={15} style={{ color: "#60B4FF" }} />
-              <span style={{ color: "#E2E8F0", fontWeight: 800, fontSize: 13, letterSpacing: 0.5 }}>SYSTEM PROMPT</span>
+          <div className="px-5 py-4 border-b border-white/5 flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-2">
+              <Terminal size={14} className="text-[#00B4FF]" />
+              <span className="text-slate-200 font-extrabold text-[11px] tracking-wider uppercase">System Prompt</span>
             </div>
             <CopyButton text={systemPrompt} />
           </div>
 
           {/* Prompt Editor */}
-          <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", minHeight: 0 }}>
+          <div className="flex-1 overflow-hidden display: flex flex-col min-h-0">
             <textarea
               value={systemPrompt}
               onChange={e => setSystemPrompt(e.target.value)}
-              style={{
-                flex: 1,
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                color: "#94D4FF",
-                fontSize: 13,
-                lineHeight: 1.7,
-                padding: "16px 20px",
-                resize: "none",
-                fontFamily: "'Courier New', 'Monaco', monospace",
-                overflowY: "auto",
-              }}
+              className="flex-1 w-full bg-transparent border-none outline-none text-[#94D4FF] text-xs leading-relaxed p-5 resize-none font-mono overflow-y-auto"
             />
           </div>
 
           {/* Model Params */}
-          <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "20px", flexShrink: 0, display: "flex", flexDirection: "column", gap: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-              <Sliders size={14} style={{ color: "#60B4FF" }} />
-              <span style={{ color: "#E2E8F0", fontWeight: 800, fontSize: 13, letterSpacing: 0.5 }}>THAM SỐ MÔ HÌNH</span>
+          <div className="border-t border-white/5 p-5 shrink-0 flex flex-col gap-4.5">
+            <div className="flex items-center gap-2 mb-1">
+              <Sliders size={14} className="text-[#00B4FF]" />
+              <span className="text-slate-200 font-extrabold text-[11px] tracking-wider uppercase">Tham số mô hình</span>
             </div>
 
             <Slider label="Temperature" desc="Độ sáng tạo" value={temperature} min={0} max={1} step={0.05} onChange={setTemperature} />
             <Slider label="Top-P" desc="Độ đa dạng từ" value={topP} min={0} max={1} step={0.05} onChange={setTopP} />
 
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                <span style={{ color: "#E2E8F0", fontSize: 13, fontWeight: 700 }}>Max Tokens</span>
-                <span style={{ background: "rgba(0,180,255,0.15)", border: "1px solid rgba(0,180,255,0.3)", borderRadius: 6, padding: "2px 10px", color: "#60B4FF", fontSize: 13, fontWeight: 800 }}>{maxTokens}</span>
+            <div className="flex flex-col gap-1.5">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-200 text-xs font-bold">Max Tokens</span>
+                <span className="bg-[#00B4FF]/12 border border-[#00B4FF]/25 rounded-md px-2 py-0.5 text-[#00B4FF] text-xs font-black">{maxTokens}</span>
               </div>
               <Slider label="" value={maxTokens} min={128} max={2048} step={64} onChange={setMaxTokens} />
             </div>
@@ -319,43 +263,35 @@ export function PromptPlaygroundPage() {
             <motion.button
               onClick={send}
               disabled={isLoading || !input.trim()}
-              whileHover={!isLoading && input.trim() ? { scale: 1.01 } : {}}
-              whileTap={!isLoading && input.trim() ? { scale: 0.99 } : {}}
-              style={{
-                width: "100%", padding: "12px", borderRadius: 10,
-                background: isLoading || !input.trim() ? "rgba(255,255,255,0.05)" : "linear-gradient(135deg, #0055A5, #00B4FF)",
-                border: "none",
-                color: isLoading || !input.trim() ? "rgba(255,255,255,0.3)" : "white",
-                fontWeight: 800, fontSize: 13, cursor: isLoading || !input.trim() ? "not-allowed" : "pointer",
-                fontFamily: "'Outfit', sans-serif",
-                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                boxShadow: isLoading || !input.trim() ? "none" : "0 4px 16px rgba(0,85,165,0.25)",
-                transition: "all 0.2s",
-                letterSpacing: 0.5,
-              }}
+              whileTap={!isLoading && input.trim() ? { scale: 0.98 } : {}}
+              className={`w-full py-3.5 rounded-xl border-none font-black text-xs cursor-pointer flex items-center justify-center gap-2 shadow-md transition-all uppercase tracking-wider ${
+                isLoading || !input.trim()
+                  ? "bg-white/5 text-white/30 cursor-not-allowed shadow-none"
+                  : "bg-gradient-to-r from-[#0055A5] to-[#00B4FF] text-white hover:shadow-lg active:scale-95"
+              }`}
             >
-              <Play size={15} />
-              {isLoading ? "ĐANG CHẠY..." : "THỬ NGHIỆM NGAY"}
+              <Play size={14} className={isLoading ? "animate-pulse" : ""} />
+              {isLoading ? "Đang chạy..." : "Thử nghiệm ngay"}
             </motion.button>
           </div>
         </div>
 
         {/* Right Sandbox Chat box */}
-        <div className="admin-card" style={{ display: "flex", flexDirection: "column", overflow: "hidden", background: "white", padding: 0 }}>
+        <div className="lg:col-span-8 bg-white rounded-3xl border border-slate-200/60 shadow-xs flex flex-col overflow-hidden min-h-0">
           {/* Header */}
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid #F1F5F9", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 34, height: 34, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#00B4FF)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(0,85,165,0.15)" }}>
-                <Zap size={15} color="white" />
+          <div className="px-6 py-4.5 border-b border-slate-100 flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0055A5] to-[#00B4FF] flex items-center justify-center shadow-md shadow-blue-500/10">
+                <Zap size={15} className="text-white fill-white" />
               </div>
               <div>
-                <div style={{ color: "#0F172A", fontWeight: 700, fontSize: 14 }}>Khung Chat Thử Nghiệm</div>
-                <div style={{ color: "#94A3B8", fontSize: 11, marginTop: 1 }}>Session ID: {sessionId}</div>
+                <div className="text-slate-800 font-bold text-sm">Khung Chat Thử Nghiệm</div>
+                <div className="text-slate-400 text-[10px] font-bold mt-0.5">Session ID: {sessionId}</div>
               </div>
             </div>
             <button
               onClick={clearChat}
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #E2E8F0", borderRadius: 8, padding: "5px 12px", cursor: "pointer", color: "#64748B", fontSize: 12, fontWeight: 700, fontFamily: "'Outfit', sans-serif" }}
+              className="flex items-center gap-1.5 bg-transparent border border-slate-200 text-slate-500 hover:bg-slate-50 rounded-lg px-3 py-1.5 cursor-pointer text-xs font-bold transition-colors"
             >
               <RotateCcw size={12} /> Xoá chat
             </button>
@@ -364,25 +300,21 @@ export function PromptPlaygroundPage() {
           {/* Messages */}
           <div
             ref={chatContainerRef}
-            style={{
-              flex: 1, overflowY: "auto", padding: "20px",
-              display: "flex", flexDirection: "column", gap: 14,
-              background: "#FAFBFD"
-            }}
+            className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-slate-50/50"
           >
             {messages.length === 0 && (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", color: "#94A3B8", padding: "40px" }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>🧪</div>
-                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: "#64748B" }}>Hộp cát Thử nghiệm Trống</div>
-                <div style={{ fontSize: 13, maxWidth: 360, margin: "0 auto", lineHeight: 1.5 }}>Nhập câu hỏi bất kỳ ở khung bên dưới để AI sử dụng thông tin RAG trả lời theo System Prompt</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginTop: 20 }}>
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                <div className="text-3xl mb-3">🧪</div>
+                <div className="text-slate-600 font-black text-sm mb-1.5">Hộp cát Thử nghiệm Trống</div>
+                <div className="text-slate-400 text-xs font-semibold max-w-xs leading-relaxed">
+                  Nhập câu hỏi bất kỳ ở khung bên dưới để AI sử dụng thông tin RAG trả lời theo System Prompt
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center mt-6">
                   {["Gói cước TK135 có ưu đãi gì?", "eSIM MobiFone đăng ký thế nào?", "Đăng ký chuyển mạng giữ số"].map(s => (
                     <button
                       key={s}
                       onClick={() => { setInput(s); }}
-                      style={{ background: "white", border: "1.5px solid #E2E8F0", borderRadius: 20, padding: "6px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer", color: "#475569", fontFamily: "'Outfit', sans-serif", transition: "all 0.2s" }}
-                      onMouseEnter={e => { const el = e.currentTarget as HTMLButtonElement; el.style.borderColor = "#0055A5"; el.style.color = "#0055A5"; }}
-                      onMouseLeave={e => { const el = e.currentTarget as HTMLButtonElement; el.style.borderColor = "#E2E8F0"; el.style.color = "#475569"; }}
+                      className="bg-white border border-slate-200 hover:border-[#0055A5] hover:text-[#0055A5] rounded-full px-4 py-1.5 text-xs font-bold text-slate-500 transition-all cursor-pointer"
                     >
                       {s}
                     </button>
@@ -392,29 +324,31 @@ export function PromptPlaygroundPage() {
             )}
 
             {messages.map((msg, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: msg.role === "user" ? "flex-end" : "flex-start", gap: 8, alignItems: "flex-end" }}>
+              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} gap-2.5 items-end`}>
                 {msg.role === "assistant" && (
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#00B4FF)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 12, color: "white", fontWeight: "bold" }}>M</div>
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0055A5] to-[#00B4FF] flex items-center justify-center shrink-0 text-white text-xs font-black shadow-xs">
+                    M
+                  </div>
                 )}
-                <div style={{ maxWidth: "75%" }}>
+                <div className="max-w-[75%]">
                   <div
-                    style={
+                    className={`p-3.5 text-xs leading-relaxed shadow-xs ${
                       msg.role === "user"
-                        ? { background: "linear-gradient(135deg,#0055A5,#0070D0)", color: "white", borderRadius: "14px 2px 14px 14px", padding: "10px 14px", fontSize: 13.5, lineHeight: 1.55, boxShadow: "0 2px 8px rgba(0,85,165,0.15)" }
-                        : { background: "white", color: "#1E293B", border: "1px solid #E2E8F0", borderRadius: "2px 14px 14px 14px", padding: "10px 14px", fontSize: 13.5, lineHeight: 1.55, boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }
-                    }
+                        ? "bg-gradient-to-br from-[#0055A5] to-[#0070D0] text-white rounded-2xl rounded-tr-xs"
+                        : "bg-white text-slate-700 border border-slate-200/60 rounded-2xl rounded-tl-xs"
+                    }`}
                   >
                     {renderContent(msg.content)}
                   </div>
                   {msg.role === "assistant" && (msg.latency || msg.tokens) && (
-                    <div style={{ display: "flex", gap: 8, marginTop: 4, padding: "0 4px" }}>
+                    <div className="flex gap-2 mt-1.5 px-1 font-bold">
                       {msg.latency !== undefined && (
-                        <span style={{ background: "rgba(0, 85, 165, 0.05)", color: "#0055A5", border: "1px solid rgba(0, 85, 165, 0.15)", borderRadius: 6, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>
+                        <span className="bg-blue-50 border border-blue-100 rounded-md px-1.5 py-0.5 text-[#0055A5] text-[9px]">
                           ⚡ {msg.latency}ms
                         </span>
                       )}
                       {msg.tokens !== undefined && (
-                        <span style={{ background: "rgba(16, 185, 129, 0.08)", color: "#10B981", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 6, padding: "1px 7px", fontSize: 10, fontWeight: 700 }}>
+                        <span className="bg-emerald-50 border border-emerald-100 rounded-md px-1.5 py-0.5 text-emerald-600 text-[9px]">
                           📊 {msg.tokens} tokens
                         </span>
                       )}
@@ -425,11 +359,17 @@ export function PromptPlaygroundPage() {
             ))}
 
             {isLoading && (
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: "linear-gradient(135deg,#0055A5,#00B4FF)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "white", fontWeight: "bold" }}>M</div>
-                <div style={{ background: "white", border: "1px solid #E2E8F0", borderRadius: "2px 14px 14px 14px", padding: "10px 14px", display: "flex", gap: 5, alignItems: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" }}>
-                  {[0,1,2].map(i => (
-                    <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "#0055A5", opacity: 0.5, animation: "bounce-dot 1.2s ease-in-out infinite", animationDelay: `${i * 0.2}s` }} />
+              <div className="flex items-end gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0055A5] to-[#00B4FF] flex items-center justify-center shrink-0 text-white text-xs font-black shadow-xs">
+                  M
+                </div>
+                <div className="bg-white border border-slate-200/60 rounded-2xl rounded-tl-xs p-3.5 flex gap-1 items-center shadow-xs">
+                  {[0, 1, 2].map(i => (
+                    <div
+                      key={i}
+                      className="w-1.5 h-1.5 rounded-full bg-[#0055A5] opacity-50 animate-bounce"
+                      style={{ animationDelay: `${i * 0.15}s` }}
+                    />
                   ))}
                 </div>
               </div>
@@ -437,50 +377,29 @@ export function PromptPlaygroundPage() {
           </div>
 
           {/* Input bar */}
-          <div style={{ padding: "12px 16px", borderTop: "1px solid #F1F5F9", display: "flex", gap: 8, flexShrink: 0, background: "white" }}>
+          <div className="p-3.5 border-t border-slate-100 flex gap-3 shrink-0 bg-white">
             <input
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === "Enter" && !e.shiftKey && send()}
               placeholder="Nhập câu hỏi để test RAG pipeline..."
-              style={{
-                flex: 1, border: "1.5px solid #E2E8F0", borderRadius: 10,
-                padding: "9px 14px", fontSize: 13.5, outline: "none",
-                color: "#1E293B", background: "#F8FAFC",
-                transition: "border-color 0.2s, box-shadow 0.2s",
-                fontFamily: "'Outfit', sans-serif",
-              }}
-              onFocus={e => { e.target.style.borderColor = "#0055A5"; e.target.style.boxShadow = "0 0 0 3px rgba(0,85,165,0.1)"; e.target.style.background = "white"; }}
-              onBlur={e => { e.target.style.borderColor = "#E2E8F0"; e.target.style.boxShadow = "none"; e.target.style.background = "#F8FAFC"; }}
+              className="flex-1 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 bg-slate-50 focus:bg-white focus:border-[#0055A5] focus:ring-2 focus:ring-[#0055A5]/10 outline-none transition-all"
             />
             <motion.button
               onClick={send}
               disabled={isLoading || !input.trim()}
               whileTap={{ scale: 0.92 }}
-              style={{
-                width: 40, height: 40, borderRadius: 10,
-                border: "none",
-                background: input.trim() && !isLoading ? "linear-gradient(135deg,#0055A5,#00B4FF)" : "#E2E8F0",
-                color: input.trim() && !isLoading ? "white" : "#94A3B8",
-                cursor: input.trim() && !isLoading ? "pointer" : "default",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0,
-                boxShadow: input.trim() && !isLoading ? "0 4px 12px rgba(0,85,165,0.25)" : "none",
-                transition: "all 0.2s",
-              }}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border-none transition-all active:scale-90 shadow-md ${
+                input.trim() && !isLoading
+                  ? "bg-gradient-to-r from-[#0055A5] to-[#00B4FF] text-white cursor-pointer shadow-blue-500/10"
+                  : "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+              }`}
             >
-              <Send size={16} />
+              <Send size={15} />
             </motion.button>
           </div>
         </div>
       </div>
-
-      <style>{`
-        @keyframes bounce-dot {
-          0%, 80%, 100% { transform: translateY(0); }
-          40% { transform: translateY(-5px); }
-        }
-      `}</style>
     </div>
   );
 }
