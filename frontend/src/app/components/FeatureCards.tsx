@@ -27,7 +27,7 @@ const cards = [
     tag: "Ưu đãi",
     tagColor: "text-red-600",
     title: "Cá nhân hóa ưu đãi",
-    desc: "AI phân tích hành vi để đề xuất gói cước phù hợp nhất, tiết kiệm tối đa chi phí của bạn.",
+    desc: "Hệ thống tự động đề xuất gói cước phù hợp nhất, tiết kiệm tối đa chi phí của bạn.",
     badge: "Hot",
     badgeClass: "bg-red-50 text-red-600 border-red-100",
   },
@@ -38,11 +38,11 @@ const cards = [
     iconBorder: "border-indigo-100",
     glowColor: "rgba(79,70,229,0.1)",
     borderGlow: "border-indigo-200",
-    tag: "AI Trợ Lý",
+    tag: "Chăm sóc khách hàng",
     tagColor: "text-indigo-600",
-    title: "Trợ lý ảo 24/7",
-    desc: "Chatbot AI thông minh hỗ trợ giải quyết mọi vấn đề tức thì, không cần chờ đợi.",
-    badge: "AI",
+    title: "Hỗ trợ 24/7",
+    desc: "Kênh hỗ trợ trực tuyến giải quyết mọi vấn đề tức thì, không cần chờ đợi.",
+    badge: "Live",
     badgeClass: "bg-indigo-50 text-indigo-600 border-indigo-100",
   },
   {
@@ -162,7 +162,7 @@ export function FeatureCards() {
             </span>
           </h2>
           <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-            Từ kết nối siêu tốc đến trợ lý AI thông minh, MobiFone đồng hành cùng bạn trong mọi khoảnh khắc số.
+            Từ kết nối siêu tốc đến dịch vụ chăm sóc tận tâm, MobiFone đồng hành cùng bạn trong mọi khoảnh khắc số.
           </p>
         </motion.div>
 

@@ -38,7 +38,7 @@ function getSalesResponse(text: string, lead: LeadData, user: any): {
   if (lower.includes("tên") || lower.includes("là ")) {
     const match = text.match(/(?:tên|là)\s+(.+)/i);
     if (match) return {
-      text: `Chào **${match[1]}**! 🎉 Rất vui được gặp bạn!\n\nTôi là **Mia** — Trợ lý AI MobiFone, chuyên gia tư vấn gói cước hàng đầu 🤖✨\n\nBạn đang sử dụng mạng di động nào? Để tôi tìm gói cước **tiết kiệm & phù hợp nhất** cho bạn nhé!`,
+      text: `Chào **${match[1]}**! 🎉 Rất vui được gặp bạn!\n\nTôi là **Mia** — Chuyên viên chăm sóc khách hàng của MobiFone 📞✨\n\nBạn đang sử dụng mạng di động nào? Để tôi tìm gói cước **tiết kiệm & phù hợp nhất** cho bạn nhé!`,
       quickReplies: ["Đang dùng Viettel", "Đang dùng Vinaphone", "Đang dùng MobiFone"],
       robotState: "happy",
     };
@@ -97,7 +97,7 @@ function getSalesResponse(text: string, lead: LeadData, user: any): {
   };
 
   return {
-    text: `Tôi đã nhận được thông tin: "${text}".\n\nLà trợ lý AI thế hệ mới của MobiFone, tôi luôn sẵn sàng tư vấn gói cước, đăng ký sim 5G và xử lý sự cố. Bạn cần hỗ trợ gì thêm không? 😊`,
+    text: `Tôi đã nhận được thông tin: "${text}".\n\nTôi là chuyên viên chăm sóc khách hàng của MobiFone, tôi luôn sẵn sàng tư vấn gói cước, đăng ký sim 5G và xử lý sự cố. Bạn cần hỗ trợ gì thêm không? 😊`,
     quickReplies: ["Tư vấn gói cước", "Các gói khuyến mãi hot", "Hỗ trợ sự cố"],
     robotState: "idle",
   };
@@ -155,8 +155,8 @@ export function ChatWidget() {
         id: 1,
         type: "bot",
         text: name
-          ? `Chào mừng **${name}** quay lại với MobiFone! 🎉\n\nHôm nay, bạn có **ưu đãi đặc biệt** dành riêng cho thành viên **${user?.tier}**:\n📶 Gia hạn gói **TK135** → tặng thêm **15GB data**\n⭐ Nhân đôi điểm tích lũy thành viên đến hết tuần này.\n\nBạn cần Mia hỗ trợ tư vấn dịch vụ nào không? 😊`
-          : `Xin chào! Tôi là **Mia** — Trợ lý AI thế hệ mới của MobiFone! 🤖✨\n\n🎁 **Ưu đãi độc quyền hôm nay:** Tặng thêm **10GB** data tốc độ cao khi đăng ký gói cước di động trực tuyến!\n\nBạn tên là gì để tôi dễ dàng xưng hô và tư vấn tốt nhất nhé?`,
+          ? `Chào mừng **${name}** quay lại với MobiFone! 🎉\n\nHôm nay, bạn có **ưu đãi đặc biệt** dành riêng cho thành viên **${user?.tier}**:\n📶 Gia hạn gói **TK135** → tặng thêm **15GB data**\n⭐ Nhân đôi điểm tích lũy thành viên đến hết tuần này.\n\nBạn cần chuyên viên hỗ trợ tư vấn dịch vụ nào không? 😊`
+          : `Xin chào! Tôi là **Mia** — Chuyên viên chăm sóc khách hàng của MobiFone! 📞✨\n\n🎁 **Ưu đãi độc quyền hôm nay:** Tặng thêm **10GB** data tốc độ cao khi đăng ký gói cước di động trực tuyến!\n\nBạn tên là gì để tôi dễ dàng xưng hô và tư vấn tốt nhất nhé?`,
         quickReplies: name
           ? ["Gia hạn gói cước", "Kiểm tra ưu đãi", "Cần tư vấn thêm"]
           : ["Tôi tên Nam", "Gọi tôi là Vy", "Không cần giới thiệu"],
@@ -302,7 +302,7 @@ export function ChatWidget() {
               <div style={{ position: "absolute", right: 88, top: "50%", transform: "translateY(-50%)", background: "rgba(9,21,44,0.96)", backdropFilter: "blur(16px)", border: "1px solid rgba(48,176,235,0.3)", borderRadius: 14, padding: "10px 16px", whiteSpace: "nowrap", pointerEvents: "none", boxShadow: "0 10px 30px rgba(0,0,0,0.3)" }}>
                 <div style={{ color: "white", fontSize: 13.5, fontWeight: 800, display: "flex", alignItems: "center", gap: 5 }}>
                   <Sparkles size={13} style={{ color: "#30B0EB" }} />
-                  Mia — Trợ lý AI MobiFone
+                  Mia — Chăm sóc khách hàng MobiFone
                 </div>
                 <div style={{ color: "#87D5F8", fontSize: 11, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", display: "inline-block", boxShadow: "0 0 6px #22C55E" }} />
@@ -355,12 +355,12 @@ export function ChatWidget() {
                   </div>
                   <div>
                     <div style={{ color: "white", fontWeight: 800, fontSize: 16, display: "flex", alignItems: "center", gap: 5 }}>
-                      Mia <span style={{ background: "rgba(48,176,235,0.15)", color: "#30B0EB", fontSize: 9, padding: "2px 6px", borderRadius: 6, fontWeight: 700 }}>AI AGENT</span>
+                      Mia
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                       <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#22C55E", display: "inline-block", boxShadow: "0 0 8px #22C55E", flexShrink: 0 }} />
                       <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 12 }}>
-                        {typing ? "Đang trả lời..." : "Trợ lý ảo MobiFone"}
+                        {typing ? "Đang trả lời..." : "Chăm sóc khách hàng MobiFone"}
                       </span>
                     </div>
                   </div>

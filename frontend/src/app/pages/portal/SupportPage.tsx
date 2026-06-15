@@ -243,16 +243,16 @@ export function SupportPage() {
           {/* Decorative Wave */}
           <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full bg-white/5 blur-2xl pointer-events-none" />
 
-          <div className="text-3xl mb-3">🤖</div>
+          <div className="text-3xl mb-3">💬</div>
           <h3 className="text-white font-extrabold text-lg sm:text-xl mb-2">
             Vẫn chưa tìm thấy thông tin bạn cần?
           </h3>
           <p className="text-white/60 text-xs sm:text-sm font-medium max-w-md mx-auto mb-6">
-            Trợ lý AI của MobiFone luôn túc trực 24/7 để trả lời mọi thắc mắc về gói cước, eSIM hoặc các dịch vụ khác. Click bong bóng chat để thử ngay!
+            Chuyên viên hỗ trợ trực tuyến của MobiFone luôn sẵn sàng 24/7 để giải đáp thắc mắc của bạn về gói cước, eSIM hoặc các dịch vụ khác. Click vào bong bóng chat để trò chuyện ngay!
           </p>
           <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-4.5 py-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34D399] animate-pulse" />
-            <span className="text-white text-xs font-bold">Trợ lý AI đang online</span>
+            <span className="text-white text-xs font-bold">Hỗ trợ trực tuyến đang online</span>
           </div>
         </motion.div>
       </div>

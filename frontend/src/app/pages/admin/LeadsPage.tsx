@@ -133,7 +133,7 @@ function LeadDetail({ lead, onClose, onUpdateStatus }: { lead: Lead; onClose: ()
           { icon: Phone, label: "Số điện thoại", value: lead.phone },
           { icon: MessageSquare, label: "Số tin nhắn", value: `${lead.messages} tin` },
           { icon: Clock, label: "Ngày tạo", value: new Date(lead.createdAt).toLocaleDateString("vi-VN") },
-          { icon: Activity, label: "Phụ trách", value: "Mia AI Chatbot" },
+          { icon: Activity, label: "Phụ trách", value: "Mia Support" },
         ].map(row => {
           const Icon = row.icon;
           return (

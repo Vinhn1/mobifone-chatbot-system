@@ -119,11 +119,10 @@ export function AdminLayout() {
                 initial={{ opacity: 0, x: -5 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.2 }}
-              >
-                <div style={{ color: "white", fontWeight: 800, fontSize: 15, lineHeight: 1.1 }}>
+                    <div style={{ color: "white", fontWeight: 800, fontSize: 15, lineHeight: 1.1 }}>
                   mobi<span style={{ color: "#E4002B" }}>fone</span> CRM
                 </div>
-                <div style={{ color: "rgba(255, 255, 255, 0.35)", fontSize: 10, fontWeight: 500, marginTop: 1 }}>AI Sales Platform</div>
+                <div style={{ color: "rgba(255, 255, 255, 0.35)", fontSize: 10, fontWeight: 500, marginTop: 1 }}>Sales Support Platform</div>
               </motion.div>
             )}
           </div>
@@ -149,7 +148,7 @@ export function AdminLayout() {
             {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
         </div>
-
+ 
         {/* Live System Indicator */}
         {!collapsed && (
           <motion.div
@@ -177,7 +176,7 @@ export function AdminLayout() {
               animation: "pulse 2s infinite"
             }} />
             <div>
-              <div style={{ color: "#22C55E", fontSize: 11, fontWeight: 700 }}>Mia AI đang chạy</div>
+              <div style={{ color: "#22C55E", fontSize: 11, fontWeight: 700 }}>Mia đang chạy</div>
               <div style={{ color: "rgba(255, 255, 255, 0.35)", fontSize: 10, marginTop: 1 }}>5 phiên hoạt động</div>
             </div>
             <style>{`

@@ -208,12 +208,12 @@ export function DashboardPage() {
           <h1 className="text-[#0F172A] font-black text-2xl tracking-tight">
             Giám Sát Doanh Thu & Phễu Bán Hàng
           </h1>
-          <p className="text-slate-400 text-xs font-semibold mt-1">Báo cáo hiệu quả tư vấn tự động của Trợ lý ảo Mia AI và đa kênh viễn thông</p>
+          <p className="text-slate-400 text-xs font-semibold mt-1">Báo cáo hiệu quả hỗ trợ trực tuyến của Mia và đa kênh viễn thông</p>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl px-3.5 py-1.5 shadow-inner">
             <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10B981] animate-pulse" />
-            <span className="text-emerald-700 text-xs font-bold">Mia AI Core Active</span>
+            <span className="text-emerald-700 text-xs font-bold">Mia Core Active</span>
           </div>
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-1.5">
             <Calendar size={13} className="text-slate-400" />
