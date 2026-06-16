@@ -20,6 +20,9 @@ export class ChatController {
       const result = await this.chatService.sendMessageToAi(message, sessionId);
       return result;
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(
         error.message || 'Lỗi xử lý chat',
         HttpStatus.INTERNAL_SERVER_ERROR
@@ -39,6 +42,9 @@ export class ChatController {
     try {
       return await this.chatService.getRagConfig();
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -49,6 +55,9 @@ export class ChatController {
     try {
       return await this.chatService.updateRagConfig(cfg);
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -59,6 +68,9 @@ export class ChatController {
     try {
       return await this.chatService.getDocuments();
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -69,6 +81,9 @@ export class ChatController {
     try {
       return await this.chatService.deleteDocument(name);
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
@@ -83,8 +98,10 @@ export class ChatController {
     try {
       return await this.chatService.uploadDocument(file);
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 }
-

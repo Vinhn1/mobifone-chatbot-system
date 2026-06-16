@@ -5,11 +5,16 @@ import { RobotAvatar } from "./RobotAvatar";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 
+type Source = {
+  title: string;
+  url: string;
+};
+
 type Message = {
   id: number;
   type: "user" | "bot";
   text: string;
-  sources?: string[];
+  sources?: (string | Source)[];
   quickReplies?: string[];
   leadCapture?: { field: string; label: string };
 };
@@ -23,6 +28,12 @@ type LeadData = {
   interest?: string;
   budget?: string;
 };
+
+function getAxiosErrorMessage(error: unknown): string {
+  if (!axios.isAxiosError(error)) return "Lỗi không xác định.";
+  const responseData = error.response?.data as { message?: string; detail?: string } | undefined;
+  return responseData?.message || responseData?.detail || error.message;
+}
 
 const SUGGESTIONS = [
   "Gói TK135 có gì?", "Đăng ký 5G?", "Xem ưu đãi hot", "Tư vấn gói phù hợp", "Hỗ trợ kỹ thuật",
@@ -204,7 +215,8 @@ export function ChatWidget() {
       }]);
       setTimeout(() => setRobotState("idle"), 3000);
     } catch (error) {
-      console.warn("Backend chat offline, using sales fallback logic:", error);
+      const errorMessage = getAxiosErrorMessage(error);
+      console.warn("Backend chat unavailable, using sales fallback logic:", errorMessage);
       setTimeout(() => {
         const resp = getSalesResponse(textToSend, leadData, user);
         setTyping(false);
@@ -212,7 +224,7 @@ export function ChatWidget() {
         setMessages(prev => [...prev, {
           id: Date.now() + 1,
           type: "bot",
-          text: resp.text,
+          text: `⚠️ MobiFone đang tạm dùng phản hồi dự phòng vì dịch vụ AI chưa sẵn sàng.\n\n${resp.text}`,
           sources: resp.sources,
           quickReplies: resp.quickReplies,
           leadCapture: resp.leadCapture,
@@ -468,11 +480,45 @@ export function ChatWidget() {
                             {/* Sources citation */}
                             {msg.sources && msg.sources.length > 0 && (
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
-                                {msg.sources.map(s => (
-                                  <span key={s} style={{ display: "inline-flex", alignItems: "center", gap: 3, background: "rgba(48,176,235,0.12)", color: "#87D5F8", border: "1px solid rgba(48,176,235,0.15)", borderRadius: 20, padding: "2px 8px", fontSize: 10.5, fontWeight: 500 }}>
-                                    <ExternalLink size={8} />{s}
-                                  </span>
-                                ))}
+                                {msg.sources.map((s, idx) => {
+                                  const title = typeof s === "string" ? s : s.title || s.url;
+                                  const url = typeof s === "string" 
+                                    ? (s.startsWith("http") ? s : `https://${s}`)
+                                    : s.url;
+                                  return (
+                                    <a
+                                      key={idx}
+                                      href={url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 3,
+                                        background: "rgba(48,176,235,0.12)",
+                                        color: "#87D5F8",
+                                        border: "1px solid rgba(48,176,235,0.15)",
+                                        borderRadius: 20,
+                                        padding: "2px 8px",
+                                        fontSize: 10.5,
+                                        fontWeight: 500,
+                                        textDecoration: "none",
+                                        transition: "all 0.2s"
+                                      }}
+                                      onMouseEnter={e => {
+                                        e.currentTarget.style.background = "rgba(48,176,235,0.24)";
+                                        e.currentTarget.style.borderColor = "rgba(48,176,235,0.4)";
+                                      }}
+                                      onMouseLeave={e => {
+                                        e.currentTarget.style.background = "rgba(48,176,235,0.12)";
+                                        e.currentTarget.style.borderColor = "rgba(48,176,235,0.15)";
+                                      }}
+                                    >
+                                      <ExternalLink size={8} />
+                                      {title}
+                                    </a>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>

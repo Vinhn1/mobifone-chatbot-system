@@ -46,3 +46,5 @@ docs
 frontend-demo
 ai-agent/
 ai-agent
+.agents
+agent-skills

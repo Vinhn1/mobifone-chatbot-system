@@ -1,0 +1,20 @@
+
+--- Query: 'Chào bạn' ---
+Answer:
+Chào bạn, MobiFone xin nghe ạ! 🌟
+Sources:
+[{'title': 'MobiFone - Gói cước', 'url': 'https://www.mobifone.vn/dich-vu-di-dong/goi-data'}]
+
+--- Query: 'Cảm ơn em nhiều nhé' ---
+Answer:
+Dạ, MobiFone cảm ơn quý khách đã tin dùng dịch vụ ạ. Nếu có bất kỳ câu hỏi nào khác, quý khách vui lòng cho MobiFone biết ạ.
+Sources:
+[{'title': 'MobiFone - Gói cước', 'url': 'https://www.mobifone.vn/dich-vu-di-dong/goi-data'}]
+
+--- Query: 'Ai là tổng thống Mỹ?' ---
+Answer:
+MobiFone xin lỗi, thông tin về tổng thống Mỹ không có trong ngữ cảnh hỗ trợ của chúng tôi.
+
+Nếu Quý khách có câu hỏi liên quan đến các gói cước hoặc dịch vụ của MobiFone, vui lòng cung cấp Số điện thoại để MobiFone có thể hỗ trợ tốt nhất ạ.
+Sources:
+[{'title': 'MobiFone - Gói cước', 'url': 'https://www.mobifone.vn/dich-vu-di-dong/goi-data'}]

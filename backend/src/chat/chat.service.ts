@@ -1,16 +1,40 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { ChatHistoryService } from '../chat-history/chat-history.service';
 import { LeadsService } from '../leads/leads.service';
 
 @Injectable()
 export class ChatService {
+  private readonly aiServiceBaseUrl: string;
+  private readonly aiRequestTimeoutMs: number;
+
   constructor(
     private readonly httpService: HttpService,
+    private readonly configService: ConfigService,
     private readonly chatHistoryService: ChatHistoryService,
     private readonly leadsService: LeadsService,
-  ) {}
+  ) {
+    this.aiServiceBaseUrl = this.configService.get<string>('AI_SERVICE_BASE_URL', 'http://localhost:8001');
+    this.aiRequestTimeoutMs = this.configService.get<number>('AI_SERVICE_TIMEOUT_MS', 60000);
+  }
+
+  private getAiServiceUrl(path: string): string {
+    return `${this.aiServiceBaseUrl}${path}`;
+  }
+
+  private getAiErrorDetail(error: any, fallbackMessage: string): string {
+    const responseData = error.response?.data;
+    return responseData?.detail || responseData?.message || error.message || fallbackMessage;
+  }
+
+  private handleAiServiceError(error: any, context: string, fallbackMessage = 'Không thể kết nối đến AI Service.'): never {
+    const status = error.response?.status || HttpStatus.SERVICE_UNAVAILABLE;
+    const detail = this.getAiErrorDetail(error, fallbackMessage);
+    console.error(`${context}:`, detail);
+    throw new HttpException(detail, status);
+  }
 
   // Hàm phụ trợ phát hiện và trích xuất SĐT Việt Nam bằng Regex
   private extractPhoneNumber(text: string): string | null {
@@ -21,7 +45,7 @@ export class ChatService {
   }
 
   async sendMessageToAi(message: string, sessionId?: string) {
-    const aiServiceUrl = 'http://localhost:8001/chat';
+    const aiServiceUrl = this.getAiServiceUrl('/chat');
     let historyPayload: { role: string; message: string }[] = [];
 
     // 1. Lấy lịch sử hội thoại trước đó (nếu có sessionId)
@@ -56,6 +80,8 @@ export class ChatService {
         this.httpService.post(aiServiceUrl, { 
           message,
           history: historyPayload
+        }, {
+          timeout: this.aiRequestTimeoutMs,
         })
       );
       
@@ -68,8 +94,7 @@ export class ChatService {
 
       return result;
     } catch (error) {
-      console.error('Lỗi khi kết nối với AI Service:', error.message);
-      throw new Error('Không thể kết nối đến AI Service.');
+      this.handleAiServiceError(error, 'Lỗi khi kết nối với AI Service');
     }
   }
 
@@ -80,55 +105,51 @@ export class ChatService {
 
   // Proxy: Lấy cấu hình RAG Prompt & Parameters từ AI Service
   async getRagConfig() {
-    const aiServiceUrl = 'http://localhost:8001/config';
+    const aiServiceUrl = this.getAiServiceUrl('/config');
     try {
-      const response = await firstValueFrom(this.httpService.get(aiServiceUrl));
+      const response = await firstValueFrom(this.httpService.get(aiServiceUrl, { timeout: this.aiRequestTimeoutMs }));
       return response.data;
     } catch (error) {
-      console.error('Lỗi khi lấy cấu hình từ AI Service:', error.message);
-      throw new Error('Không thể kết nối đến AI Service.');
+      this.handleAiServiceError(error, 'Lỗi khi lấy cấu hình từ AI Service');
     }
   }
 
   // Proxy: Cập nhật cấu hình RAG Prompt & Parameters sang AI Service
   async updateRagConfig(cfg: any) {
-    const aiServiceUrl = 'http://localhost:8001/config';
+    const aiServiceUrl = this.getAiServiceUrl('/config');
     try {
-      const response = await firstValueFrom(this.httpService.post(aiServiceUrl, cfg));
+      const response = await firstValueFrom(this.httpService.post(aiServiceUrl, cfg, { timeout: this.aiRequestTimeoutMs }));
       return response.data;
     } catch (error) {
-      console.error('Lỗi khi cập nhật cấu hình sang AI Service:', error.message);
-      throw new Error('Không thể kết nối đến AI Service.');
+      this.handleAiServiceError(error, 'Lỗi khi cập nhật cấu hình sang AI Service');
     }
   }
 
   // Proxy: Lấy danh sách tài liệu từ ChromaDB thông qua AI Service
   async getDocuments() {
-    const aiServiceUrl = 'http://localhost:8001/documents';
+    const aiServiceUrl = this.getAiServiceUrl('/documents');
     try {
-      const response = await firstValueFrom(this.httpService.get(aiServiceUrl));
+      const response = await firstValueFrom(this.httpService.get(aiServiceUrl, { timeout: this.aiRequestTimeoutMs }));
       return response.data;
     } catch (error) {
-      console.error('Lỗi khi lấy danh sách tài liệu từ AI Service:', error.message);
-      throw new Error('Không thể kết nối đến AI Service.');
+      this.handleAiServiceError(error, 'Lỗi khi lấy danh sách tài liệu từ AI Service');
     }
   }
 
   // Proxy: Xóa tài liệu khỏi ChromaDB thông qua AI Service
   async deleteDocument(name: string) {
-    const aiServiceUrl = `http://localhost:8001/documents/${encodeURIComponent(name)}`;
+    const aiServiceUrl = this.getAiServiceUrl(`/documents/${encodeURIComponent(name)}`);
     try {
-      const response = await firstValueFrom(this.httpService.delete(aiServiceUrl));
+      const response = await firstValueFrom(this.httpService.delete(aiServiceUrl, { timeout: this.aiRequestTimeoutMs }));
       return response.data;
     } catch (error) {
-      console.error('Lỗi khi xóa tài liệu từ AI Service:', error.message);
-      throw new Error('Không thể kết nối đến AI Service.');
+      this.handleAiServiceError(error, 'Lỗi khi xóa tài liệu từ AI Service');
     }
   }
 
   // Proxy: Tải file tài liệu lên AI Service để nạp vector
   async uploadDocument(file: any) {
-    const aiServiceUrl = 'http://localhost:8001/upload';
+    const aiServiceUrl = this.getAiServiceUrl('/upload');
     
     // Sử dụng standard Node.js/Web FormData
     const formData = new FormData();
@@ -137,15 +158,90 @@ export class ChatService {
 
     try {
       const response = await firstValueFrom(
-        this.httpService.post(aiServiceUrl, formData)
+        this.httpService.post(aiServiceUrl, formData, { timeout: this.aiRequestTimeoutMs })
       );
       return response.data;
     } catch (error) {
-      const details = error.response?.data?.detail || error.message;
-      console.error('Lỗi khi gửi file lên AI Service:', details);
-      throw new Error(details);
+      this.handleAiServiceError(error, 'Lỗi khi gửi file lên AI Service');
+    }
+  }
+
+  // Xử lý tin nhắn đến từ Facebook Messenger Webhook
+  async handleFacebookMessage(senderId: string, text: string) {
+    console.log(`[FB-WEBHOOK] Nhận tin nhắn từ ${senderId}: "${text}"`);
+    
+    // 1. Lấy cấu hình động để kiểm tra xem Facebook có được bật hay không
+    const config = await this.getRagConfig();
+    if (!config?.fb_enabled) {
+      console.warn('[FB-WEBHOOK] Kênh Facebook Messenger hiện đang TẮT trong cấu hình.');
+      return;
+    }
+    
+    const fbPageToken = config.fb_page_token;
+    if (!fbPageToken) {
+      console.error('[FB-WEBHOOK] Thiếu fb_page_token trong cấu hình!');
+      return;
+    }
+
+    // 2. Gọi AI sinh câu trả lời (lưu lịch sử chat theo format facebook_senderId)
+    const result = await this.sendMessageToAi(text, `facebook_${senderId}`);
+    const answer = result?.answer || 'Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi này.';
+
+    // 3. Gửi tin nhắn trả lời qua Facebook Send API
+    const fbSendUrl = `https://graph.facebook.com/v18.0/me/messages?access_token=${fbPageToken}`;
+    try {
+      await firstValueFrom(
+        this.httpService.post(fbSendUrl, {
+          recipient: { id: senderId },
+          messaging_type: 'RESPONSE',
+          message: { text: answer }
+        })
+      );
+      console.log(`[FB-WEBHOOK] Đã phản hồi thành công cho ${senderId}`);
+    } catch (fbError) {
+      console.error('[FB-WEBHOOK] Lỗi khi gửi tin nhắn qua Facebook Send API:', fbError.response?.data || fbError.message);
+    }
+  }
+
+  // Xử lý tin nhắn đến từ Zalo OA Webhook
+  async handleZaloMessage(senderId: string, text: string) {
+    console.log(`[ZALO-WEBHOOK] Nhận tin nhắn từ ${senderId}: "${text}"`);
+    
+    // 1. Lấy cấu hình động để kiểm tra xem Zalo có được bật hay không
+    const config = await this.getRagConfig();
+    if (!config?.zalo_enabled) {
+      console.warn('[ZALO-WEBHOOK] Kênh Zalo OA hiện đang TẮT trong cấu hình.');
+      return;
+    }
+    
+    const zaloAccessToken = config.zalo_access_token;
+    if (!zaloAccessToken) {
+      console.error('[ZALO-WEBHOOK] Thiếu zalo_access_token trong cấu hình!');
+      return;
+    }
+
+    // 2. Gọi AI sinh câu trả lời (lưu lịch sử chat theo format zalo_senderId)
+    const result = await this.sendMessageToAi(text, `zalo_${senderId}`);
+    const answer = result?.answer || 'Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi này.';
+
+    // 3. Gửi tin nhắn trả lời qua Zalo OpenAPI
+    const zaloSendUrl = 'https://openapi.zalo.me/v3.0/oa/message/transaction';
+    try {
+      await firstValueFrom(
+        this.httpService.post(zaloSendUrl, {
+          recipient: { user_id: senderId },
+          message: { text: answer }
+        }, {
+          headers: {
+            'Content-Type': 'application/json',
+            'access_token': zaloAccessToken
+          }
+        })
+      );
+      console.log(`[ZALO-WEBHOOK] Đã phản hồi thành công cho Zalo user ${senderId}`);
+    } catch (zaloError) {
+      console.error('[ZALO-WEBHOOK] Lỗi khi gửi tin nhắn qua Zalo OpenAPI:', zaloError.response?.data || zaloError.message);
     }
   }
 }
-
 

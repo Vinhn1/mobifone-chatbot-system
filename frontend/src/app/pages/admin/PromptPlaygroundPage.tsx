@@ -167,7 +167,12 @@ export function PromptPlaygroundPage() {
       }]);
     } catch (error) {
       console.error("Lỗi kết nối chat playground:", error);
-      const errMsg = axios.isAxiosError(error) ? (error.response?.data?.message || error.message) : "Lỗi không xác định.";
+      const responseData = axios.isAxiosError(error)
+        ? error.response?.data as { message?: string; detail?: string } | undefined
+        : undefined;
+      const errMsg = axios.isAxiosError(error)
+        ? (responseData?.message || responseData?.detail || error.message)
+        : "Lỗi không xác định.";
       setMessages(prev => [...prev, {
         role: "assistant",
         content: `❌ Lỗi hệ thống: ${errMsg}`

@@ -7,7 +7,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from rag_pipeline import MobiFoneRAG
+from rag_pipeline import AIServiceError, MobiFoneRAG
 
 # Tự động kiểm tra và cài đặt các thư viện đọc tài liệu nếu thiếu
 def install_dependencies():
@@ -73,6 +73,7 @@ class ConfigModel(BaseModel):
     zalo_enabled: Optional[bool] = False
     zalo_app_id: Optional[str] = ""
     zalo_secret_key: Optional[str] = ""
+    zalo_access_token: Optional[str] = ""
 
 # Health check
 @app.get("/health")
@@ -93,6 +94,8 @@ def chat(request: ChatRequest):
             
         answer, sources = bot.answer_question(request.message, history=history_list)
         return ChatResponse(answer=answer, sources=sources)
+    except AIServiceError as e:
+        raise HTTPException(status_code=e.status_code, detail=e.detail)
     except Exception as e:
         error_msg = str(e)
         if "503" in error_msg:
@@ -117,6 +120,7 @@ def get_config():
                 data.setdefault("zalo_enabled", False)
                 data.setdefault("zalo_app_id", "")
                 data.setdefault("zalo_secret_key", "")
+                data.setdefault("zalo_access_token", "")
                 return data
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Không thể đọc file cấu hình: {e}")
@@ -132,7 +136,8 @@ def get_config():
             "fb_page_token": "",
             "zalo_enabled": False,
             "zalo_app_id": "",
-            "zalo_secret_key": ""
+            "zalo_secret_key": "",
+            "zalo_access_token": ""
         }
 
 # Cập nhật cấu hình Prompt Playground

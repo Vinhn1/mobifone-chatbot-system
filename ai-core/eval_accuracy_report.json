@@ -1,0 +1,161 @@
+{
+  "judge_model": "gemini-3.1-flash-lite",
+  "total_test_cases": 5,
+  "averages": {
+    "faithfulness": 4.4,
+    "relevance": 4.4,
+    "correctness": 3.0
+  },
+  "details": [
+    {
+      "id": 1,
+      "category": "Gói cước",
+      "query": "Gói cước TK135 có ưu đãi gì và giá bao nhiêu?",
+      "expected_facts": "Giá cước 135.000đ/tháng, ưu đãi 4GB/ngày (120GB/tháng).",
+      "retrieved_context": [
+        "Gói TK135. giá 135.000đ/30 ngày. dung lượng 7GB/ngày. /30 ngày. Đăng ký: Xem chi tiếtĐăng ký",
+        "Gói 3TK135. giá 405.000đ/90 ngày. dung lượng 7GB/ngày. /90 ngày. Đăng ký: Xem chi tiếtĐăng ký",
+        "Gói 3TK135"
+      ],
+      "sources": [
+        {
+          "title": "MobiFone - Gói cước",
+          "url": "https://www.mobifone.vn/dich-vu-di-dong/goi-data"
+        }
+      ],
+      "generated_answer": "Chào bạn, MobiFone rất vui được hỗ trợ thông tin cho bạn ạ! 🌟\n\nDưới đây là thông tin chi tiết về gói cước **TK135** mà bạn quan tâm:\n\n*   📦 **Tên gói cước**: **TK135**\n*   💸 **Giá cước**: 135.000đ/30 ngày\n*   📶 **Ưu đãi Data**: 7GB/ngày (tương đương 210GB/30 ngày)\n*   📝 **Cú pháp đăng ký**: Bạn vui lòng soạn tin nhắn theo cú pháp đăng ký của gói cước để kích hoạt dịch vụ nhé.\n\nNếu cần hỗ trợ thêm thông tin nào khác, bạn đừng ngần ngại phản hồi lại cho MobiFone nhé! 📶",
+      "latency_seconds": 1.66,
+      "scores": {
+        "faithfulness_score": 5,
+        "faithfulness_reason": "Câu trả lời hoàn toàn dựa trên ngữ cảnh được cung cấp, không có thông tin bịa đặt bên ngoài.",
+        "relevance_score": 5,
+        "relevance_reason": "Câu trả lời giải quyết trực tiếp câu hỏi về giá và ưu đãi của gói TK135.",
+        "correctness_score": 1,
+        "correctness_reason": "Thông tin về ưu đãi (7GB/ngày) trong ngữ cảnh sai lệch hoàn toàn so với sự thật kỳ vọng (4GB/ngày), dẫn đến câu trả lời không chính xác về mặt thực tế.",
+        "overall_feedback": "Chatbot đã trích xuất thông tin trung thực từ ngữ cảnh được cung cấp, tuy nhiên do dữ liệu ngữ cảnh đầu vào bị sai lệch so với thực tế (ground truth), dẫn đến câu trả lời cuối cùng cung cấp thông tin sai cho người dùng."
+      }
+    },
+    {
+      "id": 2,
+      "category": "Gói cước",
+      "query": "Tôi muốn đăng ký gói cước nào có 4G tốc độ cao xem TikTok thoải mái?",
+      "expected_facts": "Gợi ý gói cước data khủng như TK135 hoặc gói chuyên biệt giải trí.",
+      "retrieved_context": [
+        "Gói 12TK299. giá 3.588.000đ/12 tháng. dung lượng 14GB/ngày. /12 tháng. Đăng ký: Xem chi tiếtĐăng ký",
+        "Gói 6TK359. giá 2.154.000đ/6 tháng. dung lượng 14GB/ngày. /6 tháng. Đăng ký: Xem chi tiếtĐăng ký",
+        "Lợi ích\nKết nối Internet tốc độ cao mọi lúc, mọi nơi\nCài đặt, sử dụng dịch vụ đơn giản, dễ dàng\nSử dụng dịch vụ với giá cước linh hoạt và kiểm soát được cước phí sử dụng dịch vụ\nGiá cước\nTên gói\nGiá gói (đã bao gồm VAT)\nDung lượng miễn phí tốc độ tối đa\nCước ngoài gói (50kB+50kB)\nGói 30 ngày\nFCO\n0\n0\nF70\n70.000đ/30 ngày\n7GB\n9,77đ/50kB (tương đương 200đ/MB)\nF90N*\n90.000đ/30 ngày\n9GB\nF120\n120.000đ/30 ngày\n12GB\nF200\n200.000đ/30 ngày\n20GB\nF300\n300.000đ/30 ngày\n30GB\nData50\n50.000đ/30 ngày\n3,5 GB\n(Trong đó 2,5 GB sử dụng trong vùng đăng ký (*), 1 GB sử dụng trong nước)\nGói thời hạn dài\nF150\n150.000đ/90 ngày\n3GB/30 ngày\nKhông áp dụng\nF250\n250.000đ/180 ngày\n3GB/30 ngày\nF500N\n500.000đ/360 ngày\n4GB/30 ngày\n(*) F90N: Khi sử dụng hết dung lượng miễn phí, không thể truy cập Internet\nHướng dẫn\nĐăng ký thuê bao\nĐể đăng ký thuê bao Fast Connect, bạn có thể thực hiện theo một trong các cách sau:\nHòa mạng mới SIM Fast Connect trả trước, Fast Connect trả sau tại của hàng của MobiFone trên toàn quốc."
+      ],
+      "sources": [
+        {
+          "title": "MobiFone - Gói cước",
+          "url": "https://www.mobifone.vn/dich-vu-di-dong/goi-data"
+        },
+        {
+          "title": "MobiFone - Chi tiết loại thuê bao",
+          "url": "https://www.mobifone.vn/dich-vu-di-dong/loai-thue-bao/fast-connect-5"
+        }
+      ],
+      "generated_answer": "Chào bạn, cảm ơn bạn đã quan tâm đến dịch vụ của MobiFone.\n\nĐể đáp ứng nhu cầu sử dụng Internet tốc độ cao thoải mái, MobiFone xin gợi ý các gói cước có dung lượng lớn như sau:\n\n*   📦 **Gói 12TK299**\n    *   💸 **Giá cước:** 3.588.000đ/12 tháng\n    *   📶 **Ưu đãi:** 14GB/ngày (tương đương 420GB/tháng)\n*   📦 **Gói 6TK359**\n    *   💸 **Giá cước:** 2.154.000đ/6 tháng\n    *   📶 **Ưu đãi:** 14GB/ngày (tương đương 420GB/tháng)\n\nNgoài ra, nếu bạn cần tư vấn thêm các gói cước khác phù hợp hơn với nhu cầu cá nhân, vui lòng để lại **Số điện thoại**, Chuyên viên chăm sóc khách hàng sẽ liên hệ hỗ trợ bạn nhanh nhất! 🌟",
+      "latency_seconds": 1.93,
+      "scores": {
+        "faithfulness_score": 5,
+        "faithfulness_reason": "Câu trả lời hoàn toàn dựa trên thông tin gói cước 12TK299 và 6TK359 có trong ngữ cảnh, không có thông tin bịa đặt.",
+        "relevance_score": 4,
+        "relevance_reason": "Câu trả lời giải quyết tốt nhu cầu data tốc độ cao, tuy nhiên chưa đề cập trực tiếp đến tính năng 'xem TikTok thoải mái' như người dùng yêu cầu.",
+        "correctness_score": 4,
+        "correctness_reason": "Các con số về giá và dung lượng khớp với ngữ cảnh. Tuy nhiên, so với sự thật kỳ vọng, chatbot chưa gợi ý được các gói chuyên biệt giải trí khác ngoài các gói data khủng.",
+        "overall_feedback": "Câu trả lời tốt, cung cấp thông tin chính xác từ ngữ cảnh. Cần bổ sung thêm các gói cước chuyên biệt cho giải trí hoặc làm rõ khả năng truy cập TikTok để đáp ứng sát hơn nhu cầu người dùng."
+      }
+    },
+    {
+      "id": 3,
+      "category": "eSIM",
+      "query": "Cách đổi sang eSIM MobiFone trực tuyến như thế nào và có mất phí không?",
+      "expected_facts": "Hướng dẫn đổi eSIM qua ứng dụng/online, thông tin về mức phí hoặc chương trình miễn phí.",
+      "retrieved_context": [
+        "Số phụ đang được chọn làm số sử dụng trên app My MobiFone thì vẫn chuyển sang eSIM được. MobiFone có cung cấp eSIM cho các thiết bị đeo? Các thiết bị đeo của Apple (iWatch): dự kiến đầu năm 2026.",
+        "Nếu là đổi eSIM trên app My MobiFone: Mã kích hoạt eSIM/Mã QR eSIM My MobiFone trả về sẽ có hiệu lực 30 phút, nếu không có thao tác add eSIM, kích hoạt eSIM trên thiết bị thì hệ thống sẽ tự động thu hồi (KH không sử dụng được nữa) và hoàn tiền 35.000đ cho khách hàng\nSố được thêm quản lý trong app My MobiFone có đổi eSIM trên app My MobiFone không hay phải đăng nhập là số dùng chính mới đổi được? Khách hàng sử dụng dịch vụ MultiSim.",
+        "VI\nEN\nĐăng ký ngay\nTìm hiểu thêm\neSIM là gì\neSIM là viết tắt của \"embedded SIM\", có nghĩa là SIM điện tử hoặc SIM nhúng, là một loại SIM kỹ thuật số được tích hợp trực tiếp vào bảng mạch của thiết bị như điện thoại, máy tính bảng hoặc đồng hồ thông minh, thay thế hoàn toàn cho thẻ SIM vật lý truyền thống."
+      ],
+      "sources": [
+        {
+          "title": "eSIM",
+          "url": "https://www.mobifone.vn/esim"
+        }
+      ],
+      "generated_answer": "Chào bạn, MobiFone rất vui được hỗ trợ thông tin cho bạn về dịch vụ eSIM.\n\nĐể đổi sang eSIM MobiFone trực tuyến qua ứng dụng **My MobiFone**, bạn vui lòng thực hiện theo các lưu ý sau:\n\n*   **Cách thực hiện:** Bạn có thể thực hiện thao tác đổi eSIM trực tiếp trên ứng dụng **My MobiFone**. Lưu ý, đối với số phụ đang được chọn làm số sử dụng trên ứng dụng hoặc số sử dụng dịch vụ **MultiSim**, bạn cần đăng nhập bằng chính số điện thoại đó để thực hiện đổi eSIM.\n*   **Phí dịch vụ:** Phí đổi eSIM là **35.000đ**.\n*   **Lưu ý quan trọng:** Sau khi yêu cầu, hệ thống sẽ gửi mã kích hoạt/Mã QR eSIM. Mã này chỉ có hiệu lực trong **30 phút**. Nếu bạn không thực hiện thao tác thêm và kích hoạt eSIM trên thiết bị trong thời gian này, hệ thống sẽ tự động thu hồi và hoàn lại phí 35.000đ cho bạn.\n\nNếu bạn cần hỗ trợ chi tiết hơn về các bước thao tác trên ứng dụng, vui lòng để lại **Số điện thoại** để chuyên viên chăm sóc khách hàng liên hệ hỗ trợ bạn trực tiếp nhé!",
+      "latency_seconds": 3.01,
+      "scores": {
+        "faithfulness_score": 5,
+        "faithfulness_reason": "Câu trả lời hoàn toàn dựa trên thông tin được cung cấp trong ngữ cảnh, không có thông tin bịa đặt.",
+        "relevance_score": 5,
+        "relevance_reason": "Câu trả lời giải quyết trực tiếp câu hỏi về cách đổi eSIM và thông tin phí dịch vụ một cách rõ ràng.",
+        "correctness_score": 5,
+        "correctness_reason": "Các thông tin về phí (35.000đ), thời hạn mã QR (30 phút) và chính sách hoàn tiền đều khớp chính xác với ngữ cảnh.",
+        "overall_feedback": "Câu trả lời rất tốt, đầy đủ và chính xác dựa trên ngữ cảnh được cung cấp. Cách trình bày dễ hiểu và chuyên nghiệp."
+      }
+    },
+    {
+      "id": 4,
+      "category": "Hỗ trợ kỹ thuật",
+      "query": "Điện thoại của tôi bị mất sóng không gọi điện được thì làm thế nào?",
+      "expected_facts": "Hướng dẫn kiểm tra thiết bị, liên hệ tổng đài 18001090 hoặc đến cửa hàng.",
+      "retrieved_context": [
+        "Gói Đăng ký gói cước"
+      ],
+      "sources": [
+        {
+          "title": "MobiFone",
+          "url": "https://www.mobifone.vn/"
+        }
+      ],
+      "generated_answer": "Dạ, MobiFone rất tiếc về sự bất tiện mà quý khách đang gặp phải.\n\nĐể hỗ trợ quý khách kiểm tra và khắc phục tình trạng mất sóng nhanh nhất, quý khách vui lòng cung cấp **Số điện thoại** đang gặp sự cố. Chuyên viên chăm sóc khách hàng sẽ trực tiếp kiểm tra hệ thống và hỗ trợ quý khách ngay ạ. 📝",
+      "latency_seconds": 1.64,
+      "scores": {
+        "faithfulness_score": 2,
+        "faithfulness_reason": "Câu trả lời không dựa trên ngữ cảnh được cung cấp (ngữ cảnh chỉ nói về gói cước), tuy nhiên thông tin đưa ra là hướng xử lý nghiệp vụ thực tế của nhà mạng.",
+        "relevance_score": 4,
+        "relevance_reason": "Câu trả lời giải quyết trực tiếp vấn đề của người dùng bằng cách đề xuất phương án hỗ trợ cụ thể.",
+        "correctness_score": 3,
+        "correctness_reason": "Câu trả lời thiếu các thông tin quan trọng từ ground truth như hướng dẫn tự kiểm tra thiết bị hoặc số tổng đài 18001090.",
+        "overall_feedback": "Chatbot phản hồi lịch sự và có hướng giải quyết vấn đề, nhưng cần bổ sung các bước tự kiểm tra cơ bản và thông tin liên hệ chính thức (18001090) theo đúng ground truth để hỗ trợ người dùng nhanh chóng hơn."
+      }
+    },
+    {
+      "id": 5,
+      "category": "Ưu đãi",
+      "query": "MobiFone có chương trình khuyến mãi nạp thẻ hay hoàn tiền nào gần đây không?",
+      "expected_facts": "Khuyến mãi nạp thẻ, hoàn tiền qua ứng dụng My MobiFone.",
+      "retrieved_context": [
+        "MobiFone sẽ đồng hành cùng tỉnh Đồng Tháp triển khai các nền tảng số phục vụ quản lý điều hành, dịch vụ công trực tuyến, hạ tầng viễn thông - CNTT, trung tâm dữ liệu và các giải pháp phục vụ người dân, doanh nghiệp.",
+        "Trong khuôn khổ sự kiện, MobiFone đã trao tặng gói tư vấn xây dựng “Khung kiến trúc dữ liệu, khung quản trị và quản lý dữ liệu tỉnh Đắk Lắk” trị giá khoảng 500 triệu đồng, thể hiện cam kết đồng hành thực chất, lâu dài cùng địa phương.",
+        "MobiFone sẽ phối hợp nghiên cứu, tư vấn triển khai các giải pháp chuyển đổi số, giải pháp phục vụ Đề án 06; hỗ trợ triển khai hạ tầng truyền dẫn, điện toán đám mây, trung tâm dữ liệu và các nền tảng công nghệ phục vụ lực lượng Công an tỉnh; đồng thời hỗ trợ đào tạo, chuyển giao công nghệ, nâng cao năng lực về an toàn thông tin và an ninh mạng cho cán bộ chiến sĩ."
+      ],
+      "sources": [
+        {
+          "title": "MobiFone - MobiFone và Đồng Tháp hợp tác thúc đẩy chuyển đổi số toàn diện",
+          "url": "https://www.mobifone.vn/tin-tuc/chi-tiet/mobifone-va-dong-thap-hop-tac-thuc-day-chuyen-doi-so-toan-dien-25745"
+        },
+        {
+          "title": "MobiFone - MobiFone đồng hành cùng UBND tỉnh Đắk Lắk thúc đẩy chuyển đổi số toàn diện",
+          "url": "https://www.mobifone.vn/tin-tuc/chi-tiet/mobifone-dong-hanh-cung-ubnd-tinh-dak-lak-thuc-day-chuyen-doi-so-toan-dien-25541"
+        },
+        {
+          "title": "MobiFone - MobiFone đồng hành cùng Công an tỉnh Đồng Tháp tăng cường ứng dụng công nghệ số",
+          "url": "https://www.mobifone.vn/tin-tuc/chi-tiet/mobifone-dong-hanh-cung-cong-an-tinh-dong-thap-tang-cuong-ung-dung-cong-nghe-so-25746"
+        }
+      ],
+      "generated_answer": "Chào bạn, MobiFone rất cảm ơn bạn đã quan tâm đến các chương trình ưu đãi của chúng tôi. 🌟\n\nHiện tại, trong hệ thống thông tin của MobiFone chưa có dữ liệu về các chương trình khuyến mãi nạp thẻ hoặc hoàn tiền cụ thể. Để chuyên viên có thể kiểm tra chính xác các ưu đãi dành riêng cho thuê bao của bạn, mời bạn vui lòng để lại **Số điện thoại (SĐT)** để chúng tôi liên hệ hỗ trợ trực tiếp nhé! 📝",
+      "latency_seconds": 1.8,
+      "scores": {
+        "faithfulness_score": 5,
+        "faithfulness_reason": "Câu trả lời không sử dụng thông tin sai lệch từ ngữ cảnh (vốn không liên quan đến khuyến mãi) và thừa nhận không có dữ liệu trong hệ thống.",
+        "relevance_score": 4,
+        "relevance_reason": "Câu trả lời trực tiếp phản hồi về việc thiếu thông tin khuyến mãi và đưa ra hướng giải quyết (yêu cầu SĐT), tuy nhiên chưa đề cập đến kênh My MobiFone như trong ground truth.",
+        "correctness_score": 2,
+        "correctness_reason": "Câu trả lời bỏ lỡ thông tin quan trọng từ ground truth là các chương trình khuyến mãi thường có trên ứng dụng My MobiFone, dẫn đến việc cung cấp thông tin chưa đầy đủ.",
+        "overall_feedback": "Chatbot đã xử lý tốt việc không bịa đặt thông tin từ ngữ cảnh không liên quan, nhưng cần được cập nhật thêm kiến thức nền (ground truth) về các kênh ưu đãi phổ biến như My MobiFone để hỗ trợ người dùng tốt hơn thay vì chỉ yêu cầu SĐT."
+      }
+    }
+  ]
+}

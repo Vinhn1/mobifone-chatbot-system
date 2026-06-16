@@ -1,0 +1,440 @@
+Found 46 records containing 'esim' / 'eSIM':
+
+Index: 4187
+Category: dich_vu
+Content: VI
+EN
+Đăng ký ngay
+Tìm hiểu thêm
+eSIM là gì
+eSIM là viết tắt của "embedded SIM", có nghĩa là SIM điện tử hoặc SIM nhúng, là một loại SIM kỹ thuật số được tích hợp trực tiếp vào bảng mạch của thiết bị như điện thoại, máy tính bảng hoặc đồng hồ thông minh, thay thế hoàn toàn cho thẻ SIM vật lý truyền thống.
+--------------------------------------------------
+
+Index: 4188
+Category: dich_vu
+Content: eSIM cho phép người dùng kích hoạt, chuyển đổi và quản lý các gói cước di động từ xa thông qua mã QR hoặc phần mềm, mang lại sự linh hoạt, tiện lợi, giúp thiết bị nhỏ gọn hơn và tăng tính bền bỉ. Đăng ký ngay
+Tìm hiểu thêm
+eSIM
+là gì
+eSIM là viết tắt của "embedded SIM", có nghĩa là SIM điện tử hoặc SIM nhúng, là một loại SIM kỹ thuật số được tích hợp trực tiếp vào bảng mạch của thiết bị như điện thoại, máy tính bảng hoặc đồng hồ thông minh, thay thế hoàn toàn cho thẻ SIM vật lý truyền thống.
+--------------------------------------------------
+
+Index: 4189
+Category: dich_vu
+Content: eSIM cho phép người dùng kích hoạt, chuyển đổi và quản lý các gói cước di động từ xa thông qua mã QR hoặc phần mềm, mang lại sự linh hoạt, tiện lợi, giúp thiết bị nhỏ gọn hơn và tăng tính bền bỉ.
+--------------------------------------------------
+
+Index: 4190
+Category: dich_vu
+Content: Ưu điểm
+eSIM
+embedded SIM
+Không cần
+tháo lắp SIM
+Dùng song song
+nhiều số
+Bảo mật cao, tiện lợi
+khi chuyển đổi
+Tương thích nhiều
+thiết bị thông minh
+(điện thoại, smartwatch, tablet)
+Lợi ích khi dùng
+eSIM MobiFone
+Trải nghiệm dịch vụ
+di động linh hoạt
+Hỗ trợ chuyển đổi nhanh chóng
+qua app MyMobiFone
+Chất lượng sóng MobiFone
+ổn định trên toàn quốc
+Dịch vụ chăm sóc
+hàng 24/7
+Thiết bị hỗ trợ
+eSIM
+iPhone XS, iPhone XS Max, iPhone XR trở lên
+iPad Pro thế hệ thứ 3 trở lên
+iPad Air thế hệ thứ 3 trở lên
+iPad thế hệ thứ 7 trở lên
+iPad mini thể hệ thứ 5 trở lên
+Galaxy A26 5G, A36 5G, A56 5G
+Galaxy S25 / S25+ / S25 Ultra
+Galaxy S24 Ultra
+Galaxy Z Fold7 / Flip7
+Galaxy XCover 7, Tab Active5
+Galaxy Tab S11 5G, S11 Ultra 5G, S10 FE 5G, S10 FE+ 5G
+Galaxy Watch 8 LTE, Watch 7 LTE
+Redmi note 14 Pro 5G
+xiaomi 14T Pro
+xiaomi 15
+xiaomi 15 Ultra
+Xiaomi
+Find X8- 5G
+Reno14- 5G
+Find N5- 5G
+Find N3- 5G
+Reno14 Pro 5G
+Find X8Pro- 5G
+Hướng dẫn đăng ký
+và kích hoạt
+eSIM
+01
+Cách 1
+Đăng ký tại
+các cửa hàng MobiFone
+02
+Cách 2
+Đăng ký eSIM
+trên app MY MOBIFONE
+iOS
+Đối với iOS
+Đối với Android
+01
+Mở ứng dụng My MobiFone, đăng nhập tài khoản và chọn tính năng “Đổi eSIM” tại giao diện chính.
+--------------------------------------------------
+
+Index: 4191
+Category: dich_vu
+Content: 02
+Gửi yêu cầu chuyển đổi để hệ thống bắt đầu tiếp nhận và xử lý. 03
+Tải lên ảnh chụp giấy tờ tùy thân như CCCD hoặc hộ chiếu để xác thực thông tin cá nhân. 04
+Tiến hành bước xác minh danh tính theo chỉ dẫn hiển thị trên ứng dụng. 05
+Nhập mã OTP được gửi về số thuê bao để hoàn tất bước xác thực. 06
+Kiểm tra kỹ thông tin eSIM trước khi xác nhận chuyển đổi. 07
+Thực hiện các thao tác kích hoạt eSIM trực tiếp trên thiết bị theo hướng dẫn từ hệ thống.
+--------------------------------------------------
+
+Index: 4192
+Category: dich_vu
+Content: Nhận thông báo hoàn tất, thuê bao của bạn sẽ hoạt động trên nền tảng eSIM mà không bị gián đoạn. 01
+02
+03
+04
+05
+06
+07
+Mở ứng dụng My MobiFone, đăng nhập tài khoản và chọn tính năng “Đổi eSIM” tại giao diện chính. Gửi yêu cầu chuyển đổi để hệ thống bắt đầu tiếp nhận và xử lý. Tải lên ảnh chụp giấy tờ tùy thân như CCCD hoặc hộ chiếu để xác thực thông tin cá nhân. Tiến hành bước xác minh danh tính theo chỉ dẫn hiển thị trên ứng dụng. Nhập mã OTP được gửi về số thuê bao để hoàn tất bước xác thực.
+--------------------------------------------------
+
+Index: 4193
+Category: dich_vu
+Content: Kiểm tra kỹ thông tin eSIM trước khi xác nhận chuyển đổi. Thực hiện các thao tác kích hoạt eSIM trực tiếp trên thiết bị theo hướng dẫn từ hệ thống. Nhận thông báo hoàn tất, thuê bao của bạn sẽ hoạt động trên nền tảng eSIM mà không bị gián đoạn.
+--------------------------------------------------
+
+Index: 4194
+Category: dich_vu
+Content: Kích hoạt eSIM
+trên app
+My MobiFone
+Giá cước
+eSIM MobiFone
+ĐỔI/THAY eSIM
+35.000
+đồng
+THUÊ BAO TRẢ TRƯỚC
+50.000
+đồng
+(bao gồm: 25.000đ tiền eSIM,
+25.000đ phí hòa mạng)
+THUÊ BAO TRẢ SAU
+60.000
+đồng
+(bao gồm: 25.000đ tiền eSIM,
+35.000đ phí hòa mạng)
+Câu hỏi thường gặp
+(FAQs)
+Tra cứu các cửa hàng MobiFone hỗ trợ gần nhất
+https://www.mobifone.vn/ho-tro-khach-hang/vi-tri-cua-hang
+Tổng đài hỗ trợ
+Tổng đài hỗ trợ 18001090
+eSIM là gì?
+--------------------------------------------------
+
+Index: 4195
+Category: dich_vu
+Content: Embedded SIM - phần cứng đã được tích hợp trên máy, phần mềm được cài đặt lên thiết bị. Chức năng tương tự SIM vật lý
+Lợi ích khi sử dụng eSIM? Sử dụng nhiều SĐT trên 1 thiết bị; an toàn, không hỏng, mất. Tôi có thể cài nhiều eSIM vào 1 máy được không? Được. Máy của Quý khách có thể hỗ trợ nhiều eSIM (01 máy iPhone hiện nay có thể chứa dưới 10 eSIM). Các eSIM của Quý KH có thể của một hoặc nhiều nhà mạng và cũng có thể là của nhà mạng nước ngoài.
+--------------------------------------------------
+
+Index: 4196
+Category: dich_vu
+Content: Tuy nhiên, tại một thời điểm, Quý khách chỉ có thể lựa chọn 1 eSIM của 1 nhà mạng để sử dụng.Với các eSIM không được kích hoạt còn lại, lưu ý nếu không bật lên sử dụng trong thời gian dài, số TB có thể sẽ bị khóa theo quy định của từng nhà mạng dù eSIM vẫn cài trong máy. Do đó, với KH muốn sở hữu nhiều eSIM trong 1 thiết bị, lưu ý nên bật lên 1, 2 lần trong tháng với các eSIM ít dùng. Những thiết bị hỗ trợ eSIM?
+--------------------------------------------------
+
+Index: 4197
+Category: dich_vu
+Content: iPhone 11 trở lên (tuỳ quốc gia);
+Android đời mới;
+Các dòng máy OPPO (Reno14 Pro 5G; Reno14- 5G; Find N5- 5; Find N3- 5; Find X8- 5G; Find X8Pro- 5G)
+Làm sao để kiểm tra thiết bị có hỗ trợ eSIM không? Đối với iPhone:
+1. Mở ứng dụng Cài đặt. 2. Chọn Cài đặt chung và sau đó chọn Giới thiệu. 3. Kéo xuống và tìm phần SIM kỹ thuật số hoặc SIM khả dụng. 4. Nếu bạn thấy thông tin IMEI liên quan đến eSIM, thì thiết bị của bạn hỗ trợ eSIM. Đối với Android:
+1. Vào Cài đặt. 2.
+--------------------------------------------------
+
+Index: 4198
+Category: dich_vu
+Content: Chọn mục Mạng di động hoặc Kết nối. 3. Tìm và chọn "Thêm eSIM" hoặc "Thêm gói cước di động". 4. Nếu có các tùy chọn này, thiết bị của bạn hỗ trợ eSIM. Phí dịch vụ sử dụng eSIM MobiFone? Đổi sim/thay sim: 35.000 đồng/eSIM. Thuê bao hòa mạng mới (trả trước, bao gồm tiền eSIM và phí hòa mạng): 50k
+Thuê bao hòa mạng mới (trả sau, bao gồm tiền eSIM và phí hòa mạng): 60k
+Các gói cước hỗ trợ
+Tất cả các gói cước: trả trước, trả sau, doanh nghiệp, gia đình…
+Làm sao để đăng ký sử dụng eSIM MobiFone?
+--------------------------------------------------
+
+Index: 4201
+Category: dich_vu
+Content: các cửa hàng MobiFone
+Đã vượt số TB quy định/người
+
+3 thuê bao
+Để kiểm tra khách hàng đã có mấy thuê bao, soạn tin: TTTB_Số CCCD gửi 1414
+Để đăng ký thêm thuê bao mới, cần cắt huỷ hoặc chuyển chủ quyền thuê bao hiện tại trước khi hoà mạng sim mới
+Chuyển đổi từ SIM vật lý sang eSIM
+--------------------------------------------------
+
+Index: 4202
+Category: dich_vu
+Content: Chuẩn bị giấy tờ: CCCD (bản chính) hoặc Hộ chiếu (bản chính)
+1. Tự thao tác trên App My Mobifone (iOS: https://apps.apple.com/vn/app/my-mobifone/id719320091 | Android: https://play.google.com/store/apps/details?id=vms.com.vn.mymobifone&pcampaignid=web_share)
+2. Hỗ trợ KH đổi sang eSIM tại các cửa hàng đại lý (TGDĐ; CPS... cửa hàng uỷ quyền MobiFone)
+3. Thực hiện tại cửa hàng MobiFone (xxx)
+Tại một thời điểm, khách hàng có thể SỬ DỤNG bao nhiêu thuê bao trên 1 eSIM?
+--------------------------------------------------
+
+Index: 4203
+Category: dich_vu
+Content: Chỉ có thể "bật" 1 thuê bao/1 eSIM. Tuỳ vào loại thiết bị, máy có thể hỗ trợ 1 hoặc 2 eSIM trên cùng 1 thiết bị. KH có thể sử dụng đồng thời 2 eSIM trên máy hỗ trợ 1 eSIM và 1 SIM vật lý không? Không, chỉ dùng 1 sim vật lý đồng thời với 1 eSIM
+KH đang sử dụng 1 eSIM (được tích hợp 3 STB trên sim) và 1 sim vật lý thì máy có hiển thị 4 vạch sóng không? Không, máy chỉ hiển thị vạch sóng của sim Vật lý và 1 vạch sóng của eSIM nào đang được bật.
+--------------------------------------------------
+
+Index: 4204
+Category: dich_vu
+Content: Kiểm tra tại: Cài đặt (Settings) \ Di động (Cellular) \ Chọn Số thuê bao và kiểm tra xem số đó đã được bật chưa. Có thể quét 1 QR cho 2 thiết bị được không? Không, một QR chỉ sử dụng được cho 1 thiết bị. Nếu vẫn muốn sử dụng eSIM đó trên máy khác, bắt buộc phải thực hiện cấp lại SIM để nhận QR code mới và cài đặt trên máy khác. KH đã bị mất QR code phải làm thế nào? Khách hàng phải ra cửa hàng giao dịch yêu cầu cấp lại QR cũ.
+--------------------------------------------------
+
+Index: 4205
+Category: dich_vu
+Content: Tuy nhiên, QR cũ chỉ có thể cài đặt lại trên chính thiết bị đang sử dụng eSIM đó mà thôi. QR code có hạn sử dụng không? QR có hạn sử dụng, không quá 2 năm kể từ ngày bán. KH lỡ tay xoá mất eSIM trên điện thoại phải làm thế nào? Khách hàng sử dụng lại QR code của eSIM đó (nếu còn hạn sử dụng) hoặc ra cửa hàng yêu cầu cấp lại QR code mới. KH nhập sai email khi thao tác đổi eSIM trên app phải làm thế nào để nhận được QR code?
+--------------------------------------------------
+
+Index: 4206
+Category: dich_vu
+Content: Khách hàng mua lại sim khác và khai lại địa chỉ email (có thể ra cửa hàng để lấy lại QR đã được cấp)
+KH đang sử dụng iPhone, nếu khôi phục cài đặt gốc (reset máy) thì có mất eSIM không? Khi khôi phục cài đặt gốc sẽ có 2 trường hợp:
+--------------------------------------------------
+
+Index: 4207
+Category: dich_vu
+Content: - KH chọn xóa toàn bộ và giữ gói cước di động thì sẽ không bị mất số thuê bao đã cài đặt trên eSIM"
+- KH chọn xóa toàn bộ dữ liệu sẽ bị mất số thuê bao đã cài đặt trên eSIM. Khi đó KH cần phải quét lại QR code (có thể sử dụng QR code đã được cấp để quét và cài đặt lại hoặc nếu KH đã bị mất QR code, KH ra cửa hàng giao dịch để được cấp lại)
+KH sử dụng eSIM đến khi không muốn dùng máy điện thoại đó nữa muốn bán đi thì lúc đó cần giải quyết số thuê bao eSIM đó như thế nào?
+--------------------------------------------------
+
+Index: 4208
+Category: dich_vu
+Content: KH chỉ cần xóa gói cước di động trong eSIM bằng cách: Vào Cài đặt (Settings) >> Di động (Cellular) >> Tại trường thông tin Gói cước di động (Cellular Plans) chọn vào số thuê bao eSIM >> chọn Xóa gói cước di động (Remove Cellular Plans). Trường hợp, KH vẫn muốn sử dụng số thuê bao này trên máy khác, phải ra cửa hàng cấp QR code khác. KH đang sử dụng số thuê bao A sau đó chuyển sang sử dụng số thuê bao B trên eSim thì mã QR code của số thuê bao A có thay đổi không?
+--------------------------------------------------
+
+Index: 4209
+Category: dich_vu
+Content: Nếu như không thay đổi có bị lộ mã QR code không? Mỗi QR code là 1 số thuê bao, việc KH chuyển sang sử dụng số TB khác trên eSIM không ảnh hưởng gì đến QR code của các số thuê bao còn lại. KH muốn bảo mật mã QR phải làm như thế nào? Mã QR không cần bảo mật vì chỉ có thể sử dụng trên 1 thiết bị duy nhất. Khi KH đang dùng 1 số thuê bao MobiFone và 1 số thuê bao của mạng khác. KH thực hiện tắt số thuê bao đó và bật số thuê bao của nhà mạng khác sử dụng thì thời gian chờ kết nối sẽ là bao lâu?
+--------------------------------------------------
+
+Index: 4210
+Category: dich_vu
+Content: Kết nối ngay lập tức
+KH đang sử dụng eSIM, vậy khi chạy lại (Restore) hệ điều hành máy thì có ảnh hưởng gì không? - Khi Restore máy từ bản Backup (sao lưu) lưu trên máy tính thì vẫn sử dụng được dịch vụ bình thường.
+--------------------------------------------------
+
+Index: 4211
+Category: dich_vu
+Content: - Khi Restore máy về trạng thái mới sản xuất hoặc Restore từ một firmware (bản cài đặt hệ điều hành iOS) khác thì sẽ không sử dụng được dịch vụ nữa, mà phải thực hiện quét lại mã QR code như từ đầu."
+eSIM hỗ trợ di động mặt đất vậy KH chuyển vùng Roaming có dùng gọi vệ tinh được không? Sử dụng bình thường, tương tự như sim thường
+eSIM có sử dụng được trên thiết bị Apple watch (đồng hồ thông minh) không?
+--------------------------------------------------
+
+Index: 4212
+Category: dich_vu
+Content: MobiFone dự kiến cung cấp dịch vụ eSIM trên Apple Watch vào năm 2026
+Có thể chuyển đổi từ eSIM sang SIM vật lý và ngược lại được không? Có thể thao tác liên tục (vd đổi SIM vật lý -> eSIM -> đổi ý, đổi lại về SIM vật lý) hay có thời gian chờ không? Có thể chuyển đổi từ eSIM sang Sim vật lý và ngược lại, nhưng cần ra cửa hàng và giới hạn số lần đổi cũng như thời gian chờ theo quy định của nhà mạng
+Nếu download eSIM vào máy thất bại (không thể activate eSIM) thì phải làm gì?
+--------------------------------------------------
+
+Index: 4213
+Category: dich_vu
+Content: Thực hiện restart lại máy và quét lại QR, nếu không được thì update phiên bản hệ điều hành máy mới nhất rồi thử lại. Nếu vẫn không được thì KH có thể ra cửa hàng thực hiện đổi
+Trường hợp mất máy và trên máy đó có cài đặt eSIM thì KH nên làm gì? KH cần liên hệ tổng đài để khóa số ngay lập tức và ra cửa hàng để đổi sang SIM khác. Do eSIM khi đã cài vào máy rồi thì không thể cài sang máy khác, nên trong trường hợp máy bị mất KH sử dụng máy mới, sẽ thay sang 1 eSIM khác.
+--------------------------------------------------
+
+Index: 4214
+Category: dich_vu
+Content: Tại sao khi sử dụng eSim bên cạnh biểu tượng sóng lại có thêm chữ P và chữ C? Ý nghĩa của 2 chữ này? KH lắp song song vừa sim thường và kích hoạt sử dụng eSIM thì bên cạnh tên Nhà mạng sẽ xuất hiện thêm chữ P và chữ C. P nghĩa là phụ, C nghĩa là chính. Nếu trên máy chỉ lắp sim thường hoặc chỉ dùng eSIM => Chữ P và C sẽ không hiển thị. Chữ P và C này KH có thể tự đặt bằng các ký tự khác
+Tôi cần làm gì nếu máy hỏng?
+--------------------------------------------------
+
+Index: 4215
+Category: dich_vu
+Content: Trường hợp máy của Quý KH xảy ra hỏng hóc, không thể thao thác, Quý KH vui lòng liên hệ với tổng đài 18001090 để tạm thời khóa số TB. Sau đó, tới các cửa hàng hoặc điểm giao dịch để tiến hành đổi sang SIM vật lý hoặc 1 eSIM khác để tạm thời sử dụng. Tôi có thể dùng 1 eSIM để cài vào nhiều máy được không? eSIM chỉ có thể sử dụng trên 1 thiết bị, nếu eSIM đã cài ở 1 máy điện thoại, thì máy khác không thể quét QR nữa, chỉ khi máy cũ đã xóa eSIM đi, thì máy sau mới có thể quét QR lại.
+--------------------------------------------------
+
+Index: 4217
+Category: dich_vu
+Content: Lưu ý: KH cần lưu trữ an toàn mã QR và sau khi gỡ eSIM ở máy cũ cần quét lại QR ở máy mới để đảm bảo an toàn. Tôi có thể sử dụng song song eSIM và SIM vật lý được không? Được, nếu thiết bị của Quý KH là thiết bị hỗ trợ 2 SIM 2 sóng (1 sim vật lý và 1 eSIM). Quý KH có thể cài đặt ưu tiên sử dụng SIM nào cho mục đích nào. Để biết thêm chi tiết về phần cài đặt, Quý KH vui lòng đọc kỹ hướng dẫn sử dụng thiết bị do nhà cung cấp thiết bị cung cấp.
+--------------------------------------------------
+
+Index: 4218
+Category: dich_vu
+Content: KH đổi eSIM khi đi CVQT có dùng được các DV như với sim (vật lý) bình thường không? eSIM và SIM 4G (sim vật lý) hoàn toàn giống nhau về công dụng. KH có thể sử dụng các DV CVQT bình thường. (Lưu ý: KH liên hệ tổng đài 18001090 để kiểm tra số TB của KH đã được mở CVQT hay chưa)
+KH cần chuyển sim thường sang eSIM thì có cần mang sim cũ và máy ra giao dịch không?
+--------------------------------------------------
+
+Index: 4219
+Category: dich_vu
+Content: KH chỉ cần chứng minh chủ sở hữu sim cũ, khuyến khích KH đem máy đến cửa hàng để nhân viên hướng dẫn và thực hiện giúp, do có trường hợp không tự quét được mã QR. Cách thức sử dụng chức năng Lưu danh bạ của eSIM
+eSIM hiện tại chỉ được ứng dụng trên các dòng iPhone Xs, Xs Max và Xr trở lên. Đặc điểm của iPhone là danh bạ sẽ được lưu vào 1 tài khoản email hoặc iCloud chứ không lưu trực tiếp vào điện thoại (hoặc SIM). Nên hiện tại eSim trên iPhone sẽ không có tính năng lưu danh bạ.
+--------------------------------------------------
+
+Index: 4220
+Category: dich_vu
+Content: Nếu khách hàng đang sử dụng sim số đẹp, sim trả sau cam kết thì có thể thực hiện dịch vụ ở đâu? Khách hàng thực hiện đổi, thay sim trên app MyMobiFone hoặc đến Cửa hàng MobiFone
+Nếu KH đi du lịch nước ngoài, có thể bật roaming trên eSIM không? Có, bật bình thường như SIM vật lý. Cần đăng ký dịch vụ chuyển vùng quốc tế trước khi ra khỏi lãnh thổ Việt Nam để tránh gián đoạn liên lạc.
+--------------------------------------------------
+
+Index: 4222
+Category: dich_vu
+Content: Đối với thuê bao trả trước: mở mặc định dịch vụ thoại và sms khi roaming, data phải đăng ký theo cú pháp DK CVQT ALL gửi 9199. Nếu KH đi du lịch nước ngoài, có thể tắt eSIM để cài đặt eSIM của nhà mạng nước ngoài không? Có, nếu máy chưa cài hết số lương eSIM cho phép
+Nếu khách hàng đi du lịch/công tác nước ngoài dài hạn, eSIM có thể bị thu hồi bởi Nhà mạng không?
+--------------------------------------------------
+
+Index: 4223
+Category: dich_vu
+Content: Chính sách thu hồi theo quy định quản lý thuê bao chung của nhà mạng (không phân biệt eSIM hay sim vật lý)
+Nếu TB KH là thuê bao TBTT/TBTS Doanh nghiệp có hỗ trợ đổi eSIM qua app My MobiFone hay không? Nếu hỗ trợ đổi thì khi xác thực TTTB chụp ảnh chân dung ảnh CMT/CCCD mặt trước mặt sau sẽ xác thực thông tin của người đại diện hay người sử dụng? Hiện chưa hỗ trợ KHDN đổi eSIM qua app. Khách hàng vui lòng ra các cửa hàng MobiFoe để thực hiện đăng ký, chuyển đổi.
+--------------------------------------------------
+
+Index: 4224
+Category: dich_vu
+Content: Trong quá trình đổi eSIM trên ứng dụng My MobiFone, khi thực hiện đến bước nhận mã kích hoạt eSIM do hệ thống gửi về máy mà KH ngưng không làm tiếp, thì mã kích hoạt eSIM này có giá trị bao lâu?
+--------------------------------------------------
+
+Index: 4225
+Category: dich_vu
+Content: Nếu là đổi eSIM trên app My MobiFone: Mã kích hoạt eSIM/Mã QR eSIM My MobiFone trả về sẽ có hiệu lực 30 phút, nếu không có thao tác add eSIM, kích hoạt eSIM trên thiết bị thì hệ thống sẽ tự động thu hồi (KH không sử dụng được nữa) và hoàn tiền 35.000đ cho khách hàng
+Số được thêm quản lý trong app My MobiFone có đổi eSIM trên app My MobiFone không hay phải đăng nhập là số dùng chính mới đổi được? Khách hàng sử dụng dịch vụ MultiSim.
+--------------------------------------------------
+
+Index: 4226
+Category: dich_vu
+Content: Số phụ đang được chọn làm số sử dụng trên app My MobiFone thì vẫn chuyển sang eSIM được. MobiFone có cung cấp eSIM cho các thiết bị đeo? Các thiết bị đeo của Apple (iWatch): dự kiến đầu năm 2026.
+--------------------------------------------------
+
+Index: 4227
+Category: dich_vu
+Content: Các thiết bị đeo của Samsung (Samsung gear, Samsung active) và các thiết bị đeo Android: đã cung cấp từ năm 2020.
+KH đang sử dụng máy iPhone 1 sim, KH muốn gắn 1 sim vật lý của nhà mạng khác và 1 eSIM của MobiFone có được không?
+Được. Miễn là iPhone KH sử dụng có hỗ trợ eSIM
+KH đã thay đổi eSIM thành công tại CH (đã in mã QR nhưng chưa quét) thì mã QR có hiệu lực trong bao lâu?
+eSIM sau khi in QRCODE nếu không quét dữ liệu vào điện thoại sẽ bị thu hồi sau 24 giờ
+Trang tiếp theo
+Trang
+của 8
+--------------------------------------------------
+
+Index: 4580
+Category: 5g
+Content: Làm thế nào để sử dụng 5G của MobiFone? Để sử dụng mạng 5G của MobiFone, bạn cần:
+Trong vùng phủ sóng 5G của MobiFone. Sử dụng điện thoại hỗ trợ 5G. Bật chế độ kết nối 5G trên thiết bị. Sử dụng sim 4G hoặc Esim (không cần đổi sim 5G)
+Đăng ký các gói data hoặc gói 5G của MobiFone
+Tham khảo danh sách điện thoại hỗ trợ sử dụng 5G và cách bật 5G trên điện thoại
+tại đây
+6. Để sử dụng mạng MobiFone 5G, tôi có cần đổi SIM điện thoại không?
+--------------------------------------------------
+
+Index: 6092
+Category: tin_tuc
+Content: Ứng dụng mang đến cho
+khách du lịch
+cơ hội nhận eSIM miễn phí, truy cập Internet tốc độ cao, gọi điện thuận tiện và tích hợp đa dạng tiện ích du lịch thiết yếu. Một giải pháp trọn gói, giúp bạn kết nối nhanh chóng, trải nghiệm Việt Nam dễ dàng, an tâm và trọn vẹn! Những trở ngại khách du lịch quốc tế thường gặp khi đến Việt Nam
+Theo số liệu từ Tổng cục Thống kê, trong 5 tháng đầu năm 2025, Việt Nam đã đón hơn 9,2 triệu lượt khách quốc tế, tăng hơn 21% so với cùng kỳ năm trước.
+--------------------------------------------------
+
+Index: 6097
+Category: tin_tuc
+Content: Hi Vietnam - Giải pháp kết nối thông minh cho khách quốc tế
+Với mong muốn mang đến trải nghiệm du lịch dễ dàng, thuận tiện và trọn vẹn hơn cho du khách quốc tế, MobiFone đã phát triển ứng dụng Hi Vietnam - nền tảng số tích hợp cung cấp eSIM, kết nối viễn thông và các dịch vụ thiết yếu, dành riêng cho khách nước ngoài khi nhập cảnh vào Việt Nam.
+--------------------------------------------------
+
+Index: 6098
+Category: tin_tuc
+Content: Ứng dụng được thiết kế tối ưu cho người dùng quốc tế, hỗ trợ cả hai hệ điều hành iOS và Android, giúp việc tiếp cận và thao tác trở nên đơn giản, nhanh chóng. Ngay khi tải ứng dụng và hoàn tất đăng ký, người dùng có thể nhận miễn phí 01 combo du lịch trọn gói gồm: eSIM MobiFone, gói cước HVN0 với 08 GB data 5G tốc độ cao và 10 phút gọi trong nước, sử dụng trong vòng 24 giờ. Việc này giúp du khách kết nối Internet ngay lập tức mà không cần mua SIM vật lý hay làm thủ tục phức tạp.
+--------------------------------------------------
+
+Index: 6102
+Category: tin_tuc
+Content: Hướng dẫn sử dụng ứng dụng Hi Vietnam
+Để bắt đầu trải nghiệm dịch vụ tại Việt Nam một cách nhanh chóng và thuận tiện, khách du lịch quốc tế chỉ cần thực hiện vài thao tác đơn giản ngay trên điện thoại di động. Ứng dụng Hi Vietnam được thiết kế với quy trình rõ ràng, dễ thao tác, hỗ trợ đa ngôn ngữ và hoàn toàn trực tuyến, giúp người dùng dễ dàng nhận eSIM, đăng ký thuê bao và sử dụng các gói cước phù hợp ngay sau khi nhập cảnh.
+--------------------------------------------------
+
+Index: 6104
+Category: tin_tuc
+Content: Bước 3: Đăng ký nhận eSIM miễn phí
+Người dùng bắt đầu quy trình đăng ký để nhận eSIM MobiFone kèm gói cước HVN0 sử dụng trong 24 giờ đầu. Bước 4: Tiến hành đăng ký thông tin thuê bao
+Toàn bộ quy trình định danh thuê bao được thực hiện trực tuyến ngay trên ứng dụng, đảm bảo nhanh chóng, minh bạch và tuân thủ quy định pháp luật:
+Xác nhận đồng ý với các điều khoản sử dụng và Nghị định 13 về bảo vệ dữ liệu cá nhân. Cung cấp ảnh hộ chiếu và thực hiện định danh điện tử (eKYC).
+--------------------------------------------------
+
+Index: 6105
+Category: tin_tuc
+Content: Tiến hành cuộc gọi video để xác thực thông tin. Hoàn thiện chữ ký điện tử để hoàn tất đăng ký. Bước 5: Nhận eSIM và thiết lập cài đặt
+Sau khi hoàn tất đăng ký, người dùng sẽ nhận được eSIM MobiFone và thực hiện cài đặt trực tiếp trên thiết bị theo hướng dẫn hiển thị trong ứng dụng. Bước 6: Kích hoạt tổng đài 900
+Thực hiện cuộc gọi đến 900 để kích hoạt eSIM và bắt đầu sử dụng dịch vụ.
+--------------------------------------------------
+
+Index: 6108
+Category: tin_tuc
+Content: Việc tích hợp eSIM cùng loạt tiện ích thiết yếu trên một nền tảng duy nhất không chỉ tối ưu hóa thời gian chuẩn bị mà còn mang đến một cách tiếp cận linh hoạt, hiện đại và thân thiện hơn cho những chuyến đi. Sự ra đời của Hi Vietnam cũng là minh chứng cho cam kết của MobiFone trong việc không ngừng đổi mới để nâng tầm trải nghiệm du lịch tại Việt Nam. Qua đó, góp phần xây dựng hình ảnh một Việt Nam cởi mở, luôn sẵn sàng chào đón và kết nối với bạn bè năm châu.
+--------------------------------------------------
+
+Index: 6110
+Category: tin_tuc
+Content: Từ khoá: #HiVietnam #TravelApp #MobiFone #FREEeSIM #VietnamTravel #InternationalTourist
+Chia sẻ
+Tin tức khác
+World Cup VIP trên VTVgo: Một gói VIP, trọn vẹn 104 trận đấu cùng loạt đặc quyền chưa từng có
+12 ngày trước
+Chuẩn hóa thông tin – x2 ưu đãi xịn
+45 ngày trước
+Hướng dẫn xác thực thông tin thuê bao theo Thông tư 08/2026/TT-BKHCN
+54 ngày trước
+Vi vu năm châu dịp lễ, giữ kết nối cùng MobiFone
+56 ngày trước
+Deal hot tháng 4: Nạp thẻ liền tay, nhận ngay 50%
+56 ngày trước
+Thực hiện Thông tư 08/2026/TT-BKHCN, MobiFone hướng dẫn khách hàng xác thực thông tin thuê bao nhanh chóng, thuận tiện
+62 ngày trước
+Đăng ký hội viên, nâng hạng đặc quyền – Trải nghiệm ưu đãi đặc biệt dành cho khách hàng MobiFone
+62 ngày trước
+Mở hộp say mê - Săn quà miễn chê cùng MyPoint
+83 ngày trước
+Ngày hội non sông – MobiFone kết nối thông tin, lan tỏa một lòng
+88 ngày trước
+Game thủ Samkok Tam Quốc “chinh chiến thả ga” với gói cước V6 từ MobiFone
+89 ngày trước
+Tri ân phái đẹp, MobiFone tặng e-voucher làm đẹp lên đến 10 triệu đồng
+94 ngày trước
+Thanh toán trực tuyến - nhận chiết khấu đỉnh từ MobiFone
+101 ngày trước
+Data Full – Cháy cùng Esports trên ON Live TV
+104 ngày trước
+Chiến Mobile Legends: Bang bang thả ga – Nhận quà cực đã với gói cước hợp tác độc quyền
+115 ngày trước
+Tết 2026 trọn vẹn hơn với gói cước add-on T26 từ MobiFone
+116 ngày trước
+Liên kết MyMobiFone – MyPoint: Nhận voucher dọn nhà sạch sang, sắm Tết rộn ràng
+117 ngày trước
+MobiFone triển khai chương trình “Lì Xì Trao Tay – Bính Ngọ Đại Phát” với tổng giá trị quà tặng gần 1 tỷ đồng
+126 ngày trước
+MobiFone Anti Spam – Giải pháp chặn cuộc gọi rác, mạo danh an toàn và hiệu quả
+130 ngày trước
+MobiAI – Nền tảng trí tuệ nhân tạo toàn diện mở lối tương lai số
+131 ngày trước
+Xưng danh minh chủ võ lâm: Nhận data & Giftcode cùng MobiGames và Vplay
+136 ngày trước
+--------------------------------------------------

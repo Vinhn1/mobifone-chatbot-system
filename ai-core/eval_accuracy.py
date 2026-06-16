@@ -1,8 +1,15 @@
 import os
+import sys
 import json
 import time
 import logging
 from dotenv import load_dotenv
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8')
+
 from google import genai
 from google.genai import types
 from rag_pipeline import MobiFoneRAG
@@ -24,12 +31,12 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 # ---------------------------------------------------------------------------
 # Constants (Fix #9: tách magic numbers/strings thành hằng số)
 # ---------------------------------------------------------------------------
-JUDGE_MODEL = "gemini-2.5-flash-lite"   # dùng nhất quán toàn file
+JUDGE_MODEL = "gemini-3.1-flash-lite"   # dùng nhất quán toàn file
 JUDGE_TEMPERATURE = 0.1
 TOP_K = 3                               # số chunk truy xuất mỗi query
-API_CALL_DELAY_SECONDS = 1.5            # delay giữa các lần gọi Judge
-MAX_RETRY_ATTEMPTS = 3                  # số lần thử lại khi API lỗi
-RETRY_BACKOFF_SECONDS = 2.0             # thời gian chờ cơ bản khi retry
+API_CALL_DELAY_SECONDS = 6.0            # delay giữa các lần gọi Judge (Tăng để tránh 429)
+MAX_RETRY_ATTEMPTS = 5                  # số lần thử lại khi API lỗi
+RETRY_BACKOFF_SECONDS = 6.0             # thời gian chờ cơ bản khi retry (Tăng để tránh 429)
 API_TIMEOUT_SECONDS = 60               # timeout cho mỗi API call (Fix #11)
 
 # ---------------------------------------------------------------------------
@@ -250,6 +257,9 @@ def run_evaluation() -> None:
         answer, sources = bot.answer_question(item["query"])  # Fix #6: giữ sources
         latency = time.time() - start_time
 
+        # Sleep to avoid rate limiting between generation and evaluation
+        time.sleep(API_CALL_DELAY_SECONDS)
+
         # 3. Grade using Gemini Judge
         logger.info("🤖 Đang chấm điểm tự động bằng LLM Judge (%s)...", JUDGE_MODEL)
         eval_scores = evaluate_response_with_gemini(
@@ -353,7 +363,13 @@ def _build_markdown_report(summary: dict) -> str:
 
     for detail in summary["details"]:
         scores = detail["scores"]
-        sources_str = ", ".join(detail.get("sources") or []) or "Không có nguồn"
+        sources_list = []
+        for s in (detail.get("sources") or []):
+            if isinstance(s, dict):
+                sources_list.append(f"[{s.get('title', 'Nguồn')}]({s.get('url', '#')})")
+            else:
+                sources_list.append(str(s))
+        sources_str = ", ".join(sources_list) or "Không có nguồn"
         lines += [
             "",
             f"### Test Case #{detail['id']}: {detail['query']}",
