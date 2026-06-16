@@ -3,11 +3,11 @@
   "temperature": 0.3,
   "top_p": 0.9,
   "max_tokens": 512,
-  "fb_enabled": false,
-  "fb_verify_token": "",
-  "fb_page_token": "",
-  "zalo_enabled": false,
-  "zalo_app_id": "",
-  "zalo_secret_key": "",
+  "fb_enabled": true,
+  "fb_verify_token": "mobifone_secure_token_123",
+  "fb_page_token": "EAAYJK98YnNMBRqaEL2XTOFRZA2NQA3mfq62sho7N2gZCPzGjfdpOlRuYq5suVDfxdr2mZCZAI5TXpHyNUDexAHB3ZCisuivvhLDQiTi9oZAmJsi40Pv1tVy9PZASPYuIZCijN05xtaYdYfJwFfqlPBC9qaOHum0AFBkgfZCGZC5wZAUxY7ZBw90lgPuUG2TzGcIyQxkvxTSmEcN3OgZDZD",
+  "zalo_enabled": true,
+  "zalo_app_id": "527041266701727892",
+  "zalo_secret_key": "5TEIX5Eb2y12MRXVLIzf",
   "zalo_access_token": ""
 }

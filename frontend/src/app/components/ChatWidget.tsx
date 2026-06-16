@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Send, ExternalLink, ChevronDown, Minimize2, Maximize2, User, Phone, CheckCircle2, Star, Sparkles } from "lucide-react";
+import { X, Send, ExternalLink, ChevronDown, Minimize2, Maximize2, User, Phone, CheckCircle2, Star, Sparkles, MessageCircle } from "lucide-react";
 import { RobotAvatar } from "./RobotAvatar";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
@@ -137,6 +137,9 @@ function renderText(text: string) {
   );
 }
 
+const FACEBOOK_MESSENGER_URL = "https://m.me/1215670604956653";
+const ZALO_OA_URL = "https://zalo.me/1192122707863776201";
+
 export function ChatWidget() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -149,6 +152,9 @@ export function ChatWidget() {
   const [unread, setUnread] = useState(1);
   const [sessionId] = useState(() => `widget_${Math.random().toString(36).substring(2, 11)}`);
   const endRef = useRef<HTMLDivElement>(null);
+
+  // Trạng thái hiển thị danh sách các kênh liên hệ
+  const [showChannels, setShowChannels] = useState(false);
 
   // Lead capture values
   const [captureValue, setCaptureValue] = useState("");
@@ -270,6 +276,187 @@ export function ChatWidget() {
 
       {/* Floating robot trigger */}
       <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000 }}>
+        {/* Contact Channels Stack (Messenger, Zalo, Web Chat) */}
+        <AnimatePresence>
+          {showChannels && !open && (
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              variants={{
+                hidden: { opacity: 0, scale: 0.8 },
+                visible: {
+                  opacity: 1,
+                  scale: 1,
+                  transition: {
+                    staggerChildren: 0.08,
+                    delayChildren: 0.05,
+                  }
+                }
+              }}
+              style={{
+                position: "absolute",
+                bottom: 96,
+                right: 13,
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+                zIndex: 1001,
+              }}
+            >
+              {/* Live Chat Channel */}
+              <motion.div
+                variants={{
+                  hidden: { y: 20, opacity: 0, scale: 0.8 },
+                  visible: { y: 0, opacity: 1, scale: 1 }
+                }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}
+              >
+                <div style={{
+                  background: "rgba(9,21,44,0.96)",
+                  backdropFilter: "blur(12px)",
+                  border: "1px solid rgba(48,176,235,0.3)",
+                  borderRadius: 10,
+                  padding: "6px 12px",
+                  color: "white",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  whiteSpace: "nowrap",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                  pointerEvents: "none",
+                }}>
+                  Chat trực tuyến với Mia
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.1, y: -2 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpen();
+                    setShowChannels(false);
+                  }}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: "linear-gradient(135deg, #1D397A, #30B0EB)",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    boxShadow: "0 8px 20px rgba(48, 176, 235, 0.4)",
+                  }}
+                >
+                  <MessageCircle size={22} />
+                </motion.button>
+              </motion.div>
+
+              {/* Zalo OA Channel */}
+              <motion.div
+                variants={{
+                  hidden: { y: 20, opacity: 0, scale: 0.8 },
+                  visible: { y: 0, opacity: 1, scale: 1 }
+                }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}
+              >
+                <div style={{
+                  background: "rgba(9,21,44,0.96)",
+                  backdropFilter: "blur(12px)",
+                  border: "1px solid rgba(48,176,235,0.3)",
+                  borderRadius: 10,
+                  padding: "6px 12px",
+                  color: "white",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  whiteSpace: "nowrap",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                  pointerEvents: "none",
+                }}>
+                  Kết nối qua Zalo
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.1, y: -2 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(ZALO_OA_URL, "_blank");
+                  }}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: "#0068FF",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    boxShadow: "0 8px 20px rgba(0, 104, 255, 0.4)",
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.477 2 2 5.92 2 10.77c0 2.82 1.54 5.31 3.93 6.91-.23.96-.83 2.87-.83 2.87a.4.4 0 00.56.44c.06-.03 2.65-1.58 3.66-2.18.86.22 1.76.33 2.68.33 5.523 0 10-3.92 10-8.77C22 5.92 17.523 2 12 2z" fill="white" />
+                    <path d="M8.5 15h7v-1.5l-4.5-4.5H15V7.5H8.5V9l4.5 4.5H8.5V15z" fill="#0068FF" />
+                  </svg>
+                </motion.button>
+              </motion.div>
+
+              {/* Facebook Messenger Channel */}
+              <motion.div
+                variants={{
+                  hidden: { y: 20, opacity: 0, scale: 0.8 },
+                  visible: { y: 0, opacity: 1, scale: 1 }
+                }}
+                style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}
+              >
+                <div style={{
+                  background: "rgba(9,21,44,0.96)",
+                  backdropFilter: "blur(12px)",
+                  border: "1px solid rgba(48,176,235,0.3)",
+                  borderRadius: 10,
+                  padding: "6px 12px",
+                  color: "white",
+                  fontSize: 12,
+                  fontWeight: 800,
+                  whiteSpace: "nowrap",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                  pointerEvents: "none",
+                }}>
+                  Nhắn tin qua Messenger
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.1, y: -2 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.open(FACEBOOK_MESSENGER_URL, "_blank");
+                  }}
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: "linear-gradient(135deg, #00C6FF 0%, #0072FF 50%, #F355DA 100%)",
+                    color: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    boxShadow: "0 8px 20px rgba(0, 114, 255, 0.4)",
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.36 2 2 6.13 2 11.5C2 14.54 3.4 17.21 5.6 18.97V22L8.5 20.41C9.6 20.72 10.78 20.9 12 20.9C17.64 20.9 22 16.77 22 11.5C22 6.13 17.64 2 12 2ZM12.93 14.52L10.36 11.77L5.36 14.52L10.86 8.68L13.5 11.43L18.43 8.68L12.93 14.52Z" fill="white"/>
+                  </svg>
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <AnimatePresence>
           {!open && (
             <motion.div
@@ -277,7 +464,7 @@ export function ChatWidget() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
               style={{ position: "relative", cursor: "pointer" }}
-              onClick={handleOpen}
+              onClick={() => setShowChannels(prev => !prev)}
             >
               {/* Radar rings */}
               {[1,2,3].map(n => (
@@ -300,28 +487,55 @@ export function ChatWidget() {
               >
                 <div style={{ zIndex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <RobotAvatar size={78} state={robotState} />
+                  {showChannels && (
+                    <motion.div
+                      initial={{ scale: 0, rotate: -90 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      exit={{ scale: 0, rotate: -90 }}
+                      style={{
+                        position: "absolute",
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        background: "#E4002B",
+                        border: "2px solid white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "white",
+                        boxShadow: "0 4px 10px rgba(228,0,43,0.5)",
+                        bottom: 0,
+                        right: 0,
+                        zIndex: 2,
+                      }}
+                    >
+                      <X size={14} strokeWidth={3} />
+                    </motion.div>
+                  )}
                 </div>
               </div>
 
               {/* Unread badge */}
-              {unread > 0 && (
+              {unread > 0 && !showChannels && (
                 <div style={{ position: "absolute", top: -2, right: -2, width: 22, height: 22, borderRadius: "50%", background: "#E4002B", border: "2px solid white", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 11, fontWeight: 900, boxShadow: "0 4px 10px rgba(228,0,43,0.5)" }}>
                   {unread}
                 </div>
               )}
 
               {/* Tooltip */}
-              <div style={{ position: "absolute", right: 88, top: "50%", transform: "translateY(-50%)", background: "rgba(9,21,44,0.96)", backdropFilter: "blur(16px)", border: "1px solid rgba(48,176,235,0.3)", borderRadius: 14, padding: "10px 16px", whiteSpace: "nowrap", pointerEvents: "none", boxShadow: "0 10px 30px rgba(0,0,0,0.3)" }}>
-                <div style={{ color: "white", fontSize: 13.5, fontWeight: 800, display: "flex", alignItems: "center", gap: 5 }}>
-                  <Sparkles size={13} style={{ color: "#30B0EB" }} />
-                  Mia — Chăm sóc khách hàng MobiFone
+              {!showChannels && (
+                <div style={{ position: "absolute", right: 88, top: "50%", transform: "translateY(-50%)", background: "rgba(9,21,44,0.96)", backdropFilter: "blur(16px)", border: "1px solid rgba(48,176,235,0.3)", borderRadius: 14, padding: "10px 16px", whiteSpace: "nowrap", pointerEvents: "none", boxShadow: "0 10px 30px rgba(0,0,0,0.3)" }}>
+                  <div style={{ color: "white", fontSize: 13.5, fontWeight: 800, display: "flex", alignItems: "center", gap: 5 }}>
+                    <Sparkles size={13} style={{ color: "#30B0EB" }} />
+                    Mia — Chăm sóc khách hàng MobiFone
+                  </div>
+                  <div style={{ color: "#87D5F8", fontSize: 11, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", display: "inline-block", boxShadow: "0 0 6px #22C55E" }} />
+                    Online · Đang có quà tặng 🎁
+                  </div>
+                  <div style={{ position: "absolute", right: -6, top: "50%", transform: "translateY(-50%)", width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderLeft: "6px solid rgba(9,21,44,0.96)" }} />
                 </div>
-                <div style={{ color: "#87D5F8", fontSize: 11, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", display: "inline-block", boxShadow: "0 0 6px #22C55E" }} />
-                  Online · Đang có quà tặng 🎁
-                </div>
-                <div style={{ position: "absolute", right: -6, top: "50%", transform: "translateY(-50%)", width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderLeft: "6px solid rgba(9,21,44,0.96)" }} />
-              </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
