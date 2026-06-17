@@ -545,6 +545,24 @@ export function UserPackages() {
                 </div>
               </div>
 
+              {!isMobileDevice() && (
+                <a
+                  href={`sms:${regModal.shortcode}?body=${encodeURIComponent(regModal.syntax)}`}
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    color: "#0055A5",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    textDecoration: "underline",
+                    marginBottom: 16,
+                    cursor: "pointer"
+                  }}
+                >
+                  💬 Kích hoạt nhanh bằng ứng dụng tin nhắn của máy tính (Phone Link)
+                </a>
+              )}
+
               <div style={{
                 fontSize: 11,
                 color: "#64748B",

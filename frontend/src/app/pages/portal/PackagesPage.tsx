@@ -419,6 +419,15 @@ export function PackagesPage() {
                 </div>
               </div>
 
+              {!isMobileDevice() && (
+                <a
+                  href={`sms:${regModal.shortcode}?body=${encodeURIComponent(regModal.syntax)}`}
+                  className="block text-center text-[#0055A5] text-xs font-bold underline mb-4 cursor-pointer hover:text-[#003D7A]"
+                >
+                  💬 Kích hoạt nhanh bằng ứng dụng tin nhắn của máy tính (Phone Link)
+                </a>
+              )}
+
               <div className="text-[11px] text-slate-400 mb-6 bg-blue-50/50 border border-blue-100/50 p-3 rounded-xl leading-relaxed">
                 ℹ️ Phí cước dịch vụ sẽ được trừ trực tiếp từ tài khoản gốc của thuê bao MobiFone của bạn sau khi bạn nhấn gửi tin nhắn SMS thành công.
               </div>
