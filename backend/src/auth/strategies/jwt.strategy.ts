@@ -16,6 +16,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   // Hàm này tự động chạy sau khi Passport giải mã token thành công
   async validate(payload: any) {
     // Giá trị trả về ở đây sẽ được gán vào request.user
-    return { userId: payload.sub, username: payload.username, role: payload.role };
+    return {
+      userId: payload.sub,
+      username: payload.username,
+      phoneNumber: payload.phoneNumber,
+      role: payload.role || 'user',
+    };
   }
 }

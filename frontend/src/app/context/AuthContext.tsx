@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { createContext, useContext, useState, type ReactNode, useEffect } from "react";
 import axios from "axios";
 
 export type AuthRole = "guest" | "user" | "admin";
@@ -108,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error.response?.status === 401 && !isLoginRequest) {
           // Token hết hạn hoặc không hợp lệ → logout
           localStorage.removeItem("mobifone_admin_token");
+          localStorage.removeItem("mobifone_portal_token");
           localStorage.removeItem("mobifone_portal_user");
           setToken(null);
           setUser(null);
@@ -122,16 +123,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Gắn Bearer token vào header mỗi request nếu có
   useEffect(() => {
     const interceptor = axios.interceptors.request.use((config) => {
-      const t = localStorage.getItem("mobifone_admin_token");
-      if (t) config.headers.Authorization = `Bearer ${t}`;
+      const adminToken = localStorage.getItem("mobifone_admin_token");
+      const portalToken = localStorage.getItem("mobifone_portal_token");
+      const activeToken = adminToken || portalToken;
+      if (activeToken) config.headers.Authorization = `Bearer ${activeToken}`;
       return config;
     });
     return () => axios.interceptors.request.eject(interceptor);
   }, []);
 
+  // Đồng bộ thông tin từ backend khi ứng dụng khởi chạy nếu đã đăng nhập portal
+  useEffect(() => {
+    const fetchPortalProfile = async () => {
+      const portalToken = localStorage.getItem("mobifone_portal_token");
+      if (portalToken) {
+        try {
+          const response = await axios.get(`${API_BASE}/subscribers/me`);
+          const sub = response.data;
+          if (sub && sub.id) {
+            setUser(prev => {
+              const baseUser = prev || MOCK_USER;
+              const mappedUser: AuthUser = {
+                ...baseUser,
+                id: sub.id,
+                name: sub.name || baseUser.name || `Thành viên ${sub.phoneNumber.slice(-4)}`,
+                phone: sub.phoneNumber,
+                email: sub.email || baseUser.email || `${sub.phoneNumber}@mobifone.vn`,
+                role: "user",
+                package: sub.currentPackage ? `${sub.currentPackage} Ultra` : "Không có gói",
+                packageCode: sub.currentPackage || "",
+                packageExpiry: sub.packageExpiry ? new Date(sub.packageExpiry).toLocaleDateString("vi-VN") : "N/A",
+                dataUsedGB: sub.dataUsedGB || 0,
+                dataTotalGB: sub.dataTotalGB || 0,
+                address: sub.address || baseUser.address || "Chưa cập nhật",
+                dob: sub.dob || baseUser.dob || "01/01/1990",
+              };
+              localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
+              return mappedUser;
+            });
+          }
+        } catch (error) {
+          console.warn("Không thể đồng bộ profile từ backend:", error);
+        }
+      }
+    };
+    fetchPortalProfile();
+  }, []);
+
   const login = async (identifier: string, password: string): Promise<"user" | "admin" | "error"> => {
     // Clear any previous session state to prevent mix-ups
     localStorage.removeItem("mobifone_admin_token");
+    localStorage.removeItem("mobifone_portal_token");
     localStorage.removeItem("mobifone_portal_user");
     setToken(null);
     setUser(null);
@@ -179,6 +221,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (phone: string, password: string, name?: string): Promise<"success" | "error"> => {
     try {
+      // Nếu đã xác thực OTP thành công ở bước trước và đã lưu thông tin người dùng
+      const savedUser = localStorage.getItem("mobifone_portal_user");
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed.phone === phone) {
+          setUser(parsed);
+          return "success";
+        }
+      }
+
       await axios.post(`${API_BASE}/auth/register`, {
         username: phone,
         password: password,
@@ -189,8 +241,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return "success";
     } catch (error) {
       console.error("Lỗi đăng ký:", error);
-      // Nếu backend chưa chạy thì cho phép demo
-      if ((error as any)?.code === "ERR_NETWORK" || (error as any)?.status === 404) {
+      // Nếu backend chưa chạy hoặc trả về 404/500 do chưa có endpoint register
+      const isNetworkError = (error as any)?.code === "ERR_NETWORK";
+      const is404 = (error as any)?.response?.status === 404;
+      if (isNetworkError || is404) {
         const newUser: AuthUser = {
           ...MOCK_USER,
           id: `U${Date.now()}`,
@@ -207,6 +261,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("mobifone_admin_token");
+    localStorage.removeItem("mobifone_portal_token");
     localStorage.removeItem("mobifone_portal_user");
     setToken(null);
     setUser(null);

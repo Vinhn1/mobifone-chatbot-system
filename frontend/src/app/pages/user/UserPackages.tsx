@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { Wifi, Phone, Check, Zap, RefreshCw, Plus, ChevronRight, Package, X, Copy, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import axios from "axios";
+
+const API_BASE = "http://localhost:3000";
 
 const ADDONS = [
   { icon: "📶", name: "Thêm 5GB data", price: 25000, desc: "Hiệu lực 30 ngày", color: "#0055A5" },
@@ -192,10 +195,17 @@ export function UserPackages() {
     });
   };
 
-  const handleConfirmActivation = () => {
+  const handleConfirmActivation = async () => {
     if (!user || !regModal) return;
 
     if (regModal.type === "renew") {
+      try {
+        await axios.post(`${API_BASE}/subscribers/packages/register`, {
+          packageCode: regModal.code
+        });
+      } catch (error) {
+        console.warn("Backend renew package failed, falling back to local renewal:", error);
+      }
       const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("vi-VN");
       updateUser({
         dataUsedGB: 0,
@@ -215,6 +225,13 @@ export function UserPackages() {
       }
       setSelectedAddon(null);
     } else if (regModal.type === "upgrade") {
+      try {
+        await axios.post(`${API_BASE}/subscribers/packages/register`, {
+          packageCode: regModal.code
+        });
+      } catch (error) {
+        console.warn("Backend upgrade package failed, falling back to local upgrade:", error);
+      }
       const pkgData = getPackageData(regModal.code);
       updateUser(pkgData);
       setTab("current");

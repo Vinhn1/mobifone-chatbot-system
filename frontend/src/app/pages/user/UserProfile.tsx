@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { User, Mail, Phone, MapPin, Calendar, Lock, Bell, Shield, Camera, Check, ChevronRight, Star } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import axios from "axios";
 
 const TIER_STYLE = {
   Silver: "bg-slate-50 text-slate-600 border-slate-200/60 shadow-xs",
@@ -34,21 +35,47 @@ function InfoRow({ icon: Icon, label, value, editable = false, onEdit }: {
 }
 
 export function UserProfile() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [tab, setTab] = useState<"info" | "security" | "notifications">("info");
   const [editing, setEditing] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [notifications, setNotifications] = useState({
     sms: true, email: true, promo: true, renewal: true, news: false, security: true
   });
   const tier = user?.tier ?? "Silver";
   const tierClass = TIER_STYLE[tier] || TIER_STYLE.Silver;
 
-  const handleSave = () => {
-    setSaved(true);
-    setEditing(null);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    if (!editing) return;
+    setIsSaving(true);
+    
+    // 1. Cập nhật state cục bộ qua AuthContext (sẽ tự động lưu localStorage)
+    updateUser({ [editing]: editValue });
+
+    // 2. Gửi request cập nhật lên PostgreSQL Backend
+    try {
+      const portalToken = localStorage.getItem("mobifone_portal_token");
+      if (portalToken) {
+        await axios.patch(
+          "http://localhost:3000/subscribers/profile",
+          { [editing]: editValue },
+          {
+            headers: {
+              Authorization: `Bearer ${portalToken}`,
+            },
+          }
+        );
+      }
+    } catch (error) {
+      console.error("Lỗi đồng bộ hồ sơ lên backend:", error);
+    } finally {
+      setIsSaving(false);
+      setSaved(true);
+      setEditing(null);
+      setTimeout(() => setSaved(false), 2000);
+    }
   };
 
   return (
@@ -142,10 +169,13 @@ export function UserProfile() {
                   className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all"
                 />
                 <button
+                  disabled={isSaving}
                   onClick={handleSave}
-                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#0055A5] to-blue-500 text-white font-bold text-sm cursor-pointer shadow-md shadow-[#0055A5]/20 border-none transition-all active:scale-95"
+                  className={`px-5 py-2 rounded-xl bg-gradient-to-r from-[#0055A5] to-blue-500 text-white font-bold text-sm shadow-md shadow-[#0055A5]/20 border-none transition-all active:scale-95 ${
+                    isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                  }`}
                 >
-                  Lưu
+                  {isSaving ? "Đang lưu..." : "Lưu"}
                 </button>
                 <button
                   onClick={() => setEditing(null)}

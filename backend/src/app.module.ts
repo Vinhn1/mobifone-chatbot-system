@@ -8,6 +8,7 @@ import { LeadsModule } from './leads/leads.module';
 import { ChatHistoryModule } from './chat-history/chat-history.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { SubscribersModule } from './subscribers/subscribers.module';
 
 @Module({
   imports: [
@@ -43,6 +44,8 @@ import { AuthModule } from './auth/auth.module';
     UsersModule,
 
     AuthModule,
+
+    SubscribersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

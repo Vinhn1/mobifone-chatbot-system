@@ -166,6 +166,43 @@ export class ChatService {
     }
   }
 
+  // Hàm bổ trợ chia nhỏ tin nhắn nếu vượt quá giới hạn ký tự (ví dụ: 2000 ký tự của FB Messenger/Zalo)
+  private splitMessage(text: string, maxLength = 2000): string[] {
+    if (text.length <= maxLength) return [text];
+    
+    const chunks: string[] = [];
+    let currentChunk = '';
+    
+    const lines = text.split('\n');
+    for (const line of lines) {
+      if ((currentChunk + '\n' + line).length > maxLength) {
+        if (currentChunk) {
+          chunks.push(currentChunk);
+          currentChunk = '';
+        }
+        
+        if (line.length > maxLength) {
+          let tempLine = line;
+          while (tempLine.length > maxLength) {
+            chunks.push(tempLine.substring(0, maxLength));
+            tempLine = tempLine.substring(maxLength);
+          }
+          currentChunk = tempLine;
+        } else {
+          currentChunk = line;
+        }
+      } else {
+        currentChunk = currentChunk ? currentChunk + '\n' + line : line;
+      }
+    }
+    
+    if (currentChunk) {
+      chunks.push(currentChunk);
+    }
+    
+    return chunks;
+  }
+
   // Xử lý tin nhắn đến từ Facebook Messenger Webhook
   async handleFacebookMessage(senderId: string, text: string) {
     console.log(`[FB-WEBHOOK] Nhận tin nhắn từ ${senderId}: "${text}"`);
@@ -187,19 +224,26 @@ export class ChatService {
     const result = await this.sendMessageToAi(text, `facebook_${senderId}`);
     const answer = result?.answer || 'Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi này.';
 
-    // 3. Gửi tin nhắn trả lời qua Facebook Send API
+    // 3. Gửi tin nhắn trả lời qua Facebook Send API (chia nhỏ tin nhắn nếu dài hơn 2000 kí tự)
     const fbSendUrl = `https://graph.facebook.com/v18.0/me/messages?access_token=${fbPageToken}`;
-    try {
-      await firstValueFrom(
-        this.httpService.post(fbSendUrl, {
-          recipient: { id: senderId },
-          messaging_type: 'RESPONSE',
-          message: { text: answer }
-        })
-      );
-      console.log(`[FB-WEBHOOK] Đã phản hồi thành công cho ${senderId}`);
-    } catch (fbError) {
-      console.error('[FB-WEBHOOK] Lỗi khi gửi tin nhắn qua Facebook Send API:', fbError.response?.data || fbError.message);
+    const chunks = this.splitMessage(answer, 2000);
+
+    for (const chunk of chunks) {
+      try {
+        await firstValueFrom(
+          this.httpService.post(fbSendUrl, {
+            recipient: { id: senderId },
+            messaging_type: 'RESPONSE',
+            message: { text: chunk }
+          })
+        );
+        console.log(`[FB-WEBHOOK] Đã phản hồi thành công một phần cho ${senderId}`);
+      } catch (fbError) {
+        const errorDetail = fbError.response 
+          ? JSON.stringify(fbError.response.data) 
+          : fbError.message;
+        console.error('[FB-WEBHOOK] Lỗi khi gửi tin nhắn qua Facebook Send API:', errorDetail);
+      }
     }
   }
 
@@ -224,23 +268,30 @@ export class ChatService {
     const result = await this.sendMessageToAi(text, `zalo_${senderId}`);
     const answer = result?.answer || 'Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi này.';
 
-    // 3. Gửi tin nhắn trả lời qua Zalo OpenAPI
+    // 3. Gửi tin nhắn trả lời qua Zalo OpenAPI (chia nhỏ tin nhắn nếu dài hơn 2000 kí tự)
     const zaloSendUrl = 'https://openapi.zalo.me/v3.0/oa/message/transaction';
-    try {
-      await firstValueFrom(
-        this.httpService.post(zaloSendUrl, {
-          recipient: { user_id: senderId },
-          message: { text: answer }
-        }, {
-          headers: {
-            'Content-Type': 'application/json',
-            'access_token': zaloAccessToken
-          }
-        })
-      );
-      console.log(`[ZALO-WEBHOOK] Đã phản hồi thành công cho Zalo user ${senderId}`);
-    } catch (zaloError) {
-      console.error('[ZALO-WEBHOOK] Lỗi khi gửi tin nhắn qua Zalo OpenAPI:', zaloError.response?.data || zaloError.message);
+    const chunks = this.splitMessage(answer, 2000);
+
+    for (const chunk of chunks) {
+      try {
+        await firstValueFrom(
+          this.httpService.post(zaloSendUrl, {
+            recipient: { user_id: senderId },
+            message: { text: chunk }
+          }, {
+            headers: {
+              'Content-Type': 'application/json',
+              'access_token': zaloAccessToken
+            }
+          })
+        );
+        console.log(`[ZALO-WEBHOOK] Đã phản hồi thành công một phần cho Zalo user ${senderId}`);
+      } catch (zaloError) {
+        const errorDetail = zaloError.response 
+          ? JSON.stringify(zaloError.response.data) 
+          : zaloError.message;
+        console.error('[ZALO-WEBHOOK] Lỗi khi gửi tin nhắn qua Zalo OpenAPI:', errorDetail);
+      }
     }
   }
 }
