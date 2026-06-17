@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Send, ExternalLink, ChevronDown, Minimize2, Maximize2, Star, Sparkles, MessageCircle, Check } from "lucide-react";
+import { X, Send, ExternalLink, ChevronDown, Minimize2, Maximize2, Star, Sparkles, MessageCircle, Check, Phone } from "lucide-react";
 import { RobotAvatar } from "./RobotAvatar";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
