@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
-import { Wifi, Phone, Zap, Star, Check, Filter, Search } from "lucide-react";
+import { Wifi, Phone, Zap, Star, Check, Filter, Search, X, Copy, CheckCircle2, AlertCircle } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 type Category = "all" | "data" | "voice" | "unlimited";
 
@@ -23,10 +24,97 @@ const CATEGORIES: { key: Category; label: string; icon: React.ElementType }[] = 
   { key: "unlimited", label: "Không giới hạn", icon: Zap },
 ];
 
+const getPackageData = (codeUpper: string) => {
+  let dataTotal = 120;
+  let voiceTotal = 600;
+  let name = codeUpper + " Ultra";
+
+  if (codeUpper === 'TK79') {
+    dataTotal = 60;
+    voiceTotal = 900;
+  } else if (codeUpper === 'TK99') {
+    dataTotal = 90;
+    voiceTotal = 600;
+  } else if (codeUpper === 'TK135') {
+    dataTotal = 120;
+    voiceTotal = 620;
+  } else if (codeUpper === 'TK199') {
+    dataTotal = 180;
+    voiceTotal = 1000;
+  } else if (codeUpper === 'V90') {
+    dataTotal = 30;
+    voiceTotal = 1000;
+  } else if (codeUpper === 'V150') {
+    dataTotal = 60;
+    voiceTotal = 1000;
+  } else if (codeUpper === 'MAX299') {
+    dataTotal = 999;
+    voiceTotal = 2000;
+  } else if (codeUpper === 'S49') {
+    dataTotal = 15;
+    voiceTotal = 300;
+  }
+
+  return {
+    packageCode: codeUpper,
+    package: name,
+    dataTotalGB: dataTotal,
+    dataUsedGB: 0,
+    voiceTotalMin: voiceTotal,
+    voiceUsedMin: 0,
+    packageExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("vi-VN"),
+  };
+};
+
 export function PackagesPage() {
+  const { user, updateUser } = useAuth();
   const [category, setCategory] = useState<Category>("all");
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
+
+  const [regModal, setRegModal] = useState<{ open: boolean; packageCode: string; price: string; color: string; shortcode: string; syntax: string } | null>(null);
+  const [loginPromptOpen, setLoginPromptOpen] = useState(false);
+  const [copiedShort, setCopiedShort] = useState(false);
+  const [copiedSyntax, setCopiedSyntax] = useState(false);
+
+  const isMobileDevice = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+  };
+
+  const handleRegisterClick = (pkg: any) => {
+    if (!user || user.role !== "user") {
+      setLoginPromptOpen(true);
+      return;
+    }
+
+    const code = pkg.name.toUpperCase();
+    
+    if (isMobileDevice()) {
+      window.location.href = `sms:999?body=DK%20${code}`;
+    }
+
+    setRegModal({
+      open: true,
+      packageCode: code,
+      price: pkg.price,
+      color: pkg.color,
+      shortcode: "999",
+      syntax: `DK ${code}`
+    });
+  };
+
+  const handleConfirmActivation = () => {
+    if (regModal) {
+      const pkgData = getPackageData(regModal.packageCode);
+      updateUser(pkgData);
+      setRegModal(null);
+      navigate("/dashboard/packages");
+    }
+  };
 
   const filtered = PACKAGES.filter(p => {
     const matchCat = category === "all" || p.category === category;
@@ -207,7 +295,7 @@ export function PackagesPage() {
 
                 <div className="flex gap-2">
                   <button
-                    onClick={() => navigate("/login")}
+                    onClick={() => handleRegisterClick(pkg)}
                     className="flex-1 py-2.5 rounded-xl font-bold text-xs cursor-pointer border-none transition-all active:scale-95 text-center shadow-xs"
                     style={{
                       background: pkg.popular ? `linear-gradient(135deg, ${pkg.color}, ${pkg.color}CC)` : `${pkg.color}10`,
@@ -225,6 +313,126 @@ export function PackagesPage() {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      <AnimatePresence>
+        {loginPromptOpen && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 flex flex-col items-center text-center relative"
+            >
+              <button
+                onClick={() => setLoginPromptOpen(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 bg-transparent border-none cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+              
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 mb-4">
+                <AlertCircle size={24} />
+              </div>
+
+              <h3 className="text-slate-800 font-black text-lg mb-2">Yêu cầu đăng nhập</h3>
+              <p className="text-slate-500 text-xs leading-relaxed mb-6">
+                Vui lòng đăng nhập với tài khoản MobiFone để thực hiện đăng ký và quản lý các gói cước trực tuyến.
+              </p>
+
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setLoginPromptOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-slate-100 text-slate-600 border-none cursor-pointer hover:bg-slate-200/80 transition-all"
+                >
+                  Bỏ qua
+                </button>
+                <button
+                  onClick={() => navigate("/login")}
+                  className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-[#0055A5] text-white border-none cursor-pointer shadow-md shadow-[#0055A5]/20 hover:bg-[#003D7A] transition-all"
+                >
+                  Đăng nhập ngay
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {regModal && regModal.open && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-100 flex flex-col relative"
+            >
+              <div className="flex justify-between items-center mb-5">
+                <h3 className="text-slate-800 font-black text-lg flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: regModal.color }} />
+                  Đăng ký gói {regModal.packageCode}
+                </h3>
+                <button
+                  onClick={() => setRegModal(null)}
+                  className="text-slate-400 hover:text-slate-600 bg-transparent border-none cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <p className="text-slate-500 text-xs leading-relaxed mb-4">
+                Để hoàn tất đăng ký gói cước <strong>{regModal.packageCode}</strong> ({regModal.price}), vui lòng thực hiện soạn tin nhắn SMS trên điện thoại của bạn với thông tin sau:
+              </p>
+
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col gap-3 mb-5">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 text-xs font-semibold">Đầu số gửi:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-800 font-extrabold text-sm">{regModal.shortcode}</span>
+                    <button
+                      onClick={() => {
+                        copyToClipboard(regModal.shortcode);
+                        setCopiedShort(true);
+                        setTimeout(() => setCopiedShort(false), 1500);
+                      }}
+                      className="bg-transparent border-none text-slate-400 hover:text-[#0055A5] cursor-pointer p-1 rounded-md hover:bg-slate-100 flex"
+                    >
+                      {copiedShort ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                </div>
+                <div className="h-[1px] bg-slate-200/60" />
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-400 text-xs font-semibold">Cú pháp:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[#E4002B] font-extrabold text-sm">{regModal.syntax}</span>
+                    <button
+                      onClick={() => {
+                        copyToClipboard(regModal.syntax);
+                        setCopiedSyntax(true);
+                        setTimeout(() => setCopiedSyntax(false), 1500);
+                      }}
+                      className="bg-transparent border-none text-slate-400 hover:text-[#0055A5] cursor-pointer p-1 rounded-md hover:bg-slate-100 flex"
+                    >
+                      {copiedSyntax ? <CheckCircle2 size={14} className="text-green-500" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-slate-400 mb-6 bg-blue-50/50 border border-blue-100/50 p-3 rounded-xl leading-relaxed">
+                ℹ️ Phí cước dịch vụ sẽ được trừ trực tiếp từ tài khoản gốc của thuê bao MobiFone của bạn sau khi bạn nhấn gửi tin nhắn SMS thành công.
+              </div>
+
+              <button
+                onClick={handleConfirmActivation}
+                className="w-full py-3 rounded-xl font-bold text-xs bg-[#0055A5] text-white border-none cursor-pointer shadow-md shadow-[#0055A5]/25 hover:bg-[#003D7A] active:scale-95 transition-all text-center"
+              >
+                XÁC NHẬN KÍCH HOẠT GÓI
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
