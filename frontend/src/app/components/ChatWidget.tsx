@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Send, ExternalLink, ChevronDown, Minimize2, Maximize2, Star, Sparkles, MessageCircle, Check } from "lucide-react";
 import { RobotAvatar } from "./RobotAvatar";
+import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 
 type Source = {
@@ -186,7 +187,9 @@ export function ChatWidget() {
     if (open) endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, typing, open]);
 
-
+  const send = async (text: string) => {
+    const textToSend = text.trim();
+    if (!textToSend) return;
 
     setMessages(prev => [...prev, { id: Date.now(), type: "user", text: textToSend }]);
     setInput("");
