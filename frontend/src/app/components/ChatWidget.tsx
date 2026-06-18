@@ -697,8 +697,8 @@ export function ChatWidget() {
                               )}
                             </div>
 
-                            {/* Sources citation */}
-                            {msg.sources && msg.sources.length > 0 && (
+                            {/* Sources citation - hidden per user request */}
+                            {/*msg.sources && msg.sources.length > 0 && (
                               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginTop: 6 }}>
                                 {msg.sources.map((s, idx) => {
                                   const title = typeof s === "string" ? s : s.title || s.url;
@@ -740,7 +740,7 @@ export function ChatWidget() {
                                   );
                                 })}
                               </div>
-                            )}
+                            )*/}
                           </div>
                         </div>
 

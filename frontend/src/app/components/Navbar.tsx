@@ -91,8 +91,14 @@ export function Navbar() {
               >
                 <div className={`w-7 h-7 rounded-full ${
                   user.role === "admin" ? "bg-gradient-to-br from-amber-500 to-red-500" : "bg-gradient-to-br from-blue-600 to-amber-500"
-                } flex items-center justify-center text-white text-xs font-extrabold shadow-xs`}>
-                  {user.role === "admin" ? <Shield size={13} /> : user.name.charAt(0)}
+                } flex items-center justify-center text-white text-xs font-extrabold shadow-xs overflow-hidden`}>
+                  {user.avatar ? (
+                    <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : user.role === "admin" ? (
+                    <Shield size={13} />
+                  ) : (
+                    user.name.charAt(0)
+                  )}
                 </div>
                 <div className="text-left">
                   <div className="text-slate-800 font-bold text-xs leading-none mb-0.5">{user.name.split(" ").slice(-2).join(" ")}</div>

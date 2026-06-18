@@ -47,6 +47,35 @@ export function UserProfile() {
   const tier = user?.tier ?? "Silver";
   const tierClass = TIER_STYLE[tier] || TIER_STYLE.Silver;
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result as string;
+      updateUser({ avatar: base64 });
+
+      // Gửi lên backend
+      try {
+        const portalToken = localStorage.getItem("mobifone_portal_token");
+        if (portalToken) {
+          await axios.patch(
+            "http://localhost:3000/subscribers/profile",
+            { avatar: base64 },
+            {
+              headers: {
+                Authorization: `Bearer ${portalToken}`,
+              },
+            }
+          );
+        }
+      } catch (error) {
+        console.error("Lỗi đồng bộ avatar lên backend:", error);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSave = async () => {
     if (!editing) return;
     setIsSaving(true);
@@ -87,12 +116,17 @@ export function UserProfile() {
         className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm shadow-slate-200/30 mb-6 flex flex-wrap items-center gap-5"
       >
         <div className="relative">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#0055A5] to-[#E4002B] flex items-center justify-center text-white text-2xl font-black shadow-md shadow-[#0055A5]/25 border-4 border-white">
-            {user?.name?.charAt(0)}
+          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#0055A5] to-[#E4002B] flex items-center justify-center text-white text-2xl font-black shadow-md shadow-[#0055A5]/25 border-4 border-white overflow-hidden">
+            {user?.avatar ? (
+              <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              user?.name?.charAt(0)
+            )}
           </div>
-          <button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#0055A5] hover:bg-[#00448A] border-2 border-white flex items-center justify-center cursor-pointer transition-all">
+          <label className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#0055A5] hover:bg-[#00448A] border-2 border-white flex items-center justify-center cursor-pointer transition-all">
             <Camera size={12} className="text-white" />
-          </button>
+            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+          </label>
         </div>
 
         <div className="flex-1 min-w-[200px]">

@@ -38,6 +38,9 @@ export class Subscriber {
   @Column({ type: 'varchar', nullable: true })
   address: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  avatar: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

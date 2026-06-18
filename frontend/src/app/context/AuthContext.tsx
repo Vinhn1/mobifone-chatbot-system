@@ -91,7 +91,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem("mobifone_admin_token"));
   const [user, setUser] = useState<AuthUser | null>(() => {
     const savedToken = localStorage.getItem("mobifone_admin_token");
-    if (savedToken) return MOCK_ADMIN;
+    if (savedToken) {
+      const savedAdmin = localStorage.getItem("mobifone_admin_user");
+      if (savedAdmin) {
+        try { return JSON.parse(savedAdmin); } catch { return MOCK_ADMIN; }
+      }
+      return MOCK_ADMIN;
+    }
     const savedUser = localStorage.getItem("mobifone_portal_user");
     if (savedUser) {
       try { return JSON.parse(savedUser); } catch { return null; }
@@ -191,7 +197,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (apiToken) {
           localStorage.setItem("mobifone_admin_token", apiToken);
           setToken(apiToken);
-          setUser(MOCK_ADMIN);
+          const savedAdmin = localStorage.getItem("mobifone_admin_user");
+          if (savedAdmin) {
+            try { setUser(JSON.parse(savedAdmin)); } catch { setUser(MOCK_ADMIN); }
+          } else {
+            setUser(MOCK_ADMIN);
+          }
           return "admin";
         }
       } catch (error) {
@@ -202,7 +213,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log("Đăng nhập Admin ở chế độ Demo Fallback thành công!");
           localStorage.setItem("mobifone_admin_token", "demo_token_admin");
           setToken("demo_token_admin");
-          setUser(MOCK_ADMIN);
+          const savedAdmin = localStorage.getItem("mobifone_admin_user");
+          if (savedAdmin) {
+            try { setUser(JSON.parse(savedAdmin)); } catch { setUser(MOCK_ADMIN); }
+          } else {
+            setUser(MOCK_ADMIN);
+          }
           return "admin";
         }
         return "error";
@@ -261,6 +277,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("mobifone_admin_token");
+    localStorage.removeItem("mobifone_admin_user");
     localStorage.removeItem("mobifone_portal_token");
     localStorage.removeItem("mobifone_portal_user");
     setToken(null);
@@ -273,6 +290,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const updated = { ...prev, ...patch };
       if (updated.role === "user") {
         localStorage.setItem("mobifone_portal_user", JSON.stringify(updated));
+      } else if (updated.role === "admin") {
+        localStorage.setItem("mobifone_admin_user", JSON.stringify(updated));
       }
       return updated;
     });

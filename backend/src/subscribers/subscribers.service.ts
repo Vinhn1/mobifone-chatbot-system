@@ -150,7 +150,7 @@ export class SubscribersService {
     }
 
     // Chỉ cho phép cập nhật các trường được quy định
-    const allowedFields = ['name', 'email', 'dob', 'address'];
+    const allowedFields = ['name', 'email', 'dob', 'address', 'avatar'];
     for (const key of allowedFields) {
       if (profileData[key] !== undefined) {
         subscriber[key] = profileData[key];
@@ -176,7 +176,7 @@ export class SubscribersService {
 
     const updatableFields = [
       'name', 'email', 'dob', 'address', 'currentPackage',
-      'dataTotalGB', 'dataUsedGB', 'packageExpiry'
+      'dataTotalGB', 'dataUsedGB', 'packageExpiry', 'avatar'
     ];
     for (const key of updatableFields) {
       if (updateData[key] !== undefined) {

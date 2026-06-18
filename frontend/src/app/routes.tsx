@@ -17,6 +17,7 @@ import { ConversationsPage } from "./pages/admin/ConversationsPage";
 import { KnowledgeBasePage } from "./pages/admin/KnowledgeBasePage";
 import { PromptPlaygroundPage } from "./pages/admin/PromptPlaygroundPage";
 import { BotConfigPage } from "./pages/admin/BotConfigPage";
+import { AdminProfilePage } from "./pages/admin/AdminProfilePage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -62,6 +63,7 @@ export const router = createBrowserRouter([
       { path: "knowledge", Component: KnowledgeBasePage },
       { path: "playground", Component: PromptPlaygroundPage },
       { path: "bot-config", Component: BotConfigPage },
+      { path: "profile", Component: AdminProfilePage },
     ],
   },
   // Fallback 404 → trang chủ

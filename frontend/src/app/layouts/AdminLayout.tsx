@@ -388,25 +388,37 @@ export function AdminLayout() {
           background: "rgba(0, 0, 0, 0.15)"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: collapsed ? "center" : "flex-start" }}>
-            <div style={{
-              width: 34,
-              height: 34,
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #F39C12, #E4002B)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontSize: 13,
-              fontWeight: 800,
-              flexShrink: 0,
-              boxShadow: "0 4px 10px rgba(228, 0, 43, 0.2)"
-            }}>
-              {user?.name?.charAt(0) ?? "A"}
+            <div 
+              onClick={() => navigate("/admin/profile")}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #F39C12, #E4002B)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: 13,
+                fontWeight: 800,
+                flexShrink: 0,
+                boxShadow: "0 4px 10px rgba(228, 0, 43, 0.2)",
+                cursor: "pointer",
+                overflow: "hidden"
+              }}
+            >
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                user?.name?.charAt(0) ?? "A"
+              )}
             </div>
             {!collapsed && (
               <>
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div 
+                  onClick={() => navigate("/admin/profile")}
+                  style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
+                >
                   <div style={{
                     color: "white",
                     fontWeight: 700,
@@ -738,16 +750,19 @@ export function AdminLayout() {
           </div>
 
           {/* User drop */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            background: "rgba(255, 255, 255, 0.8)",
-            border: "1px solid rgba(0, 0, 0, 0.08)",
-            borderRadius: 10,
-            padding: "4px 10px 4px 4px",
-            cursor: "pointer"
-          }}>
+          <div 
+            onClick={() => navigate("/admin/profile")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              background: "rgba(255, 255, 255, 0.8)",
+              border: "1px solid rgba(0, 0, 0, 0.08)",
+              borderRadius: 10,
+              padding: "4px 10px 4px 4px",
+              cursor: "pointer"
+            }}
+          >
             <div style={{
               width: 30,
               height: 30,
@@ -758,9 +773,14 @@ export function AdminLayout() {
               justifyContent: "center",
               color: "white",
               fontSize: 12,
-              fontWeight: 800
+              fontWeight: 800,
+              overflow: "hidden"
             }}>
-              {user?.name?.charAt(0) ?? "A"}
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                user?.name?.charAt(0) ?? "A"
+              )}
             </div>
             <span style={{ color: "#334155", fontSize: 13, fontWeight: 700 }}>
               {user?.name?.split(" ").pop()}

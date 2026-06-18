@@ -93,8 +93,12 @@ export function UserLayout() {
               onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = "#F8FAFC"}
               onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "none"}
             >
-              <div style={{ width: 34, height: 34, borderRadius: "50%", background: "linear-gradient(135deg,#0055A5,#F39C12)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 13, fontWeight: 800, boxShadow: `0 0 12px ${tierColor.glow}` }}>
-                {user?.name?.charAt(0) ?? "U"}
+              <div style={{ width: 34, height: 34, borderRadius: "50%", background: "linear-gradient(135deg,#0055A5,#F39C12)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 13, fontWeight: 800, boxShadow: `0 0 12px ${tierColor.glow}`, overflow: "hidden" }}>
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  user?.name?.charAt(0) ?? "U"
+                )}
               </div>
               <div className="hidden sm:block" style={{ textAlign: "left" }}>
                 <div style={{ color: "#0F172A", fontWeight: 700, fontSize: 13, lineHeight: 1.2 }}>{user?.name?.split(" ").slice(-2).join(" ")}</div>
