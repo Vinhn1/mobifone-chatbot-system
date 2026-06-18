@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { Flame, Clock, ArrowRight } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 function useCountdown(targetSeconds: number) {
   const [timeLeft, setTimeLeft] = useState(targetSeconds);
@@ -111,10 +112,25 @@ const DEALS = [
 export function PromotionsPage() {
   const [activeCategory, setActiveCategory] = useState("all");
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { h, m, s } = useCountdown(23 * 3600 + 59 * 60 + 59);
 
   const categories = ["all", "Data", "eSIM", "Unlimited", "Voice + Data"];
   const filtered = activeCategory === "all" ? DEALS : DEALS.filter(d => d.category === activeCategory);
+
+  const handleClaimOffer = (deal: typeof DEALS[0]) => {
+    if (user && (user.role === "user" || user.role === "admin")) {
+      let pkgCode = "TK135";
+      if (deal.name.includes("199")) pkgCode = "TK199";
+      else if (deal.name.includes("135")) pkgCode = "TK135";
+      else if (deal.name.includes("299")) pkgCode = "MAX299";
+      else if (deal.name.includes("49")) pkgCode = "S49";
+      else if (deal.name.includes("eSIM")) pkgCode = "TK135";
+      navigate(`/packages?code=${pkgCode}`);
+    } else {
+      navigate("/login");
+    }
+  };
 
   return (
     <div className="bg-slate-50 min-h-screen font-outfit">
@@ -279,7 +295,7 @@ export function PromotionsPage() {
 
               <div className="p-5 pt-0">
                 <button
-                  onClick={() => navigate("/login")}
+                  onClick={() => handleClaimOffer(deal)}
                   className="w-full py-2.5 rounded-xl font-bold text-xs cursor-pointer border-none transition-all active:scale-95 text-center flex items-center justify-center gap-1.5 text-white shadow-md shadow-slate-200/50"
                   style={{
                     background: `linear-gradient(135deg, ${deal.color}, ${deal.color}CC)`,

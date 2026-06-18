@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { Check } from "lucide-react";
+import { useNavigate } from "react-router";
 
 const plans = [
   {
@@ -45,6 +46,7 @@ const plans = [
 ];
 
 export function PricingSection() {
+  const navigate = useNavigate();
   return (
     <section className="bg-white py-20 font-outfit border-t border-slate-100">
       <div className="max-w-7xl mx-auto px-6">
@@ -123,7 +125,10 @@ export function PricingSection() {
                 </div>
               </div>
 
-              <button className={`w-full py-3 rounded-xl text-sm font-bold cursor-pointer transition-all duration-250 hover:scale-102 active:scale-98 ${plan.btnClass}`}>
+              <button
+                onClick={() => navigate(`/packages?code=${plan.name}`)}
+                className={`w-full py-3 rounded-xl text-sm font-bold cursor-pointer transition-all duration-250 hover:scale-102 active:scale-98 ${plan.btnClass}`}
+              >
                 Đăng ký ngay
               </button>
             </motion.div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { Wifi, Phone, Zap, Star, Check, Filter, Search, X, Copy, CheckCircle2, AlertCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import axios from "axios";
@@ -32,6 +32,8 @@ export function PackagesPage() {
   const [packages, setPackages] = useState<any[]>(PACKAGES);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<Category>("all");
+  const [searchParams] = useSearchParams();
+  const codeParam = searchParams.get("code");
 
   useEffect(() => {
     let active = true;
@@ -109,6 +111,15 @@ export function PackagesPage() {
       syntax: `DK ${code}`
     });
   };
+
+  useEffect(() => {
+    if (!loading && codeParam && packages.length > 0) {
+      const pkg = packages.find(p => p.id.toLowerCase() === codeParam.toLowerCase() || p.name.toLowerCase() === codeParam.toLowerCase());
+      if (pkg) {
+        handleRegisterClick(pkg);
+      }
+    }
+  }, [loading, codeParam, packages, user]);
 
   const handleConfirmActivation = async () => {
     if (regModal) {

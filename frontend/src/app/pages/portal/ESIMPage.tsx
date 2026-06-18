@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 import { useNavigate } from "react-router";
 import { Check, Smartphone, QrCode, Download, Wifi, Zap } from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
 
 const STEPS = [
   { icon: QrCode, title: "Chọn gói eSIM", desc: "Chọn gói data phù hợp với nhu cầu của bạn và hoàn tất thanh toán online." },
@@ -104,6 +105,16 @@ export function ESIMPage() {
   const [activeStep, setActiveStep] = useState(0);
   const [selectedPlan, setSelectedPlan] = useState(2);
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleBuyPlan = (plan: typeof PLANS[0]) => {
+    if (user && (user.role === "user" || user.role === "admin")) {
+      const pkgCode = plan.name === "Premium" ? "TK135" : plan.name === "Unlimited" ? "TK199" : "TK79";
+      navigate(`/packages?code=${pkgCode}`);
+    } else {
+      navigate("/login");
+    }
+  };
 
   return (
     <div className="bg-slate-50 min-h-screen font-outfit">
@@ -259,7 +270,7 @@ export function ESIMPage() {
                 </div>
 
                 <button
-                  onClick={() => navigate("/login")}
+                  onClick={() => handleBuyPlan(plan)}
                   className={`w-full py-2.5 rounded-xl font-bold text-xs cursor-pointer transition-all active:scale-95 text-center ${
                     selectedPlan === i
                       ? "bg-gradient-to-r from-[#FFD200] to-[#E4002B] text-white border-none shadow-md shadow-red-500/10"
