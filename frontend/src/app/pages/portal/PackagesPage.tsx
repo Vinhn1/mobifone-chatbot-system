@@ -1,20 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router";
 import { Wifi, Phone, Zap, Star, Check, Filter, Search, X, Copy, CheckCircle2, AlertCircle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import axios from "axios";
+
+const API_BASE = "http://localhost:3000";
 
 type Category = "all" | "data" | "voice" | "unlimited";
 
 const PACKAGES = [
-  { id: "TK79", name: "TK79", price: "79.000đ", data: "2GB/ngày", voice: "30p/ngày", validity: "30 ngày", category: "data" as const, features: ["4G LTE", "SMS miễn phí", "MobiFone TV"], color: "#64748B", popular: false },
-  { id: "TK99", name: "TK99", price: "99.000đ", data: "3GB/ngày", voice: "Nội mạng miễn phí", validity: "30 ngày", category: "data" as const, features: ["5G Ready", "SMS miễn phí", "MobiFone TV"], color: "#0055A5", popular: false },
-  { id: "TK135", name: "TK135", price: "135.000đ", data: "4GB/ngày", voice: "Nội mạng miễn phí + 20p ngoại mạng", validity: "30 ngày", category: "data" as const, features: ["5G Ready", "SMS miễn phí", "MobiFone TV+", "Cloud 5GB"], color: "#E4002B", popular: true },
-  { id: "TK199", name: "TK199", price: "199.000đ", data: "6GB/ngày", voice: "Tất cả mạng miễn phí", validity: "30 ngày", category: "unlimited" as const, features: ["5G Ultra", "Roaming ASEAN", "TV360 1 tháng", "Cloud 20GB"], color: "#7C3AED", popular: false },
-  { id: "V90", name: "V90", price: "90.000đ", data: "1GB/ngày", voice: "1000p nội mạng", validity: "30 ngày", category: "voice" as const, features: ["4G LTE", "SMS 500 tin"], color: "#059669", popular: false },
-  { id: "V150", name: "V150", price: "150.000đ", data: "2GB/ngày", voice: "Không giới hạn nội mạng", validity: "30 ngày", category: "voice" as const, features: ["5G Ready", "SMS 1000 tin", "Gọi quốc tế -30%"], color: "#0284C7", popular: false },
-  { id: "MAX299", name: "MAX299", price: "299.000đ", data: "Không giới hạn", voice: "Tất cả mạng miễn phí", validity: "30 ngày", category: "unlimited" as const, features: ["5G Ultra", "Roaming 10 nước", "TV360", "Cloud 50GB", "Priority Support"], color: "#DC2626", popular: false },
-  { id: "S49", name: "S49", price: "49.000đ", data: "500MB/ngày", voice: "10p/ngày", validity: "30 ngày", category: "data" as const, features: ["4G LTE", "Gói sinh viên"], color: "#4F46E5", popular: false },
+  { id: "TK79", name: "TK79", price: "79.000đ", data: "2GB/ngày", voice: "30p/ngày", validity: "30 ngày", category: "data" as const, features: ["4G LTE", "SMS miễn phí", "MobiFone TV"], color: "#64748B", popular: false, dataTotalGB: 60, voiceTotalMin: 900 },
+  { id: "TK99", name: "TK99", price: "99.000đ", data: "3GB/ngày", voice: "Nội mạng miễn phí", validity: "30 ngày", category: "data" as const, features: ["5G Ready", "SMS miễn phí", "MobiFone TV"], color: "#0055A5", popular: false, dataTotalGB: 90, voiceTotalMin: 600 },
+  { id: "TK135", name: "TK135", price: "135.000đ", data: "4GB/ngày", voice: "Nội mạng miễn phí + 20p ngoại mạng", validity: "30 ngày", category: "data" as const, features: ["5G Ready", "SMS miễn phí", "MobiFone TV+", "Cloud 5GB"], color: "#E4002B", popular: true, dataTotalGB: 120, voiceTotalMin: 620 },
+  { id: "TK199", name: "TK199", price: "199.000đ", data: "6GB/ngày", voice: "Tất cả mạng miễn phí", validity: "30 ngày", category: "unlimited" as const, features: ["5G Ultra", "Roaming ASEAN", "TV360 1 tháng", "Cloud 20GB"], color: "#7C3AED", popular: false, dataTotalGB: 180, voiceTotalMin: 1000 },
+  { id: "V90", name: "V90", price: "90.000đ", data: "1GB/ngày", voice: "1000p nội mạng", validity: "30 ngày", category: "voice" as const, features: ["4G LTE", "SMS 500 tin"], color: "#059669", popular: false, dataTotalGB: 30, voiceTotalMin: 1000 },
+  { id: "V150", name: "V150", price: "150.000đ", data: "2GB/ngày", voice: "Không giới hạn nội mạng", validity: "30 ngày", category: "voice" as const, features: ["5G Ready", "SMS 1000 tin", "Gọi quốc tế -30%"], color: "#0284C7", popular: false, dataTotalGB: 60, voiceTotalMin: 1000 },
+  { id: "MAX299", name: "MAX299", price: "299.000đ", data: "Không giới hạn", voice: "Tất cả mạng miễn phí", validity: "30 ngày", category: "unlimited" as const, features: ["5G Ultra", "Roaming 10 nước", "TV360", "Cloud 50GB", "Priority Support"], color: "#DC2626", popular: false, dataTotalGB: 999, voiceTotalMin: 2000 },
+  { id: "S49", name: "S49", price: "49.000đ", data: "500MB/ngày", voice: "10p/ngày", validity: "30 ngày", category: "data" as const, features: ["4G LTE", "Gói sinh viên"], color: "#4F46E5", popular: false, dataTotalGB: 15, voiceTotalMin: 300 },
 ];
 
 const CATEGORIES: { key: Category; label: string; icon: React.ElementType }[] = [
@@ -24,51 +27,51 @@ const CATEGORIES: { key: Category; label: string; icon: React.ElementType }[] = 
   { key: "unlimited", label: "Không giới hạn", icon: Zap },
 ];
 
-const getPackageData = (codeUpper: string) => {
-  let dataTotal = 120;
-  let voiceTotal = 600;
-  let name = codeUpper + " Ultra";
-
-  if (codeUpper === 'TK79') {
-    dataTotal = 60;
-    voiceTotal = 900;
-  } else if (codeUpper === 'TK99') {
-    dataTotal = 90;
-    voiceTotal = 600;
-  } else if (codeUpper === 'TK135') {
-    dataTotal = 120;
-    voiceTotal = 620;
-  } else if (codeUpper === 'TK199') {
-    dataTotal = 180;
-    voiceTotal = 1000;
-  } else if (codeUpper === 'V90') {
-    dataTotal = 30;
-    voiceTotal = 1000;
-  } else if (codeUpper === 'V150') {
-    dataTotal = 60;
-    voiceTotal = 1000;
-  } else if (codeUpper === 'MAX299') {
-    dataTotal = 999;
-    voiceTotal = 2000;
-  } else if (codeUpper === 'S49') {
-    dataTotal = 15;
-    voiceTotal = 300;
-  }
-
-  return {
-    packageCode: codeUpper,
-    package: name,
-    dataTotalGB: dataTotal,
-    dataUsedGB: 0,
-    voiceTotalMin: voiceTotal,
-    voiceUsedMin: 0,
-    packageExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("vi-VN"),
-  };
-};
-
 export function PackagesPage() {
   const { user, updateUser } = useAuth();
+  const [packages, setPackages] = useState<any[]>(PACKAGES);
+  const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<Category>("all");
+
+  useEffect(() => {
+    let active = true;
+    const fetchPackages = async () => {
+      try {
+        const response = await axios.get(`${API_BASE}/packages`);
+        if (active && response.data && Array.isArray(response.data) && response.data.length > 0) {
+          const mappedPackages = response.data.map(p => ({
+            ...p,
+            category: p.category as Category,
+            features: Array.isArray(p.features) ? p.features : (typeof p.features === 'string' ? JSON.parse(p.features) : []),
+          }));
+          setPackages(mappedPackages);
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải danh sách gói cước từ server:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    fetchPackages();
+    return () => { active = false; };
+  }, []);
+
+  const getPackageData = (codeUpper: string) => {
+    const pkg = packages.find(p => p.id === codeUpper);
+    const dataTotal = pkg ? pkg.dataTotalGB : 120;
+    const voiceTotal = pkg ? pkg.voiceTotalMin : 600;
+    const name = codeUpper + " Ultra";
+
+    return {
+      packageCode: codeUpper,
+      package: name,
+      dataTotalGB: dataTotal,
+      dataUsedGB: 0,
+      voiceTotalMin: voiceTotal,
+      voiceUsedMin: 0,
+      packageExpiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString("vi-VN"),
+    };
+  };
   const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
@@ -107,16 +110,25 @@ export function PackagesPage() {
     });
   };
 
-  const handleConfirmActivation = () => {
+  const handleConfirmActivation = async () => {
     if (regModal) {
-      const pkgData = getPackageData(regModal.packageCode);
-      updateUser(pkgData);
+      try {
+        await axios.post(`${API_BASE}/subscribers/packages/register`, {
+          packageCode: regModal.packageCode
+        });
+        const pkgData = getPackageData(regModal.packageCode);
+        updateUser(pkgData);
+      } catch (error) {
+        console.warn("Backend register package failed, falling back to local registration:", error);
+        const pkgData = getPackageData(regModal.packageCode);
+        updateUser(pkgData);
+      }
       setRegModal(null);
       navigate("/dashboard/packages");
     }
   };
 
-  const filtered = PACKAGES.filter(p => {
+  const filtered = packages.filter(p => {
     const matchCat = category === "all" || p.category === category;
     const matchSearch = p.id.toLowerCase().includes(search.toLowerCase()) || p.price.includes(search);
     return matchCat && matchSearch;
@@ -141,7 +153,7 @@ export function PackagesPage() {
             </span>
           </h1>
           <p className="text-white/60 text-sm sm:text-base font-medium max-w-xl mx-auto mb-8">
-            Hơn {PACKAGES.length} gói cước linh hoạt với ưu đãi khủng, tốc độ mạng vượt trội.
+            Hơn {packages.length} gói cước linh hoạt với ưu đãi khủng, tốc độ mạng vượt trội.
           </p>
 
           {/* Search container */}

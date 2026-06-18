@@ -351,7 +351,7 @@ export function ConversationsPage() {
                   {selected.phone !== "—" && (
                     <a
                       href={`tel:${selected.phone}`}
-                      className="gradient-btn-primary flex items-center gap-1.5 px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-decoration-none"
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider no-underline shadow-sm shadow-emerald-500/20 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all"
                     >
                       <Phone size={12} /> Gọi ngay
                     </a>

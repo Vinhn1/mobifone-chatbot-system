@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Subscriber } from './subscriber.entity';
+import { Package } from './package.entity';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
@@ -9,6 +10,8 @@ export class SubscribersService {
   constructor(
     @InjectRepository(Subscriber)
     private readonly subscriberRepository: Repository<Subscriber>,
+    @InjectRepository(Package)
+    private readonly packageRepository: Repository<Package>,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -99,26 +102,32 @@ export class SubscribersService {
       throw new NotFoundException('Không tìm thấy thông tin thuê bao.');
     }
 
+    const codeUpper = packageCode.toUpperCase();
+    const dbPkg = await this.packageRepository.findOneBy({ id: codeUpper });
+    
     // Cấu hình dung lượng data mặc định cho các gói cước MobiFone phổ biến
     let dataTotal = 120; // Gói mặc định (ví dụ TK135 = 120GB)
     
-    const codeUpper = packageCode.toUpperCase();
-    if (codeUpper === 'TK79') {
-      dataTotal = 60;
-    } else if (codeUpper === 'TK99') {
-      dataTotal = 90;
-    } else if (codeUpper === 'TK135') {
-      dataTotal = 120;
-    } else if (codeUpper === 'TK199') {
-      dataTotal = 180;
-    } else if (codeUpper === 'V90') {
-      dataTotal = 30;
-    } else if (codeUpper === 'V150') {
-      dataTotal = 60;
-    } else if (codeUpper === 'MAX299') {
-      dataTotal = 999; // Coi như không giới hạn
-    } else if (codeUpper === 'S49') {
-      dataTotal = 15;
+    if (dbPkg) {
+      dataTotal = dbPkg.dataTotalGB;
+    } else {
+      if (codeUpper === 'TK79') {
+        dataTotal = 60;
+      } else if (codeUpper === 'TK99') {
+        dataTotal = 90;
+      } else if (codeUpper === 'TK135') {
+        dataTotal = 120;
+      } else if (codeUpper === 'TK199') {
+        dataTotal = 180;
+      } else if (codeUpper === 'V90') {
+        dataTotal = 30;
+      } else if (codeUpper === 'V150') {
+        dataTotal = 60;
+      } else if (codeUpper === 'MAX299') {
+        dataTotal = 999; // Coi như không giới hạn
+      } else if (codeUpper === 'S49') {
+        dataTotal = 15;
+      }
     }
 
     subscriber.currentPackage = codeUpper;

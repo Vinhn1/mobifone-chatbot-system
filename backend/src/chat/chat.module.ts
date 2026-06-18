@@ -8,9 +8,10 @@ import { ChatHistoryModule } from '../chat-history/chat-history.module';
 import { LeadsModule } from '../leads/leads.module';
 
 import { NotificationsModule } from '../notifications/notifications.module';
+import { SubscribersModule } from '../subscribers/subscribers.module';
 
 @Module({
-  imports: [HttpModule, ConfigModule, ChatHistoryModule, LeadsModule, NotificationsModule],
+  imports: [HttpModule, ConfigModule, ChatHistoryModule, LeadsModule, NotificationsModule, SubscribersModule],
   controllers: [ChatController, WebhookController],
   providers: [ChatService]
 })

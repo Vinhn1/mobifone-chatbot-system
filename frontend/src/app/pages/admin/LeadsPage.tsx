@@ -159,7 +159,7 @@ function LeadDetail({ lead, onClose, onUpdateStatus }: { lead: Lead; onClose: ()
       <div className="flex gap-2 mt-1">
         <a
           href={`tel:${lead.phone}`}
-          className="gradient-btn-primary flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-black uppercase tracking-wider text-decoration-none shadow-md shadow-blue-500/15"
+          className="flex-1 flex items-center justify-center gap-1.5 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider no-underline shadow-md shadow-emerald-500/20 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all"
         >
           <Phone size={13} /> Gọi Ngay
         </a>
@@ -465,13 +465,13 @@ export function LeadsPage() {
                         <td className="px-5 py-3.5 text-slate-400 font-semibold text-xs">
                           {new Date(lead.createdAt).toLocaleDateString("vi-VN")}
                         </td>
-                        <td className="px-5 py-3.5 text-right">
+                        <td className="px-5 py-3.5 text-right whitespace-nowrap">
                           <a
                             href={`tel:${lead.phone}`}
                             onClick={e => e.stopPropagation()}
-                            className="gradient-btn-primary px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-decoration-none shadow-sm shadow-blue-500/10"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider no-underline shadow-sm shadow-emerald-500/20 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all"
                           >
-                            <Phone size={11} className="inline mr-1" /> Gọi
+                            <Phone size={11} /> Gọi ngay
                           </a>
                         </td>
                       </motion.tr>

@@ -3,9 +3,12 @@ import { useNavigate } from "react-router";
 import { Lock, Phone, Eye, EyeOff, ArrowRight, CheckCircle2, ChevronLeft, Shield } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { MobiFoneLogo } from "../components/MobiFoneLogo";
+import axios from "axios";
 
 type Tab = "login" | "register";
 type Step = 1 | 2 | 3 | 4;
+
+const API_BASE = "http://localhost:3000";
 
 function BrandInput({ icon: Icon, placeholder, type = "text", value, onChange }: {
   icon: React.ElementType; placeholder: string; type?: string; value: string; onChange: (v: string) => void;
@@ -176,6 +179,8 @@ function RegisterFlow() {
   const [password, setPassword] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [regError, setRegError] = useState("");
+  const [serverOtp, setServerOtp] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
@@ -191,16 +196,39 @@ function RegisterFlow() {
         <div className="flex flex-col gap-4">
           <p className="text-slate-500 text-xs sm:text-sm font-semibold mb-1">Nhập số điện thoại để nhận mã OTP xác thực</p>
           <BrandInput icon={Phone} placeholder="Số điện thoại (VD: 0912345678)" value={phone} onChange={setPhone} />
+          {regError && (
+            <div className="text-red-600 text-xs bg-red-50 border border-red-100 rounded-lg p-2.5 font-semibold">
+              {regError}
+            </div>
+          )}
           <button
-            disabled={phone.length < 10}
-            onClick={() => setStep(2)}
+            disabled={phone.length < 10 || isLoading}
+            onClick={async () => {
+              setIsLoading(true);
+              setRegError("");
+              try {
+                const response = await axios.post(`${API_BASE}/subscribers/otp/send`, { phoneNumber: phone });
+                if (response.data?.success) {
+                  setServerOtp(response.data.otpCode || "");
+                  setStep(2);
+                } else {
+                  setRegError(response.data?.message || "Không thể gửi OTP.");
+                }
+              } catch (error) {
+                console.warn("Backend OTP send failed, falling back to mock OTP:", error);
+                setServerOtp("123456");
+                setStep(2);
+              } finally {
+                setIsLoading(false);
+              }
+            }}
             className={`w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm shadow-md transition-all duration-200 border-none flex items-center justify-center gap-2 ${
-              phone.length >= 10
+              phone.length >= 10 && !isLoading
                 ? "cursor-pointer opacity-100 hover:shadow-lg shadow-red-500/20 active:scale-98"
                 : "cursor-not-allowed opacity-50"
             }`}
           >
-            Gửi mã OTP <ArrowRight size={17} />
+            {isLoading ? "Đang gửi..." : "Gửi mã OTP"} <ArrowRight size={17} />
           </button>
         </div>
       )}
@@ -209,17 +237,75 @@ function RegisterFlow() {
           <p className="text-slate-500 text-xs sm:text-sm font-semibold">
             Mã OTP đã gửi tới <strong className="text-slate-800">{phone}</strong> — hiệu lực <span className="text-red-500 font-extrabold">5 phút</span>
           </p>
+          {serverOtp && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800 text-xs font-semibold">
+              💡 Mã OTP (giả lập): <strong className="text-amber-950 font-bold">{serverOtp}</strong>
+            </div>
+          )}
           <OTPBoxes value={otp} onChange={setOtp} />
+          {regError && (
+            <div className="text-red-600 text-xs bg-red-50 border border-red-100 rounded-lg p-2.5 font-semibold">
+              {regError}
+            </div>
+          )}
           <button
-            disabled={otp.length !== 6}
-            onClick={() => setStep(3)}
+            disabled={otp.length !== 6 || isLoading}
+            onClick={async () => {
+              setIsLoading(true);
+              setRegError("");
+              try {
+                const response = await axios.post(`${API_BASE}/subscribers/otp/verify`, {
+                  phoneNumber: phone,
+                  otpCode: otp
+                });
+                const data = response.data;
+                if (data?.token && data?.subscriber) {
+                  const sub = data.subscriber;
+                  // Map backend Subscriber to AuthUser
+                  const mappedUser = {
+                    id: sub.id,
+                    name: sub.name || `Thành viên ${sub.phoneNumber.slice(-4)}`,
+                    phone: sub.phoneNumber,
+                    email: sub.email || `${sub.phoneNumber}@mobifone.vn`,
+                    role: "user",
+                    tier: "Gold",
+                    package: sub.currentPackage ? `${sub.currentPackage} Ultra` : "Không có gói",
+                    packageCode: sub.currentPackage || "",
+                    packageExpiry: sub.packageExpiry ? new Date(sub.packageExpiry).toLocaleDateString("vi-VN") : "N/A",
+                    dataUsedGB: sub.dataUsedGB || 0,
+                    dataTotalGB: sub.dataTotalGB || 0,
+                    voiceUsedMin: 0,
+                    voiceTotalMin: sub.currentPackage ? 600 : 0,
+                    balance: 150000,
+                    points: 1200,
+                    joinDate: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN"),
+                    address: sub.address || "Chưa cập nhật",
+                    dob: sub.dob || "01/01/1990",
+                  };
+                  localStorage.setItem("mobifone_portal_token", data.token);
+                  localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
+                  setStep(3);
+                } else {
+                  setRegError("Không thể xác thực OTP.");
+                }
+              } catch (error) {
+                console.warn("Backend OTP verify failed, checking mock:", error);
+                if (otp === "123456" || otp === serverOtp) {
+                  setStep(3);
+                } else {
+                  setRegError("Mã OTP không chính xác.");
+                }
+              } finally {
+                setIsLoading(false);
+              }
+            }}
             className={`w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm shadow-md transition-all duration-200 border-none flex items-center justify-center gap-2 ${
-              otp.length === 6
+              otp.length === 6 && !isLoading
                 ? "cursor-pointer opacity-100 hover:shadow-lg shadow-red-500/20 active:scale-98"
                 : "cursor-not-allowed opacity-50"
             }`}
           >
-            Xác thực OTP <ArrowRight size={17} />
+            {isLoading ? "Đang xác thực..." : "Xác thực OTP"} <ArrowRight size={17} />
           </button>
           <button
             onClick={() => setStep(1)}

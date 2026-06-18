@@ -294,6 +294,12 @@ async def upload_document(file: UploadFile = File(...)):
         ids.append(f"upload_{filename}_{int(time.time())}_{idx}")
         
     try:
+        # Tự động xóa các vector cũ cùng tên (nếu có) để tránh trùng lặp dữ liệu
+        try:
+            bot.collection.delete(where={"source_title": filename})
+        except Exception as delete_err:
+            print(f"⚠️ Cảnh báo khi dọn dẹp tài liệu cũ: {delete_err}")
+
         # Nạp theo lô nhỏ
         batch_size = 100
         for i in range(0, len(documents), batch_size):
@@ -303,11 +309,61 @@ async def upload_document(file: UploadFile = File(...)):
                 metadatas=metadatas[i:end_idx],
                 ids=ids[i:end_idx]
             )
+            
+        # 5. Gọi Gemini trích xuất thông tin gói cước nếu có trong tài liệu tri thức
+        extracted_packages = []
+        try:
+            # Chỉ gửi một phần nội dung nếu tệp quá lớn để tránh quá tải token
+            preview_content = text_content[:15000]
+            
+            prompt = f"""Bạn là một chuyên gia phân tích dữ liệu của nhà mạng MobiFone.
+Hãy đọc kỹ văn bản dưới đây và trích xuất danh sách tất cả các gói cước di động/viễn thông MobiFone được giới thiệu.
+Với mỗi gói cước, hãy trích xuất các thông tin sau theo đúng cấu trúc JSON:
+- id: Mã gói cước viết hoa liền nhau, ví dụ: "TK135", "KC150"
+- name: Tên gói cước viết hoa liền nhau, giống id
+- price: Giá gói cước định dạng chuỗi có chữ 'đ' hoặc 'đồng', ví dụ: "135.000đ", "90.000đ"
+- data: Mô tả dung lượng data, ví dụ: "4GB/ngày", "1.5GB/ngày", "Không giới hạn"
+- voice: Mô tả ưu đãi cuộc gọi thoại, ví dụ: "Nội mạng miễn phí + 20p ngoại mạng", "1000p nội mạng"
+- validity: Chu kỳ gói cước, ví dụ: "30 ngày", "24 giờ"
+- category: Thể loại gói cước, chỉ chọn một trong ba giá trị sau: "data", "voice", hoặc "unlimited"
+- features: Danh sách mảng chuỗi các đặc điểm nổi bật, ví dụ: ["5G Ready", "MobiFone TV+", "Xem YouTube miễn phí"]
+- color: Mã màu HEX phù hợp làm màu chủ đạo cho card gói cước này, ví dụ: "#E4002B", "#0055A5", "#059669", "#7C3AED", "#DC2626", "#4F46E5"
+- popular: Giá trị boolean (true hoặc false) biểu thị gói cước này có phải là gói nổi bật phổ biến không
+- dataTotalGB: Tổng dung lượng GB trong một chu kỳ (ví dụ: 4GB/ngày * 30 ngày = 120, hoặc 1GB/ngày * 30 ngày = 30, hoặc không giới hạn = 999), lưu dạng số nguyên (integer)
+- voiceTotalMin: Tổng số phút gọi thoại nội mạng + ngoại mạng trong một chu kỳ, lưu dạng số nguyên (integer). Nếu không đề cập thì mặc định lưu 600.
+
+Hãy trả về kết quả dưới dạng một mảng JSON các đối tượng gói cước.
+LƯU Ý QUAN TRỌNG: Chỉ trả về JSON nguyên bản, không kèm ký tự markdown như ```json hay ```. Không có bất cứ ký tự giải thích nào khác ngoài chuỗi JSON hợp lệ. Nếu không tìm thấy bất kỳ gói cước nào trong văn bản, hãy trả về mảng rỗng [].
+
+Văn bản cần phân tích:
+{preview_content}
+"""
+            llm_response = bot._call_llm_with_retry(prompt, temperature=0.1)
+            
+            # Làm sạch dữ liệu phản hồi từ mô hình
+            cleaned_response = llm_response.strip()
+            if cleaned_response.startswith("```"):
+                lines = cleaned_response.splitlines()
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                cleaned_response = "\n".join(lines).strip()
+            
+            extracted_packages = json.loads(cleaned_response)
+            if not isinstance(extracted_packages, list):
+                extracted_packages = []
+            print(f"[EXTRACT] Trích xuất thành công {len(extracted_packages)} gói cước từ '{filename}'")
+        except Exception as extract_err:
+            print(f"⚠️ Cảnh báo: Lỗi khi trích xuất gói cước bằng Gemini: {extract_err}")
+            extracted_packages = []
+
         return {
             "status": "success",
             "message": f"Đã nạp thành công tài liệu '{filename}'",
             "chunks_count": len(chunks),
-            "size": f"{size_bytes / 1024:.1f} KB"
+            "size": f"{size_bytes / 1024:.1f} KB",
+            "packages": extracted_packages
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi nạp vector vào ChromaDB: {e}")

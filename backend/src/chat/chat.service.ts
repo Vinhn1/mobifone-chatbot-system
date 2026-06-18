@@ -2,9 +2,12 @@ import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { ChatHistoryService } from '../chat-history/chat-history.service';
 import { LeadsService } from '../leads/leads.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { Package } from '../subscribers/package.entity';
 
 @Injectable()
 export class ChatService {
@@ -17,6 +20,8 @@ export class ChatService {
     private readonly chatHistoryService: ChatHistoryService,
     private readonly leadsService: LeadsService,
     private readonly notificationsService: NotificationsService,
+    @InjectRepository(Package)
+    private readonly packageRepository: Repository<Package>,
   ) {
     this.aiServiceBaseUrl = this.configService.get<string>('AI_SERVICE_BASE_URL', 'http://localhost:8001');
     this.aiRequestTimeoutMs = this.configService.get<number>('AI_SERVICE_TIMEOUT_MS', 60000);
@@ -199,6 +204,59 @@ export class ChatService {
         this.httpService.post(aiServiceUrl, formData, { timeout: this.aiRequestTimeoutMs })
       );
       
+      const resultData = response.data;
+
+      // Lưu trữ/đồng bộ hóa các gói cước trích xuất được từ tài liệu vào cơ sở dữ liệu
+      if (resultData && resultData.packages && Array.isArray(resultData.packages)) {
+        console.log(`[SYNC] Trích xuất được ${resultData.packages.length} gói cước từ file '${file.originalname}'. Bắt đầu đồng bộ...`);
+        for (const pkg of resultData.packages) {
+          if (!pkg.id) continue;
+          
+          try {
+            const packageId = pkg.id.toUpperCase();
+            
+            // Upsert: kiểm tra xem gói cước đã tồn tại chưa
+            let packageEntity = await this.packageRepository.findOneBy({ id: packageId });
+            
+            if (packageEntity) {
+              console.log(`[SYNC] Gói cước ${packageId} đã tồn tại. Cập nhật thông tin mới.`);
+              packageEntity.name = pkg.name || packageEntity.name;
+              packageEntity.price = pkg.price || packageEntity.price;
+              packageEntity.data = pkg.data || packageEntity.data;
+              packageEntity.voice = pkg.voice || packageEntity.voice;
+              packageEntity.validity = pkg.validity || packageEntity.validity;
+              packageEntity.category = pkg.category || packageEntity.category;
+              packageEntity.features = pkg.features || packageEntity.features;
+              packageEntity.color = pkg.color || packageEntity.color;
+              packageEntity.popular = pkg.popular !== undefined ? pkg.popular : packageEntity.popular;
+              packageEntity.dataTotalGB = typeof pkg.dataTotalGB === 'number' ? pkg.dataTotalGB : packageEntity.dataTotalGB;
+              packageEntity.voiceTotalMin = typeof pkg.voiceTotalMin === 'number' ? pkg.voiceTotalMin : packageEntity.voiceTotalMin;
+            } else {
+              console.log(`[SYNC] Tạo mới gói cước ${packageId}.`);
+              packageEntity = this.packageRepository.create({
+                id: packageId,
+                name: pkg.name || pkg.id,
+                price: pkg.price || '0đ',
+                data: pkg.data || 'N/A',
+                voice: pkg.voice || 'N/A',
+                validity: pkg.validity || '30 ngày',
+                category: pkg.category || 'data',
+                features: pkg.features || [],
+                color: pkg.color || '#0055A5',
+                popular: pkg.popular || false,
+                dataTotalGB: typeof pkg.dataTotalGB === 'number' ? pkg.dataTotalGB : 120,
+                voiceTotalMin: typeof pkg.voiceTotalMin === 'number' ? pkg.voiceTotalMin : 600,
+              });
+            }
+            
+            await this.packageRepository.save(packageEntity);
+            console.log(`[SYNC] Đã đồng bộ gói cước: ${packageId}`);
+          } catch (syncErr) {
+            console.error(`[SYNC-ERROR] Lỗi khi lưu gói cước ${pkg.id}:`, syncErr.message);
+          }
+        }
+      }
+
       // Phát trạng thái đồng bộ thành công
       try {
         this.notificationsService.emitNotification('doc-status', {
@@ -211,7 +269,7 @@ export class ChatService {
         console.error('Lỗi khi phát sự kiện hoàn thành nạp tài liệu:', err.message);
       }
 
-      return response.data;
+      return resultData;
     } catch (error) {
       // Phát trạng thái đồng bộ lỗi
       try {
