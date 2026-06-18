@@ -163,6 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 dataTotalGB: sub.dataTotalGB || 0,
                 address: sub.address || baseUser.address || "Chưa cập nhật",
                 dob: sub.dob || baseUser.dob || "01/01/1990",
+                avatar: sub.avatar || baseUser.avatar || undefined,
               };
               localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
               return mappedUser;
@@ -177,10 +178,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (identifier: string, password: string): Promise<"user" | "admin" | "error"> => {
-    // Clear any previous session state to prevent mix-ups
+    // Chỉ xóa các token phiên làm việc đang có
     localStorage.removeItem("mobifone_admin_token");
     localStorage.removeItem("mobifone_portal_token");
-    localStorage.removeItem("mobifone_portal_user");
     setToken(null);
     setUser(null);
 
@@ -227,8 +227,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Tài khoản user thường: Phải có độ dài từ 6 ký tự trở lên và không chứa chữ "admin" để tránh nhầm lẫn
     if (idLower.length >= 6 && !idLower.includes("admin")) {
-      localStorage.setItem("mobifone_portal_user", JSON.stringify(MOCK_USER));
-      setUser(MOCK_USER);
+      try {
+        const response = await axios.post(`${API_BASE}/subscribers/login-demo`, {
+          phoneNumber: identifier,
+        });
+        const { token: apiToken, subscriber: sub } = response.data;
+        if (apiToken && sub) {
+          localStorage.setItem("mobifone_portal_token", apiToken);
+          setToken(apiToken);
+          
+          const mappedUser: AuthUser = {
+            id: sub.id,
+            name: sub.name || `Thành viên ${sub.phoneNumber.slice(-4)}`,
+            phone: sub.phoneNumber,
+            email: sub.email || `${sub.phoneNumber}@mobifone.vn`,
+            role: "user",
+            tier: "Gold",
+            package: sub.currentPackage ? `${sub.currentPackage} Ultra` : "Không có gói",
+            packageCode: sub.currentPackage || "",
+            packageExpiry: sub.packageExpiry ? new Date(sub.packageExpiry).toLocaleDateString("vi-VN") : "N/A",
+            dataUsedGB: sub.dataUsedGB || 0,
+            dataTotalGB: sub.dataTotalGB || 0,
+            voiceUsedMin: 0,
+            voiceTotalMin: sub.currentPackage ? 600 : 0,
+            balance: 150000,
+            points: 1200,
+            joinDate: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN"),
+            address: sub.address || "Chưa cập nhật",
+            dob: sub.dob || "01/01/1990",
+            avatar: sub.avatar || undefined,
+          };
+          localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
+          setUser(mappedUser);
+          return "user";
+        }
+      } catch (error) {
+        console.warn("Backend login-demo failed, falling back to local storage / mock:", error);
+      }
+
+      // Sandbox fallback: Lấy thông tin user đã lưu trong localStorage nếu trùng khớp
+      const savedUserStr = localStorage.getItem("mobifone_portal_user");
+      let existingUser: AuthUser | null = null;
+      if (savedUserStr) {
+        try {
+          const parsed = JSON.parse(savedUserStr);
+          if (parsed && (parsed.phone === identifier || parsed.email === identifier || identifier.replace(/[\s.-]/g, "") === parsed.phone.replace(/[\s.-]/g, ""))) {
+            existingUser = parsed;
+          }
+        } catch (e) {}
+      }
+
+      const userToSet = existingUser || {
+        ...MOCK_USER,
+        phone: identifier,
+        name: `Thành viên ${identifier.slice(-4)}`
+      };
+
+      localStorage.setItem("mobifone_portal_user", JSON.stringify(userToSet));
+      setUser(userToSet);
       return "user";
     }
 
@@ -277,9 +333,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     localStorage.removeItem("mobifone_admin_token");
-    localStorage.removeItem("mobifone_admin_user");
     localStorage.removeItem("mobifone_portal_token");
-    localStorage.removeItem("mobifone_portal_user");
+    // Giữ nguyên cache mobifone_admin_user và mobifone_portal_user trong localStorage
+    // Để giữ lại avatar và thông tin cá nhân đã cập nhật khi logout/login lại.
     setToken(null);
     setUser(null);
   };

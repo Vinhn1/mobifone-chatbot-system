@@ -86,6 +86,37 @@ export class SubscribersService {
     };
   }
 
+  // Đăng nhập demo cho thuê bao di động bằng số điện thoại
+  async loginDemo(phoneNumber: string): Promise<{ token: string; subscriber: Subscriber }> {
+    // Chuẩn hóa số điện thoại: bỏ khoảng trắng, dấu chấm, dấu gạch ngang
+    const cleanPhone = phoneNumber.replace(/[\s.-]/g, "");
+    if (!cleanPhone || !cleanPhone.match(/^0\d{9}$/)) {
+      throw new BadRequestException('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại gồm 10 chữ số bắt đầu bằng số 0.');
+    }
+
+    let subscriber = await this.subscriberRepository.findOneBy({ phoneNumber: cleanPhone });
+    if (!subscriber) {
+      // Khởi tạo thuê bao mới với các thông tin mặc định nếu chưa tồn tại
+      subscriber = this.subscriberRepository.create({
+        phoneNumber: cleanPhone,
+        currentPackage: null,
+        dataTotalGB: 0,
+        dataUsedGB: 0,
+        packageExpiry: null,
+      });
+      await this.subscriberRepository.save(subscriber);
+    }
+
+    // Phát hành token JWT với role là 'subscriber'
+    const payload = { sub: subscriber.id, phoneNumber: subscriber.phoneNumber, role: 'subscriber' };
+    const token = this.jwtService.sign(payload);
+
+    return {
+      token,
+      subscriber,
+    };
+  }
+
   // 3. Lấy thông tin chi tiết của thuê bao
   async getProfile(id: string): Promise<Subscriber> {
     const subscriber = await this.subscriberRepository.findOneBy({ id });

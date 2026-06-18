@@ -23,6 +23,15 @@ export class SubscribersController {
     return await this.subscribersService.verifyOtp(phoneNumber, otpCode);
   }
 
+  // 2.1 Đăng nhập demo không cần OTP
+  @Post('login-demo')
+  @HttpCode(HttpStatus.OK)
+  async loginDemo(
+    @Body('phoneNumber') phoneNumber: string,
+  ) {
+    return await this.subscribersService.loginDemo(phoneNumber);
+  }
+
   // 3. Lấy thông tin thuê bao đã đăng nhập
   @UseGuards(JwtAuthGuard)
   @Get('me')

@@ -281,6 +281,7 @@ function RegisterFlow() {
                     joinDate: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN"),
                     address: sub.address || "Chưa cập nhật",
                     dob: sub.dob || "01/01/1990",
+                    avatar: sub.avatar || undefined,
                   };
                   localStorage.setItem("mobifone_portal_token", data.token);
                   localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
