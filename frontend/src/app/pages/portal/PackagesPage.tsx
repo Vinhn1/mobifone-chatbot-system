@@ -89,7 +89,7 @@ export function PackagesPage() {
   };
 
   const handleRegisterClick = (pkg: any) => {
-    if (!user || user.role !== "user") {
+    if (!user || (user.role !== "user" && user.role !== "admin")) {
       setLoginPromptOpen(true);
       return;
     }
