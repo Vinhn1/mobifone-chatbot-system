@@ -9,6 +9,7 @@ import { ChatHistoryModule } from './chat-history/chat-history.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { SubscribersModule } from './subscribers/subscribers.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -46,6 +47,8 @@ import { SubscribersModule } from './subscribers/subscribers.module';
     AuthModule,
 
     SubscribersModule,
+
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

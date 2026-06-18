@@ -7,8 +7,10 @@ import { ChatService } from './chat.service';
 import { ChatHistoryModule } from '../chat-history/chat-history.module';
 import { LeadsModule } from '../leads/leads.module';
 
+import { NotificationsModule } from '../notifications/notifications.module';
+
 @Module({
-  imports: [HttpModule, ConfigModule, ChatHistoryModule, LeadsModule],
+  imports: [HttpModule, ConfigModule, ChatHistoryModule, LeadsModule, NotificationsModule],
   controllers: [ChatController, WebhookController],
   providers: [ChatService]
 })

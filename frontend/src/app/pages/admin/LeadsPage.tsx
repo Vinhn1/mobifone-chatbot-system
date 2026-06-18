@@ -277,6 +277,38 @@ export function LeadsPage() {
     fetchLeads();
   }, [token]);
 
+  useEffect(() => {
+    const handleNotification = (e: Event) => {
+      const { type, payload } = (e as CustomEvent).detail;
+      if (type === 'new-lead') {
+        const interestStr = payload.interest || "Tư vấn gói cước";
+        const score = Math.min(45 + (interestStr.length) * 1.5 + (payload.name ? 15 : 0), 99);
+        const temp: Temp = score >= 80 ? "hot" : score >= 60 ? "warm" : "cold";
+        const stage = mapStatusToStage(payload.status);
+
+        const newLead: Lead = {
+          id: payload.id,
+          name: payload.name || "Khách hàng ẩn danh",
+          phone: payload.phone,
+          interest: interestStr,
+          stage,
+          temp,
+          score,
+          notes: `Khách hàng để lại thông tin quan tâm gói ${interestStr}`,
+          createdAt: payload.createdAt,
+          messages: interestStr.length > 10 ? 8 : 4,
+        };
+
+        setLeads(prev => {
+          if (prev.some(l => l.id === newLead.id)) return prev;
+          return [newLead, ...prev];
+        });
+      }
+    };
+    window.addEventListener('app-notification', handleNotification);
+    return () => window.removeEventListener('app-notification', handleNotification);
+  }, []);
+
   const filtered = leads.filter(l =>
     (stageFilter === "all" || l.stage === stageFilter) &&
     (tempFilter === "all" || l.temp === tempFilter) &&

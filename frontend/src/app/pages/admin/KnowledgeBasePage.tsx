@@ -159,6 +159,57 @@ export function KnowledgeBasePage() {
     loadDocs();
   }, [token]);
 
+  useEffect(() => {
+    const handleNotification = (e: Event) => {
+      const { type, payload } = (e as CustomEvent).detail;
+      if (type === 'doc-status') {
+        setDocs(prev => {
+          const docName = payload.name;
+          const extension = docName.split(".").pop()?.toUpperCase() || "TXT";
+          const exists = prev.some(d => d.name === docName);
+
+          const statusMapped: DocStatus = 
+            payload.status === 'synced' ? 'Synced' :
+            payload.status === 'error' ? 'error' :
+            'vectorizing';
+
+          if (exists) {
+            return prev.map(d => {
+              if (d.name === docName) {
+                return {
+                  ...d,
+                  status: statusMapped,
+                  progress: payload.progress,
+                };
+              }
+              return d;
+            });
+          } else {
+            const newDoc: Doc = {
+              name: docName,
+              type: extension,
+              size: "Đang tính...",
+              status: statusMapped,
+              progress: payload.progress,
+              upload_date: "Vừa xong",
+              vectors: 0,
+              chunks: 0
+            };
+            return [newDoc, ...prev];
+          }
+        });
+
+        if (payload.status === 'synced') {
+          setTimeout(() => {
+            loadDocs();
+          }, 1500);
+        }
+      }
+    };
+    window.addEventListener('app-notification', handleNotification);
+    return () => window.removeEventListener('app-notification', handleNotification);
+  }, []);
+
   const handleUpload = async (file: globalThis.File) => {
     if (!token) return;
     setUploading(true);

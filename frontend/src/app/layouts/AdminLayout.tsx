@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -33,6 +33,70 @@ export function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [toast, setToast] = useState<{ message: string; visible: boolean; type?: string } | null>(null);
+
+  useEffect(() => {
+    const adminToken = localStorage.getItem("mobifone_admin_token");
+    if (!adminToken) return;
+
+    const eventSource = new EventSource(`http://localhost:3000/notifications/sse?token=${adminToken}`);
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        const newNotif = {
+          id: data.timestamp + '-' + Math.random(),
+          type: data.type,
+          payload: data.payload,
+          timestamp: data.timestamp,
+          read: false
+        };
+        
+        setNotifications(prev => [newNotif, ...prev].slice(0, 50));
+
+        // Hiển thị Toast
+        if (data.type === 'new-lead') {
+          setToast({
+            message: `Khách hàng mới: ${data.payload.phone} vừa quan tâm gói cước!`,
+            visible: true,
+            type: 'lead'
+          });
+        } else if (data.type === 'doc-status') {
+          setToast({
+            message: `${data.payload.name}: ${data.payload.message}`,
+            visible: data.payload.status !== 'synced', // Show toast if not immediately done, or just show everything
+            type: 'doc'
+          });
+        }
+
+        // Phát ra CustomEvent để các trang con tự cập nhật
+        window.dispatchEvent(new CustomEvent('app-notification', { detail: data }));
+      } catch (err) {
+        console.error("Lỗi khi đọc sự kiện SSE:", err);
+      }
+    };
+
+    eventSource.onerror = (err) => {
+      console.error("Lỗi kết nối SSE:", err);
+      eventSource.close();
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (toast?.visible) {
+      const timer = setTimeout(() => {
+        setToast(prev => prev ? { ...prev, visible: false } : null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
   const handleLogout = () => { logout(); navigate("/login"); };
 
   return (
@@ -45,6 +109,58 @@ export function AdminLayout() {
       overflow: "hidden",
       position: "relative"
     }}>
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast?.visible && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, x: 20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, x: 20, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            style={{
+              position: "fixed",
+              top: 24,
+              right: 24,
+              zIndex: 9999,
+              background: "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(20px)",
+              borderLeft: `5px solid ${toast.type === 'lead' ? '#10B981' : '#7C3AED'}`,
+              borderRadius: "12px",
+              padding: "16px 20px",
+              boxShadow: "0 20px 40px rgba(0, 0, 0, 0.12)",
+              display: "flex",
+              alignItems: "center",
+              gap: 14,
+              maxWidth: 360,
+              cursor: "pointer"
+            }}
+            onClick={() => setToast(prev => prev ? { ...prev, visible: false } : null)}
+          >
+            <div style={{
+              width: 36,
+              height: 36,
+              borderRadius: "50%",
+              background: toast.type === 'lead' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(124, 58, 237, 0.1)',
+              color: toast.type === 'lead' ? '#10B981' : '#7C3AED',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0
+            }}>
+              {toast.type === 'lead' ? <Users size={18} /> : <Database size={18} />}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 800, fontSize: 13, color: "#1E293B" }}>
+                {toast.type === 'lead' ? 'Khách Hàng Mới!' : 'Tiến Trình Đọc Tài Liệu'}
+              </div>
+              <div style={{ fontSize: 12, color: "#64748B", marginTop: 2, lineHeight: 1.3 }}>
+                {toast.message}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Decorative Blur Blobs */}
       <div style={{
         position: "absolute",
@@ -412,6 +528,11 @@ export function AdminLayout() {
           <div style={{ position: "relative" }}>
             <motion.button
               whileHover={{ scale: 1.05 }}
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                // Mark all as read when opening
+                setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+              }}
               style={{
                 background: "white",
                 border: "1px solid rgba(0, 0, 0, 0.08)",
@@ -422,21 +543,198 @@ export function AdminLayout() {
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
-                color: "#64748B"
+                color: "#64748B",
+                position: "relative"
               }}
             >
               <Bell size={16} />
+              {notifications.filter(n => !n.read).length > 0 && (
+                <div style={{
+                  position: "absolute",
+                  top: -2,
+                  right: -2,
+                  background: "#EF4444",
+                  color: "white",
+                  fontSize: 9,
+                  fontWeight: 800,
+                  borderRadius: "50%",
+                  width: 16,
+                  height: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "2px solid white",
+                  boxShadow: "0 2px 6px rgba(239, 68, 68, 0.4)"
+                }}>
+                  {notifications.filter(n => !n.read).length}
+                </div>
+              )}
             </motion.button>
-            <div style={{
-              position: "absolute",
-              top: 6,
-              right: 6,
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              background: "#EF4444",
-              border: "2px solid white"
-            }} />
+
+            {showNotifications && (
+              <>
+                {/* Overlay to close when clicking outside */}
+                <div 
+                  onClick={() => setShowNotifications(false)}
+                  style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: 998
+                  }}
+                />
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  style={{
+                    position: "absolute",
+                    top: 48,
+                    right: 0,
+                    width: 320,
+                    background: "rgba(255, 255, 255, 0.98)",
+                    backdropFilter: "blur(20px)",
+                    border: "1px solid rgba(0, 0, 0, 0.08)",
+                    borderRadius: 16,
+                    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
+                    padding: 12,
+                    zIndex: 999,
+                    maxHeight: 400,
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    borderBottom: "1px solid rgba(0, 0, 0, 0.05)",
+                    paddingBottom: 8,
+                    marginBottom: 8
+                  }}>
+                    <span style={{ fontWeight: 800, fontSize: 14, color: "#1E293B" }}>Thông báo</span>
+                    <button 
+                      onClick={() => setNotifications([])}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        fontSize: 11,
+                        color: "#64748B",
+                        cursor: "pointer",
+                        fontWeight: 600
+                      }}
+                    >
+                      Xóa tất cả
+                    </button>
+                  </div>
+
+                  <div 
+                    className="custom-scrollbar"
+                    style={{
+                      overflowY: "auto",
+                      flex: 1,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 6,
+                    }}
+                  >
+                    {notifications.length === 0 ? (
+                      <div style={{
+                        padding: "24px 0",
+                        textAlign: "center",
+                        color: "#94A3B8",
+                        fontSize: 13,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 8
+                      }}>
+                        <Bell size={24} style={{ opacity: 0.5 }} />
+                        Không có thông báo mới
+                      </div>
+                    ) : (
+                      notifications.map(notif => {
+                        let iconBg = "#EFF6FF";
+                        let iconColor = "#2563EB";
+                        let title = "Thông báo hệ thống";
+                        let message = "";
+                        
+                        if (notif.type === 'new-lead') {
+                          iconBg = "#ECFDF5";
+                          iconColor = "#10B981";
+                          title = "Khách hàng mới";
+                          message = `SĐT: ${notif.payload.phone} ${notif.payload.interest ? `(${notif.payload.interest.substring(0, 40)}...)` : ''}`;
+                        } else if (notif.type === 'doc-status') {
+                          if (notif.payload.status === 'error') {
+                            iconBg = "#FEF2F2";
+                            iconColor = "#EF4444";
+                          } else if (notif.payload.status === 'synced') {
+                            iconBg = "#ECFDF5";
+                            iconColor = "#10B981";
+                          } else {
+                            iconBg = "#FFFBEB";
+                            iconColor = "#D97706";
+                          }
+                          title = "Đồng bộ Tri thức";
+                          message = `${notif.payload.name}: ${notif.payload.message}`;
+                        } else if (notif.type === 'new-message') {
+                          iconBg = "#F5F3FF";
+                          iconColor = "#7C3AED";
+                          title = "Tin nhắn Chatbot";
+                          message = `${notif.payload.sender === 'user' ? 'Khách' : 'Bot'}: ${notif.payload.message.substring(0, 50)}`;
+                        }
+
+                        return (
+                          <div 
+                            key={notif.id}
+                            style={{
+                              display: "flex",
+                              gap: 10,
+                              padding: 8,
+                              borderRadius: 10,
+                              background: "rgba(0, 0, 0, 0.02)",
+                              border: "1px solid rgba(0, 0, 0, 0.02)",
+                              transition: "all 0.2s"
+                            }}
+                          >
+                            <div style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 8,
+                              background: iconBg,
+                              color: iconColor,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0
+                            }}>
+                              <Bell size={14} />
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: "#334155" }}>{title}</span>
+                                <span style={{ fontSize: 9, color: "#94A3B8" }}>
+                                  {new Date(notif.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p style={{
+                                fontSize: 11,
+                                color: "#64748B",
+                                margin: "2px 0 0 0",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap"
+                              }}>{message}</p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </motion.div>
+              </>
+            )}
           </div>
 
           {/* User drop */}

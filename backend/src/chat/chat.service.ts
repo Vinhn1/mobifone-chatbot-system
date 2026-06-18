@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 import { ChatHistoryService } from '../chat-history/chat-history.service';
 import { LeadsService } from '../leads/leads.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class ChatService {
@@ -15,6 +16,7 @@ export class ChatService {
     private readonly configService: ConfigService,
     private readonly chatHistoryService: ChatHistoryService,
     private readonly leadsService: LeadsService,
+    private readonly notificationsService: NotificationsService,
   ) {
     this.aiServiceBaseUrl = this.configService.get<string>('AI_SERVICE_BASE_URL', 'http://localhost:8001');
     this.aiRequestTimeoutMs = this.configService.get<number>('AI_SERVICE_TIMEOUT_MS', 60000);
@@ -74,6 +76,17 @@ export class ChatService {
       }
     }
 
+    // Phát sự kiện tin nhắn User đến Admin Dashboard
+    try {
+      this.notificationsService.emitNotification('new-message', {
+        sessionId: sessionId || 'anonymous',
+        sender: 'user',
+        message,
+      });
+    } catch (err) {
+      console.error('Lỗi khi phát sự kiện user message:', err.message);
+    }
+
     try {
       // 2. Gửi sang AI Service kèm history
       const response = await firstValueFrom(
@@ -90,6 +103,19 @@ export class ChatService {
       // 3. Lưu phản hồi của Bot vào DB (nếu có sessionId)
       if (sessionId && result && result.answer) {
         await this.chatHistoryService.saveMessage(sessionId, 'bot', result.answer);
+      }
+
+      // Phát sự kiện tin nhắn Bot đến Admin Dashboard
+      if (result && result.answer) {
+        try {
+          this.notificationsService.emitNotification('new-message', {
+            sessionId: sessionId || 'anonymous',
+            sender: 'bot',
+            message: result.answer,
+          });
+        } catch (err) {
+          console.error('Lỗi khi phát sự kiện bot reply:', err.message);
+        }
       }
 
       return result;
@@ -151,6 +177,18 @@ export class ChatService {
   async uploadDocument(file: any) {
     const aiServiceUrl = this.getAiServiceUrl('/upload');
     
+    // Phát trạng thái bắt đầu đồng bộ
+    try {
+      this.notificationsService.emitNotification('doc-status', {
+        name: file.originalname,
+        status: 'processing',
+        progress: 30,
+        message: 'Đang tải file và trích xuất dữ liệu...',
+      });
+    } catch (err) {
+      console.error('Lỗi khi phát sự kiện bắt đầu nạp tài liệu:', err.message);
+    }
+    
     // Sử dụng standard Node.js/Web FormData
     const formData = new FormData();
     const blob = new Blob([file.buffer], { type: file.mimetype });
@@ -160,8 +198,32 @@ export class ChatService {
       const response = await firstValueFrom(
         this.httpService.post(aiServiceUrl, formData, { timeout: this.aiRequestTimeoutMs })
       );
+      
+      // Phát trạng thái đồng bộ thành công
+      try {
+        this.notificationsService.emitNotification('doc-status', {
+          name: file.originalname,
+          status: 'synced',
+          progress: 100,
+          message: 'Đã hoàn thành đồng bộ tri thức!',
+        });
+      } catch (err) {
+        console.error('Lỗi khi phát sự kiện hoàn thành nạp tài liệu:', err.message);
+      }
+
       return response.data;
     } catch (error) {
+      // Phát trạng thái đồng bộ lỗi
+      try {
+        this.notificationsService.emitNotification('doc-status', {
+          name: file.originalname,
+          status: 'error',
+          progress: 0,
+          message: `Lỗi nạp tri thức: ${error.message || 'Lỗi kết nối AI Service'}`,
+        });
+      } catch (err) {
+        console.error('Lỗi khi phát sự kiện thất bại nạp tài liệu:', err.message);
+      }
       this.handleAiServiceError(error, 'Lỗi khi gửi file lên AI Service');
     }
   }
