@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, UseGuards, Request, HttpCode, HttpStatus, Param } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, UseGuards, Request, HttpCode, HttpStatus, Param, BadRequestException } from '@nestjs/common';
 import { SubscribersService } from './subscribers.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -23,13 +23,14 @@ export class SubscribersController {
     return await this.subscribersService.verifyOtp(phoneNumber, otpCode);
   }
 
-  // 2.1 Đăng nhập demo không cần OTP
+  // 2.1 Đăng nhập demo không cần OTP (Có hỗ trợ kiểm tra mật khẩu)
   @Post('login-demo')
   @HttpCode(HttpStatus.OK)
   async loginDemo(
     @Body('phoneNumber') phoneNumber: string,
+    @Body('password') password?: string,
   ) {
-    return await this.subscribersService.loginDemo(phoneNumber);
+    return await this.subscribersService.loginDemo(phoneNumber, password);
   }
 
   // 3. Lấy thông tin thuê bao đã đăng nhập
@@ -48,6 +49,9 @@ export class SubscribersController {
     @Request() req: any,
     @Body('packageCode') packageCode: string,
   ) {
+    if (req.user.role === 'admin') {
+      throw new BadRequestException('Tài khoản quản trị viên không thể thực hiện đăng ký gói cước di động.');
+    }
     return await this.subscribersService.registerPackage(req.user.userId, packageCode);
   }
 

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
+import { SubscribersService } from '../subscribers/subscribers.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -8,7 +9,12 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly subscribersService: SubscribersService,
   ) {}
+
+  async registerSubscriber(phone: string, pass: string, name?: string) {
+    return await this.subscribersService.registerPassword(phone, pass, name);
+  }
 
   // 1. Xác thực tên đăng nhập và mật khẩu (sử dụng bcrypt băm ngược để so sánh)
   async validateUser(username: string, pass: string): Promise<any> {

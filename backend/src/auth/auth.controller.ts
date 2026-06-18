@@ -20,5 +20,12 @@ export class AuthController {
     // 2. Sinh và trả về JWT Token
     return this.authService.login(user);
   }
+
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() body: any) {
+    const { username, password, name } = body;
+    return await this.authService.registerSubscriber(username, password, name);
+  }
 }
 

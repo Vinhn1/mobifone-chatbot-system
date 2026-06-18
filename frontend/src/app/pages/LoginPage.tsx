@@ -104,10 +104,10 @@ function LoginForm() {
     <div className="flex flex-col gap-4">
       {/* Demo hint */}
       <div className="bg-blue-50/70 border border-blue-100/80 rounded-xl p-3.5">
-        <div className="text-blue-600 text-xs font-extrabold mb-1">💡 Tài khoản demo</div>
+        <div className="text-blue-600 text-xs font-extrabold mb-1">💡 Tài khoản đăng nhập</div>
         <div className="text-slate-500 text-[11px] leading-relaxed font-semibold">
-          <strong className="text-slate-700">Khách hàng:</strong> 0912345678 / bất kỳ mật khẩu<br />
-          <strong className="text-slate-700">Admin:</strong> admin hoặc admin@mobifone.vn / <span className="text-red-600 font-bold">admin123</span>
+          <strong className="text-slate-700">Khách hàng:</strong> 0393375961 / <span className="text-red-600 font-bold">Vinhnguyen@1</span><br />
+          <strong className="text-slate-700">Admin:</strong> admin / <span className="text-red-600 font-bold">admin@123</span>
         </div>
       </div>
 

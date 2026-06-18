@@ -25,48 +25,6 @@ export type AuthUser = {
   dob: string;
 };
 
-const MOCK_USER: AuthUser = {
-  id: "U001",
-  name: "Nguyễn Thị Lan",
-  phone: "0912 345 678",
-  email: "lan.nguyen@gmail.com",
-  role: "user",
-  tier: "Gold",
-  package: "TK135 Ultra",
-  packageCode: "TK135",
-  packageExpiry: "10/07/2026",
-  dataUsedGB: 68,
-  dataTotalGB: 120,
-  voiceUsedMin: 320,
-  voiceTotalMin: 600,
-  balance: 125000,
-  points: 4820,
-  joinDate: "15/03/2021",
-  address: "45 Lê Lợi, Q.1, TP.HCM",
-  dob: "05/08/1994",
-};
-
-const MOCK_ADMIN: AuthUser = {
-  id: "A001",
-  name: "Trần Minh Tuấn",
-  phone: "0987 654 321",
-  email: "admin@mobifone.vn",
-  role: "admin",
-  tier: "Diamond",
-  package: "Staff",
-  packageCode: "STAFF",
-  packageExpiry: "31/12/2026",
-  dataUsedGB: 0,
-  dataTotalGB: 0,
-  voiceUsedMin: 0,
-  voiceTotalMin: 0,
-  balance: 0,
-  points: 0,
-  joinDate: "01/01/2020",
-  address: "MobiFone HQ, Hà Nội",
-  dob: "12/05/1988",
-};
-
 type AuthContextType = {
   user: AuthUser | null;
   token: string | null;
@@ -88,15 +46,13 @@ const AuthContext = createContext<AuthContextType>({
 const API_BASE = "http://localhost:3000";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("mobifone_admin_token"));
+  const [token, setToken] = useState<string | null>(() => {
+    return localStorage.getItem("mobifone_admin_token") || localStorage.getItem("mobifone_portal_token");
+  });
   const [user, setUser] = useState<AuthUser | null>(() => {
-    const savedToken = localStorage.getItem("mobifone_admin_token");
-    if (savedToken) {
-      const savedAdmin = localStorage.getItem("mobifone_admin_user");
-      if (savedAdmin) {
-        try { return JSON.parse(savedAdmin); } catch { return MOCK_ADMIN; }
-      }
-      return MOCK_ADMIN;
+    const savedAdmin = localStorage.getItem("mobifone_admin_user");
+    if (savedAdmin) {
+      try { return JSON.parse(savedAdmin); } catch { return null; }
     }
     const savedUser = localStorage.getItem("mobifone_portal_user");
     if (savedUser) {
@@ -148,22 +104,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const sub = response.data;
           if (sub && sub.id) {
             setUser(prev => {
-              const baseUser = prev || MOCK_USER;
               const mappedUser: AuthUser = {
-                ...baseUser,
                 id: sub.id,
-                name: sub.name || baseUser.name || `Thành viên ${sub.phoneNumber.slice(-4)}`,
+                name: sub.name || `Thành viên ${sub.phoneNumber.slice(-4)}`,
                 phone: sub.phoneNumber,
-                email: sub.email || baseUser.email || `${sub.phoneNumber}@mobifone.vn`,
+                email: sub.email || `${sub.phoneNumber}@mobifone.vn`,
                 role: "user",
+                tier: "Gold",
                 package: sub.currentPackage ? `${sub.currentPackage} Ultra` : "Không có gói",
                 packageCode: sub.currentPackage || "",
                 packageExpiry: sub.packageExpiry ? new Date(sub.packageExpiry).toLocaleDateString("vi-VN") : "N/A",
                 dataUsedGB: sub.dataUsedGB || 0,
                 dataTotalGB: sub.dataTotalGB || 0,
-                address: sub.address || baseUser.address || "Chưa cập nhật",
-                dob: sub.dob || baseUser.dob || "01/01/1990",
-                avatar: sub.avatar || baseUser.avatar || undefined,
+                voiceUsedMin: 0,
+                voiceTotalMin: sub.currentPackage ? 600 : 0,
+                balance: 150000,
+                points: 1200,
+                joinDate: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN"),
+                address: sub.address || "Chưa cập nhật",
+                dob: sub.dob || "01/01/1990",
+                avatar: sub.avatar || undefined,
               };
               localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
               return mappedUser;
@@ -194,33 +154,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password: password,
         });
         const apiToken = response.data?.access_token;
-        if (apiToken) {
+        const apiUser = response.data?.user;
+        if (apiToken && apiUser) {
           localStorage.setItem("mobifone_admin_token", apiToken);
           setToken(apiToken);
-          const savedAdmin = localStorage.getItem("mobifone_admin_user");
-          if (savedAdmin) {
-            try { setUser(JSON.parse(savedAdmin)); } catch { setUser(MOCK_ADMIN); }
-          } else {
-            setUser(MOCK_ADMIN);
-          }
+          const adminUser: AuthUser = {
+            id: String(apiUser.id),
+            name: "MobiFone Administrator",
+            phone: "0987654321",
+            email: "admin@mobifone.vn",
+            role: "admin",
+            tier: "Diamond",
+            package: "Staff",
+            packageCode: "STAFF",
+            packageExpiry: "31/12/2026",
+            dataUsedGB: 0,
+            dataTotalGB: 0,
+            voiceUsedMin: 0,
+            voiceTotalMin: 0,
+            balance: 0,
+            points: 0,
+            joinDate: "01/01/2020",
+            address: "MobiFone HQ, Hà Nội",
+            dob: "12/05/1988",
+          };
+          localStorage.setItem("mobifone_admin_user", JSON.stringify(adminUser));
+          setUser(adminUser);
           return "admin";
         }
       } catch (error) {
         console.error("Lỗi xác thực Admin:", error);
-        // Chế độ Demo Fallback: Nếu database lỗi hoặc backend chưa chạy,
-        // cho phép đăng nhập làm Admin nếu mật khẩu nhập vào đúng là "admin123"
-        if (password === "admin123") {
-          console.log("Đăng nhập Admin ở chế độ Demo Fallback thành công!");
-          localStorage.setItem("mobifone_admin_token", "demo_token_admin");
-          setToken("demo_token_admin");
-          const savedAdmin = localStorage.getItem("mobifone_admin_user");
-          if (savedAdmin) {
-            try { setUser(JSON.parse(savedAdmin)); } catch { setUser(MOCK_ADMIN); }
-          } else {
-            setUser(MOCK_ADMIN);
-          }
-          return "admin";
-        }
         return "error";
       }
     }
@@ -230,6 +193,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const response = await axios.post(`${API_BASE}/subscribers/login-demo`, {
           phoneNumber: identifier,
+          password: password,
         });
         const { token: apiToken, subscriber: sub } = response.data;
         if (apiToken && sub) {
@@ -262,30 +226,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return "user";
         }
       } catch (error) {
-        console.warn("Backend login-demo failed, falling back to local storage / mock:", error);
+        console.warn("Lỗi đăng nhập Subscriber:", error);
+        return "error";
       }
-
-      // Sandbox fallback: Lấy thông tin user đã lưu trong localStorage nếu trùng khớp
-      const savedUserStr = localStorage.getItem("mobifone_portal_user");
-      let existingUser: AuthUser | null = null;
-      if (savedUserStr) {
-        try {
-          const parsed = JSON.parse(savedUserStr);
-          if (parsed && (parsed.phone === identifier || parsed.email === identifier || identifier.replace(/[\s.-]/g, "") === parsed.phone.replace(/[\s.-]/g, ""))) {
-            existingUser = parsed;
-          }
-        } catch (e) {}
-      }
-
-      const userToSet = existingUser || {
-        ...MOCK_USER,
-        phone: identifier,
-        name: `Thành viên ${identifier.slice(-4)}`
-      };
-
-      localStorage.setItem("mobifone_portal_user", JSON.stringify(userToSet));
-      setUser(userToSet);
-      return "user";
     }
 
     return "error";
@@ -293,16 +236,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (phone: string, password: string, name?: string): Promise<"success" | "error"> => {
     try {
-      // Nếu đã xác thực OTP thành công ở bước trước và đã lưu thông tin người dùng
-      const savedUser = localStorage.getItem("mobifone_portal_user");
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        if (parsed.phone === phone) {
-          setUser(parsed);
-          return "success";
-        }
-      }
-
       await axios.post(`${API_BASE}/auth/register`, {
         username: phone,
         password: password,
@@ -313,20 +246,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return "success";
     } catch (error) {
       console.error("Lỗi đăng ký:", error);
-      // Nếu backend chưa chạy hoặc trả về 404/500 do chưa có endpoint register
-      const isNetworkError = (error as any)?.code === "ERR_NETWORK";
-      const is404 = (error as any)?.response?.status === 404;
-      if (isNetworkError || is404) {
-        const newUser: AuthUser = {
-          ...MOCK_USER,
-          id: `U${Date.now()}`,
-          phone,
-          name: name || `Thành viên ${phone.slice(-4)}`,
-        };
-        localStorage.setItem("mobifone_portal_user", JSON.stringify(newUser));
-        setUser(newUser);
-        return "success";
-      }
       return "error";
     }
   };

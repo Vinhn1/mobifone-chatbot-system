@@ -123,6 +123,11 @@ export function PackagesPage() {
 
   const handleConfirmActivation = async () => {
     if (regModal) {
+      if (user?.role === "admin") {
+        alert("Tài khoản Quản trị viên (Admin) không thể đăng ký gói cước di động. Vui lòng sử dụng số điện thoại của Subscriber để thực hiện test chức năng này.");
+        setRegModal(null);
+        return;
+      }
       try {
         await axios.post(`${API_BASE}/subscribers/packages/register`, {
           packageCode: regModal.packageCode

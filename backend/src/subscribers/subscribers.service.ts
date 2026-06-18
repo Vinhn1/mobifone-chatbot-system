@@ -1,12 +1,13 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Subscriber } from './subscriber.entity';
 import { Package } from './package.entity';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
-export class SubscribersService {
+export class SubscribersService implements OnModuleInit {
   constructor(
     @InjectRepository(Subscriber)
     private readonly subscriberRepository: Repository<Subscriber>,
@@ -14,6 +15,40 @@ export class SubscribersService {
     private readonly packageRepository: Repository<Package>,
     private readonly jwtService: JwtService,
   ) {}
+
+  async onModuleInit() {
+    const phone = '0393375961';
+    let subscriber = await this.subscriberRepository.findOneBy({ phoneNumber: phone });
+    const hashedPassword = await bcrypt.hash('Vinhnguyen@1', 10);
+    if (!subscriber) {
+      subscriber = this.subscriberRepository.create({
+        phoneNumber: phone,
+        password: hashedPassword,
+        name: 'Vinh Nguyen',
+        email: 'vinh.nguyen@mobifone.vn',
+        currentPackage: 'TK135',
+        dataTotalGB: 120,
+        dataUsedGB: 15,
+        packageExpiry: new Date(Date.now() + 22 * 24 * 60 * 60 * 1000), // expires in 22 days
+        dob: '01/01/1995',
+        address: '80 Nguyễn Du, Q.1, TP.HCM',
+      });
+      await this.subscriberRepository.save(subscriber);
+      console.log('--------------------------------------------------');
+      console.log(`[SEED] Đã tạo tài khoản thuê bao mặc định:`);
+      console.log(`Phone: ${phone}`);
+      console.log(`Password: Vinhnguyen@1`);
+      console.log('--------------------------------------------------');
+    } else {
+      subscriber.password = hashedPassword;
+      await this.subscriberRepository.save(subscriber);
+      console.log('--------------------------------------------------');
+      console.log(`[SEED] Đã cập nhật mật khẩu cho thuê bao mặc định:`);
+      console.log(`Phone: ${phone}`);
+      console.log(`Password: Vinhnguyen@1`);
+      console.log('--------------------------------------------------');
+    }
+  }
 
   // 1. Gửi OTP giả lập (Tạo mới thuê bao nếu chưa có trong DB)
   async sendOtp(phoneNumber: string): Promise<{ success: boolean; message: string; otpCode: string }> {
@@ -87,7 +122,7 @@ export class SubscribersService {
   }
 
   // Đăng nhập demo cho thuê bao di động bằng số điện thoại
-  async loginDemo(phoneNumber: string): Promise<{ token: string; subscriber: Subscriber }> {
+  async loginDemo(phoneNumber: string, password?: string): Promise<{ token: string; subscriber: Subscriber }> {
     // Chuẩn hóa số điện thoại: bỏ khoảng trắng, dấu chấm, dấu gạch ngang
     const cleanPhone = phoneNumber.replace(/[\s.-]/g, "");
     if (!cleanPhone || !cleanPhone.match(/^0\d{9}$/)) {
@@ -104,7 +139,20 @@ export class SubscribersService {
         dataUsedGB: 0,
         packageExpiry: null,
       });
+      if (password) {
+        subscriber.password = await bcrypt.hash(password, 10);
+      }
       await this.subscriberRepository.save(subscriber);
+    } else {
+      if (subscriber.password) {
+        if (!password) {
+          throw new BadRequestException('Vui lòng nhập mật khẩu.');
+        }
+        const isMatch = await bcrypt.compare(password, subscriber.password);
+        if (!isMatch) {
+          throw new BadRequestException('Mật khẩu không chính xác.');
+        }
+      }
     }
 
     // Phát hành token JWT với role là 'subscriber'
@@ -115,6 +163,28 @@ export class SubscribersService {
       token,
       subscriber,
     };
+  }
+
+  async registerPassword(phoneNumber: string, pass: string, name?: string): Promise<Subscriber> {
+    const cleanPhone = phoneNumber.replace(/[\s.-]/g, "");
+    let subscriber = await this.subscriberRepository.findOneBy({ phoneNumber: cleanPhone });
+    const hashedPassword = await bcrypt.hash(pass, 10);
+    if (!subscriber) {
+      subscriber = this.subscriberRepository.create({
+        phoneNumber: cleanPhone,
+        password: hashedPassword,
+        currentPackage: null,
+        dataTotalGB: 0,
+        dataUsedGB: 0,
+        packageExpiry: null,
+      });
+    } else {
+      subscriber.password = hashedPassword;
+    }
+    if (name) {
+      subscriber.name = name;
+    }
+    return await this.subscriberRepository.save(subscriber);
   }
 
   // 3. Lấy thông tin chi tiết của thuê bao
