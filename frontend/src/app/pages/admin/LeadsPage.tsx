@@ -189,6 +189,248 @@ function LeadDetail({ lead, onClose, onUpdateStatus }: { lead: Lead; onClose: ()
   );
 }
 
+function SubscriberDetail({
+  subscriber,
+  onClose,
+  onUpdate,
+  packages
+}: {
+  subscriber: any;
+  onClose: () => void;
+  onUpdate: (id: string, data: any) => Promise<void>;
+  packages: any[];
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: subscriber.name || "",
+    email: subscriber.email || "",
+    dob: subscriber.dob || "",
+    address: subscriber.address || "",
+    currentPackage: subscriber.currentPackage || "",
+    dataTotalGB: subscriber.dataTotalGB || 0,
+    dataUsedGB: subscriber.dataUsedGB || 0,
+    packageExpiry: subscriber.packageExpiry ? new Date(subscriber.packageExpiry).toISOString().split('T')[0] : ""
+  });
+
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setFormData({
+      name: subscriber.name || "",
+      email: subscriber.email || "",
+      dob: subscriber.dob || "",
+      address: subscriber.address || "",
+      currentPackage: subscriber.currentPackage || "",
+      dataTotalGB: subscriber.dataTotalGB || 0,
+      dataUsedGB: subscriber.dataUsedGB || 0,
+      packageExpiry: subscriber.packageExpiry ? new Date(subscriber.packageExpiry).toISOString().split('T')[0] : ""
+    });
+    setIsEditing(false);
+  }, [subscriber]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await onUpdate(subscriber.id, {
+        ...formData,
+        dataTotalGB: Number(formData.dataTotalGB),
+        dataUsedGB: Number(formData.dataUsedGB),
+        packageExpiry: formData.packageExpiry ? new Date(formData.packageExpiry).toISOString() : null
+      });
+      setIsEditing(false);
+    } catch (err) {
+      console.error(err);
+      alert("Không thể lưu thông tin thuê bao.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 30 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 30 }}
+      className="w-[380px] p-6 flex flex-col gap-5 shrink-0 bg-white/85 backdrop-blur-md rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-900/5 overflow-y-auto"
+    >
+      <div className="flex justify-between items-start">
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#E4002B] to-[#FF5E62] flex items-center justify-center text-white text-lg font-black shadow-md shadow-red-500/10">
+            {(formData.name || subscriber.phoneNumber).charAt(0)}
+          </div>
+          <div>
+            <div className="text-slate-800 font-extrabold text-sm">{formData.name || "Thuê bao MobiFone"}</div>
+            <div className="text-slate-400 text-xs font-semibold mt-0.5">{subscriber.phoneNumber}</div>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="bg-slate-100 hover:bg-slate-200 border-none rounded-xl w-8 h-8 flex items-center justify-center cursor-pointer text-slate-500 transition-colors"
+        >
+          <X size={15} />
+        </button>
+      </div>
+
+      {!isEditing ? (
+        <>
+          <div className="flex gap-2 font-extrabold text-[10px] uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-lg bg-blue-50 border border-blue-100 text-[#0055A5]">
+              👤 Thuê bao
+            </span>
+            {subscriber.currentPackage ? (
+              <span className="px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-600">
+                📦 {subscriber.currentPackage}
+              </span>
+            ) : (
+              <span className="px-3 py-1 rounded-lg bg-slate-50 border border-slate-200 text-slate-500">
+                Chưa có gói
+              </span>
+            )}
+          </div>
+
+          {/* Info grid */}
+          <div className="grid grid-cols-2 gap-2.5">
+            {[
+              { label: "Họ và tên", value: subscriber.name || "Chưa cập nhật" },
+              { label: "Số điện thoại", value: subscriber.phoneNumber },
+              { label: "Email", value: subscriber.email || "Chưa cập nhật" },
+              { label: "Ngày sinh", value: subscriber.dob || "Chưa cập nhật" },
+              { label: "Địa chỉ", value: subscriber.address || "Chưa cập nhật" },
+              { label: "Gói cước", value: subscriber.currentPackage || "Không hoạt động" },
+              { label: "Tổng dung lượng", value: `${subscriber.dataTotalGB} GB` },
+              { label: "Đã sử dụng", value: `${subscriber.dataUsedGB} GB` },
+              { label: "Hạn gói cước", value: subscriber.packageExpiry ? new Date(subscriber.packageExpiry).toLocaleDateString("vi-VN") : "N/A" },
+              { label: "Ngày đăng ký", value: new Date(subscriber.createdAt).toLocaleDateString("vi-VN") },
+            ].map(row => (
+              <div key={row.label} className="bg-slate-50/30 rounded-xl p-3 border border-slate-100/60">
+                <div className="text-slate-400 text-[9px] font-black tracking-wider uppercase mb-1">{row.label}</div>
+                <div className="text-slate-700 font-extrabold text-xs truncate">{row.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setIsEditing(true)}
+            className="w-full flex items-center justify-center gap-1.5 py-3 bg-gradient-to-r from-blue-600 to-[#0055A5] hover:from-blue-700 hover:to-[#004485] text-white border-none rounded-2xl text-xs font-black uppercase tracking-wider shadow-md cursor-pointer transition-all"
+          >
+            Chỉnh sửa thông tin
+          </button>
+        </>
+      ) : (
+        <form onSubmit={handleSave} className="flex flex-col gap-4">
+          <div className="text-slate-800 font-extrabold text-xs">Cập nhật thông tin</div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-slate-400 text-[10px] font-bold uppercase">Họ và tên</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
+              className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-slate-400 text-[10px] font-bold uppercase">Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={e => setFormData({ ...formData, email: e.target.value })}
+              className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-slate-400 text-[10px] font-bold uppercase">Ngày sinh (DD/MM/YYYY)</label>
+            <input
+              type="text"
+              placeholder="01/01/1990"
+              value={formData.dob}
+              onChange={e => setFormData({ ...formData, dob: e.target.value })}
+              className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-slate-400 text-[10px] font-bold uppercase">Địa chỉ</label>
+            <input
+              type="text"
+              value={formData.address}
+              onChange={e => setFormData({ ...formData, address: e.target.value })}
+              className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-slate-400 text-[10px] font-bold uppercase">Gói cước</label>
+            <select
+              value={formData.currentPackage}
+              onChange={e => setFormData({ ...formData, currentPackage: e.target.value })}
+              className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400 bg-white"
+            >
+              <option value="">Chưa kích hoạt</option>
+              {packages.map((pkg: any) => (
+                <option key={pkg.id} value={pkg.id}>
+                  {pkg.id} - {pkg.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-slate-400 text-[10px] font-bold uppercase">Dung lượng (GB)</label>
+              <input
+                type="number"
+                value={formData.dataTotalGB}
+                onChange={e => setFormData({ ...formData, dataTotalGB: Number(e.target.value) })}
+                className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-slate-400 text-[10px] font-bold uppercase">Đã dùng (GB)</label>
+              <input
+                type="number"
+                value={formData.dataUsedGB}
+                onChange={e => setFormData({ ...formData, dataUsedGB: Number(e.target.value) })}
+                className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-slate-400 text-[10px] font-bold uppercase">Ngày hết hạn gói</label>
+            <input
+              type="date"
+              value={formData.packageExpiry}
+              onChange={e => setFormData({ ...formData, packageExpiry: e.target.value })}
+              className="border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 outline-none focus:border-blue-400"
+            />
+          </div>
+
+          <div className="flex gap-2.5 mt-2">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 border-none rounded-xl text-xs font-bold cursor-pointer transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex-1 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white border-none rounded-xl text-xs font-bold cursor-pointer transition-all shadow-sm"
+            >
+              {saving ? "Đang lưu..." : "Lưu lại"}
+            </button>
+          </div>
+        </form>
+      )}
+    </motion.div>
+  );
+}
+
 export function LeadsPage() {
   const { token, logout, user } = useAuth();
   const navigate = useNavigate();

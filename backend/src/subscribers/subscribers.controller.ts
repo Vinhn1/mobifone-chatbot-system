@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, UseGuards, Request, HttpCode, HttpStatus, Param } from '@nestjs/common';
 import { SubscribersService } from './subscribers.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -51,5 +51,23 @@ export class SubscribersController {
     @Body() profileData: any,
   ) {
     return await this.subscribersService.updateProfile(req.user.userId, profileData);
+  }
+
+  // 6. Lấy toàn bộ danh sách thuê bao (Dành cho Admin)
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  async getAllSubscribers() {
+    return await this.subscribersService.findAll();
+  }
+
+  // 7. Cập nhật thông tin thuê bao bất kỳ theo ID (Dành cho Admin)
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id')
+  @HttpCode(HttpStatus.OK)
+  async adminUpdateSubscriber(
+    @Param('id') id: string,
+    @Body() updateData: any,
+  ) {
+    return await this.subscribersService.adminUpdateProfile(id, updateData);
   }
 }

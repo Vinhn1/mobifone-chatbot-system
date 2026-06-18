@@ -159,4 +159,35 @@ export class SubscribersService {
 
     return await this.subscriberRepository.save(subscriber);
   }
+
+  // Lấy toàn bộ danh sách thuê bao (Dành cho Admin)
+  async findAll(): Promise<Subscriber[]> {
+    return await this.subscriberRepository.find({
+      order: { createdAt: 'DESC' }
+    });
+  }
+
+  // Cập nhật thông tin thuê bao bất kỳ (Dành cho Admin)
+  async adminUpdateProfile(id: string, updateData: any): Promise<Subscriber> {
+    const subscriber = await this.subscriberRepository.findOneBy({ id });
+    if (!subscriber) {
+      throw new NotFoundException('Không tìm thấy thông tin thuê bao.');
+    }
+
+    const updatableFields = [
+      'name', 'email', 'dob', 'address', 'currentPackage',
+      'dataTotalGB', 'dataUsedGB', 'packageExpiry'
+    ];
+    for (const key of updatableFields) {
+      if (updateData[key] !== undefined) {
+        if (key === 'packageExpiry') {
+          subscriber.packageExpiry = updateData.packageExpiry ? new Date(updateData.packageExpiry) : null;
+        } else {
+          subscriber[key] = updateData[key];
+        }
+      }
+    }
+
+    return await this.subscriberRepository.save(subscriber);
+  }
 }
