@@ -323,6 +323,16 @@ export class ChatService {
     return chunks;
   }
 
+  // Làm sạch các định dạng markdown cho tin nhắn chat app (Messenger/Zalo)
+  private cleanMarkdown(text: string): string {
+    if (!text) return '';
+    // 1. Chuyển các gạch đầu dòng dạng "* " hoặc "- " thành "• "
+    let cleaned = text.replace(/^\s*[\*\-]\s+/gm, '• ');
+    // 2. Loại bỏ các dấu * dùng để in đậm/in nghiêng
+    cleaned = cleaned.replace(/\*/g, '');
+    return cleaned;
+  }
+
   // Xử lý tin nhắn đến từ Facebook Messenger Webhook
   async handleFacebookMessage(senderId: string, text: string) {
     console.log(`[FB-WEBHOOK] Nhận tin nhắn từ ${senderId}: "${text}"`);
@@ -339,22 +349,38 @@ export class ChatService {
       console.error('[FB-WEBHOOK] Thiếu fb_page_token trong cấu hình!');
       return;
     }
-
+    
     // 2. Gọi AI sinh câu trả lời (lưu lịch sử chat theo format facebook_senderId)
     const result = await this.sendMessageToAi(text, `facebook_${senderId}`);
-    const answer = result?.answer || 'Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi này.';
+    let answer = result?.answer || 'Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi này.';
+
+    // Làm sạch định dạng markdown/asterisks và định dạng gạch đầu dòng
+    answer = this.cleanMarkdown(answer);
 
     // 3. Gửi tin nhắn trả lời qua Facebook Send API (chia nhỏ tin nhắn nếu dài hơn 2000 kí tự)
     const fbSendUrl = `https://graph.facebook.com/v18.0/me/messages?access_token=${fbPageToken}`;
     const chunks = this.splitMessage(answer, 2000);
 
-    for (const chunk of chunks) {
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const isLastChunk = i === chunks.length - 1;
+      const messagePayload: any = { text: chunk };
+
+      // Đính kèm các câu hỏi gợi ý dạng Quick Replies ở chunk cuối cùng
+      if (isLastChunk && result?.suggested_questions && Array.isArray(result.suggested_questions) && result.suggested_questions.length > 0) {
+        messagePayload.quick_replies = result.suggested_questions.map((q: string) => ({
+          content_type: 'text',
+          title: q.length > 20 ? q.substring(0, 17) + '...' : q,
+          payload: q
+        }));
+      }
+
       try {
         await firstValueFrom(
           this.httpService.post(fbSendUrl, {
             recipient: { id: senderId },
             messaging_type: 'RESPONSE',
-            message: { text: chunk }
+            message: messagePayload
           })
         );
         console.log(`[FB-WEBHOOK] Đã phản hồi thành công một phần cho ${senderId}`);
@@ -386,7 +412,10 @@ export class ChatService {
 
     // 2. Gọi AI sinh câu trả lời (lưu lịch sử chat theo format zalo_senderId)
     const result = await this.sendMessageToAi(text, `zalo_${senderId}`);
-    const answer = result?.answer || 'Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi này.';
+    let answer = result?.answer || 'Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi này.';
+
+    // Làm sạch định dạng markdown/asterisks và định dạng gạch đầu dòng
+    answer = this.cleanMarkdown(answer);
 
     // 3. Gửi tin nhắn trả lời qua Zalo OpenAPI (chia nhỏ tin nhắn nếu dài hơn 2000 kí tự)
     const zaloSendUrl = 'https://openapi.zalo.me/v3.0/oa/message/transaction';

@@ -130,11 +130,29 @@ function TypingBubble() {
 }
 
 function renderText(text: string) {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
-    p.startsWith("**") && p.endsWith("**")
-      ? <strong key={i} style={{ fontWeight: 700, color: "white" }}>{p.slice(2,-2)}</strong>
-      : p.split("\n").map((l, j, a) => <span key={`${i}-${j}`}>{l}{j<a.length-1&&<br/>}</span>)
-  );
+  if (!text) return "";
+  // 1. Chuyển các gạch đầu dòng dạng "* " hoặc "- " thành "• "
+  const formattedText = text.replace(/^\s*[\*\-]\s+/gm, "• ");
+
+  // 2. Tách chuỗi theo các phần in đậm (**), loại bỏ dấu * đơn lẻ ở phần văn bản thường
+  return formattedText.split(/(\*\*[^*]+\*\*)/g).map((p, i) => {
+    if (p.startsWith("**") && p.endsWith("**")) {
+      return (
+        <strong key={i} style={{ fontWeight: 700, color: "white" }}>
+          {p.slice(2, -2)}
+        </strong>
+      );
+    } else {
+      // Loại bỏ các dấu * đơn lẻ còn sót lại trong văn bản thường
+      const cleanSeg = p.replace(/\*/g, "");
+      return cleanSeg.split("\n").map((l, j, a) => (
+        <span key={`${i}-${j}`}>
+          {l}
+          {j < a.length - 1 && <br />}
+        </span>
+      ));
+    }
+  });
 }
 
 const FACEBOOK_MESSENGER_URL = "https://m.me/1215670604956653";
