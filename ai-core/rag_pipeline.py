@@ -427,8 +427,8 @@ class MobiFoneRAG:
 
     def answer_question(self, question, history=None):
         """Truy xuất thông tin liên quan và gửi OpenAI sinh câu trả lời"""
-        # 1. Lấy ngữ cảnh tương quan
-        retrieved = self.retrieve(question, n_results=3)
+        # 1. Lấy ngữ cảnh tương quan (Tăng từ 3 lên 5 để tối ưu tư vấn)
+        retrieved = self.retrieve(question, n_results=5)
         contexts = retrieved.get('documents', [[]])[0]
         sources = retrieved.get('metadatas', [[]])[0]
         
@@ -453,7 +453,8 @@ class MobiFoneRAG:
             "   - 💸 Giá cước & Chu kỳ sử dụng\n"
             "   - 📶 Ưu đãi Data và Gọi thoại (chi tiết)\n"
             "   - 📝 Cú pháp đăng ký chuẩn (nếu có trong ngữ cảnh)\n"
-            "6. Đối với các câu hỏi nghiệp vụ (gói cước, eSIM, lỗi kỹ thuật, dịch vụ...) mà Ngữ cảnh KHÔNG cung cấp đủ thông tin để trả lời: Hãy khéo léo xin lỗi và hướng dẫn khách hàng để lại Số điện thoại (SĐT) để chuyên viên hỗ trợ có thể liên hệ trực tiếp khắc phục/tư vấn nhanh nhất. Tuyệt đối không tự bịa thông tin ngoài ngữ cảnh."
+            "6. Đối với các câu hỏi nghiệp vụ (gói cước, eSIM, lỗi kỹ thuật, dịch vụ...) mà Ngữ cảnh KHÔNG cung cấp đủ thông tin chi tiết: Hãy dựa vào các thông tin hiện có trong ngữ cảnh để tư vấn/đề xuất giải pháp gần nhất hoặc gói cước có sẵn, kết hợp đặt câu hỏi gợi mở để tìm hiểu nhu cầu của khách hàng (ví dụ: Quý khách cần ưu đãi về Data hay thoại nhiều hơn?).\n"
+            "7. Tuyệt đối KHÔNG tự tiện yêu cầu Số điện thoại ngay từ đầu trừ khi khách hàng trực tiếp yêu cầu đăng ký/mua gói cước cụ thể, yêu cầu gặp chuyên viên hỗ trợ trực tiếp/khiếu nại, hoặc hỏi thông tin cá nhân/bảo mật tài khoản nằm ngoài kho tri thức."
         )
         temperature = 0.3
         top_p = 0.9
@@ -488,6 +489,14 @@ class MobiFoneRAG:
 [Câu hỏi hiện tại của khách hàng]:
 {question}
 
+[Yêu cầu bắt buộc về phần câu hỏi gợi ý tiếp theo]:
+Cuối câu trả lời của bạn, hãy tạo thêm 3 câu hỏi gợi ý tiếp theo có liên quan chặt chẽ đến câu hỏi hiện tại hoặc ngữ cảnh hội thoại vừa rồi (Khách hàng có thể muốn hỏi các câu này tiếp theo). Các câu hỏi gợi ý phải ngắn gọn, thiết thực và có ích.
+Định dạng phần gợi ý ở cuối câu trả lời của bạn theo đúng mẫu sau (không viết thêm lời giải thích nào khác ở phần gợi ý):
+[GỢI Ý]
+1. <Câu hỏi gợi ý 1>
+2. <Câu hỏi gợi ý 2>
+3. <Câu hỏi gợi ý 3>
+
 [Câu trả lời của bạn]:"""
 
         # 4. Gọi LLM với cơ chế retry tự động và tham số tùy chỉnh
@@ -498,6 +507,42 @@ class MobiFoneRAG:
             max_tokens=max_tokens
         )
         
+        # Tách phần gợi ý câu hỏi ở cuối phản hồi
+        import re
+        suggested_questions = []
+        parts = re.split(r'\[GỢI\s*Ý\]', answer, flags=re.IGNORECASE)
+        if len(parts) > 1:
+            answer = parts[0].strip()
+            suggestions_block = parts[1].strip()
+            for line in suggestions_block.split("\n"):
+                line = line.strip()
+                cleaned_line = re.sub(r'^\d+[\.\-\s]+', '', line).strip()
+                cleaned_line = re.sub(r'^[\-\*\+\s]+', '', cleaned_line).strip()
+                if cleaned_line and len(cleaned_line) > 3:
+                    if not cleaned_line.startswith(('[', ']', '<', '>')):
+                        suggested_questions.append(cleaned_line)
+                        
+        # Fallback nếu không có gợi ý sinh ra hoặc có lỗi định dạng
+        if not suggested_questions:
+            if any(kw in question.lower() for kw in ["gói", "đăng ký", "data"]):
+                suggested_questions = [
+                    "Các gói cước 4G/5G MobiFone hot nhất?",
+                    "Cú pháp đăng ký gói cước như thế nào?",
+                    "Tư vấn gói cước data dung lượng khủng?"
+                ]
+            elif any(kw in question.lower() for kw in ["esim", "sim"]):
+                suggested_questions = [
+                    "Thủ tục đổi eSIM MobiFone cần gì?",
+                    "Phí đổi eSIM MobiFone là bao nhiêu?",
+                    "eSIM có dùng chung số với SIM vật lý không?"
+                ]
+            else:
+                suggested_questions = [
+                    "Đăng ký gói cước nào nhiều ưu đãi nhất?",
+                    "Hướng dẫn cài đặt eSIM MobiFone?",
+                    "Cách đăng ký mạng 5G MobiFone?"
+                ]
+        
         # 5. Trích xuất danh sách nguồn tham khảo không trùng lặp
         unique_sources = []
         for src in sources:
@@ -506,7 +551,7 @@ class MobiFoneRAG:
             if url and url not in [s['url'] for s in unique_sources]:
                 unique_sources.append({"title": title, "url": url})
                 
-        return answer, unique_sources
+        return answer, unique_sources, suggested_questions
 
 # Demo chạy thử nghiệm
 if __name__ == "__main__":

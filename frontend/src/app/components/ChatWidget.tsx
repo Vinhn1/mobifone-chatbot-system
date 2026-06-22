@@ -161,18 +161,19 @@ export function ChatWidget() {
 
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
 
+  const fetchSuggestions = async () => {
+    try {
+      const response = await axios.get("http://localhost:3000/chat/suggestions");
+      if (Array.isArray(response.data) && response.data.length > 0) {
+        setSuggestions(response.data);
+      }
+    } catch (err) {
+      console.warn("Không thể tải gợi ý động, sử dụng gợi ý mặc định:", err);
+    }
+  };
+
   // Tải danh sách gợi ý câu hỏi động từ backend
   useEffect(() => {
-    const fetchSuggestions = async () => {
-      try {
-        const response = await axios.get("http://localhost:3000/chat/suggestions");
-        if (Array.isArray(response.data) && response.data.length > 0) {
-          setSuggestions(response.data);
-        }
-      } catch (err) {
-        console.warn("Không thể tải gợi ý động, sử dụng gợi ý mặc định:", err);
-      }
-    };
     fetchSuggestions();
   }, []);
 
@@ -227,6 +228,7 @@ export function ChatWidget() {
 
       const botAnswer = response.data?.answer || "";
       const botSources = response.data?.sources || [];
+      const botSuggestions = response.data?.suggested_questions || [];
 
       setTyping(false);
       setRobotState("talking");
@@ -236,6 +238,11 @@ export function ChatWidget() {
         text: botAnswer,
         sources: botSources,
       }]);
+
+      if (Array.isArray(botSuggestions) && botSuggestions.length > 0) {
+        setSuggestions(botSuggestions);
+      }
+
       setTimeout(() => setRobotState("idle"), 3000);
     } catch (error) {
       const errorMessage = getAxiosErrorMessage(error);
@@ -261,6 +268,7 @@ export function ChatWidget() {
     setOpen(true);
     setUnread(0);
     setMinimized(false);
+    fetchSuggestions();
   };
 
   return (
