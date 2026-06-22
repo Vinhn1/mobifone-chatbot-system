@@ -813,11 +813,69 @@ export function ChatWidget() {
 
                   {/* Suggestions list */}
                   <div style={{ background: "rgba(0,5,15,0.7)", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "10px 16px 6px" }}>
-                    <div className="suggest-pills" style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
+                    <div 
+                      className="suggest-pills" 
+                      onWheel={(e) => {
+                        if (e.deltaY !== 0) {
+                          e.currentTarget.scrollLeft += e.deltaY;
+                        }
+                      }}
+                      onMouseDown={(e) => {
+                        const el = e.currentTarget;
+                        el.dataset.isDown = "true";
+                        el.dataset.dragged = "false";
+                        el.dataset.startX = String(e.pageX - el.offsetLeft);
+                        el.dataset.scrollLeft = String(el.scrollLeft);
+                        el.style.cursor = "grabbing";
+                      }}
+                      onMouseLeave={(e) => {
+                        const el = e.currentTarget;
+                        el.dataset.isDown = "false";
+                        el.style.cursor = "grab";
+                      }}
+                      onMouseUp={(e) => {
+                        const el = e.currentTarget;
+                        el.dataset.isDown = "false";
+                        el.style.cursor = "grab";
+                        // Reset dragged flag slightly later so click handler can read it
+                        setTimeout(() => {
+                          el.dataset.dragged = "false";
+                        }, 50);
+                      }}
+                      onMouseMove={(e) => {
+                        const el = e.currentTarget;
+                        if (el.dataset.isDown !== "true") return;
+                        e.preventDefault();
+                        const x = e.pageX - el.offsetLeft;
+                        const startX = Number(el.dataset.startX || 0);
+                        const scrollLeftVal = Number(el.dataset.scrollLeft || 0);
+                        const walk = (x - startX) * 1.5;
+                        if (Math.abs(x - startX) > 5) {
+                          el.dataset.dragged = "true";
+                        }
+                        el.scrollLeft = scrollLeftVal - walk;
+                      }}
+                      style={{ 
+                        display: "flex", 
+                        flexWrap: "nowrap",
+                        gap: 6, 
+                        overflowX: "auto", 
+                        scrollbarWidth: "none",
+                        msOverflowStyle: "none",
+                        cursor: "grab",
+                        userSelect: "none"
+                      }}
+                    >
                       {suggestions.map(s => (
                         <button
                           key={s}
-                          onClick={() => send(s)}
+                          onClick={(e) => {
+                            const container = e.currentTarget.parentElement;
+                            if (container && container.getAttribute("data-dragged") === "true") {
+                              return;
+                            }
+                            send(s);
+                          }}
                           style={{
                             flexShrink: 0,
                             background: "rgba(255,255,255,0.05)",
