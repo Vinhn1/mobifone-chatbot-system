@@ -104,4 +104,16 @@ export class ChatController {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  @Get('suggestions') // Lấy gợi ý câu hỏi động từ AI Service (không yêu cầu JWT để Widget dùng)
+  async getSuggestions() {
+    try {
+      return await this.chatService.getDynamicSuggestions();
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

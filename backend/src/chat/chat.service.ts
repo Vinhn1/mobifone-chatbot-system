@@ -414,5 +414,25 @@ export class ChatService {
       }
     }
   }
+
+  // Lấy gợi ý câu hỏi động từ AI Service
+  async getDynamicSuggestions(): Promise<string[]> {
+    const aiServiceUrl = this.getAiServiceUrl('/suggestions');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(aiServiceUrl, { timeout: this.aiRequestTimeoutMs })
+      );
+      return response.data;
+    } catch (error) {
+      console.warn('Lỗi khi lấy gợi ý động từ AI Service, dùng danh sách mặc định:', error.message);
+      return [
+        "Gói TK135 có gì?",
+        "Đăng ký 5G?",
+        "Xem ưu đãi hot",
+        "Tư vấn gói phù hợp",
+        "Hỗ trợ kỹ thuật"
+      ];
+    }
+  }
 }
 

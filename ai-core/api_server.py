@@ -48,6 +48,111 @@ app.add_middleware(
 # Khởi tạo RAG bot
 bot = MobiFoneRAG()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+import threading
+
+# Đường dẫn lưu file cache gợi ý động
+SUGGESTIONS_CACHE_PATH = os.path.join(BASE_DIR, "dynamic_suggestions.json")
+
+# Danh sách gợi ý mặc định dự phòng
+DEFAULT_SUGGESTIONS = [
+    "Gói TK135 có gì?",
+    "Đăng ký 5G?",
+    "Xem ưu đãi hot",
+    "Tư vấn gói phù hợp",
+    "Hỗ trợ kỹ thuật"
+]
+
+def generate_dynamic_suggestions():
+    """Gọi Gemini phân tích kho tri thức và sinh 5 câu hỏi gợi ý tối ưu nhất."""
+    print("[SUGGESTIONS] Đang khởi chạy tiến trình sinh gợi ý động bằng AI...")
+    try:
+        # Lấy tất cả metadata hiện có trong Vector DB để phân tích
+        data = bot.collection.get(include=["metadatas"])
+        metadatas = data.get("metadatas", []) or []
+        
+        # Lọc ra danh sách tiêu đề tài liệu và gói cước độc bản
+        doc_titles = list(set([meta.get("source_title") for meta in metadatas if meta and meta.get("source_title")]))
+        package_names = list(set([meta.get("package_name") for meta in metadatas if meta and meta.get("package_name")]))
+        
+        # Nếu chưa có bất kỳ tài liệu hay gói cước nào, dùng danh sách mặc định
+        if not doc_titles and not package_names:
+            print("[SUGGESTIONS] Không tìm thấy dữ liệu trong Vector DB, dùng gợi ý mặc định.")
+            suggestions = DEFAULT_SUGGESTIONS
+        else:
+            prompt = f"""Bạn là một chuyên gia tư vấn dịch vụ của nhà mạng MobiFone.
+Hãy phân tích danh sách các tài liệu hướng dẫn và gói cước hiện đang được nạp vào hệ thống dưới đây:
+
+Tài liệu tri thức: {", ".join(doc_titles[:15]) if doc_titles else "Chưa có"}
+Gói cước di động: {", ".join(package_names[:15]) if package_names else "Chưa có"}
+
+Yêu cầu:
+1. Đề xuất chính xác 5 câu hỏi hoặc phím tắt gợi ý (suggestions) ngắn gọn mà khách hàng sẽ quan tâm nhất (Ví dụ: "Gói TK135 có ưu đãi gì?", "Đăng ký eSIM thế nào?").
+2. Mỗi câu hỏi gợi ý phải cực kỳ ngắn gọn, súc tích (tối đa 25 ký tự) để hiển thị đẹp mắt trên giao diện widget của điện thoại hoặc góc màn hình máy tính.
+3. Trả về kết quả dưới dạng một mảng JSON các chuỗi (string array). Ví dụ: ["Gói TK135 có gì?", "Đăng ký eSIM?", "Lỗi không nhận sóng?"]
+4. Chỉ trả về JSON nguyên bản duy nhất, không bọc trong thẻ markdown ```json hay ```. Không ghi bất kỳ dòng giải thích, giới thiệu nào khác ngoài chuỗi JSON hợp lệ.
+"""
+            llm_response = bot._call_llm_with_retry(prompt, temperature=0.3)
+            cleaned_response = llm_response.strip()
+            
+            # Làm sạch thẻ markdown ```json nếu LLM vẫn trả về
+            if cleaned_response.startswith("```"):
+                lines = cleaned_response.splitlines()
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                cleaned_response = "\n".join(lines).strip()
+                
+            try:
+                suggestions = json.loads(cleaned_response)
+                if not isinstance(suggestions, list) or len(suggestions) < 3:
+                    raise ValueError("Dữ liệu trả về không phải là mảng hoặc số lượng gợi ý quá ít.")
+                suggestions = [str(item) for item in suggestions[:6]] # Lấy tối đa 6 cái
+                print(f"[SUGGESTIONS] Đã sinh thành công {len(suggestions)} gợi ý động từ AI.")
+            except Exception as parse_err:
+                print(f"⚠️ [SUGGESTIONS] Lỗi parse JSON gợi ý từ LLM: {parse_err}. Nội dung thô: {cleaned_response}")
+                suggestions = DEFAULT_SUGGESTIONS
+                
+    except Exception as e:
+        print(f"⚠️ [SUGGESTIONS] Lỗi trong tiến trình sinh gợi ý: {e}")
+        suggestions = DEFAULT_SUGGESTIONS
+        
+    # Ghi đè vào file cache
+    try:
+        with open(SUGGESTIONS_CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump(suggestions, f, ensure_ascii=False, indent=2)
+        print("[SUGGESTIONS] Đã cập nhật file cache gợi ý thành công.")
+    except Exception as write_err:
+        print(f"⚠️ [SUGGESTIONS] Không thể ghi file cache gợi ý: {write_err}")
+    return suggestions
+
+def get_cached_suggestions() -> list:
+    """Lấy danh sách gợi ý từ cache, nếu chưa có thì chạy sinh mới."""
+    if os.path.exists(SUGGESTIONS_CACHE_PATH):
+        try:
+            with open(SUGGESTIONS_CACHE_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list) and len(data) > 0:
+                    return data
+        except Exception as read_err:
+            print(f"⚠️ [SUGGESTIONS] Lỗi đọc file cache gợi ý: {read_err}")
+    
+    # Sinh mới nếu chưa có hoặc lỗi
+    return generate_dynamic_suggestions()
+
+@app.on_event("startup")
+def startup_event():
+    """Khi khởi động server, tự động nạp hoặc tái tạo cache gợi ý ở background thread."""
+    threading.Thread(target=generate_dynamic_suggestions, daemon=True).start()
+
+# API endpoint lấy gợi ý động
+@app.get("/suggestions")
+def get_suggestions():
+    try:
+        suggestions = get_cached_suggestions()
+        return suggestions
+    except Exception as e:
+        return DEFAULT_SUGGESTIONS
 
 # Schema Pydantic
 class MessageModel(BaseModel):
@@ -193,6 +298,8 @@ def get_documents():
 def delete_document(name: str):
     try:
         bot.collection.delete(where={"source_title": name})
+        # Cập nhật gợi ý động trong background thread để tránh làm chậm response delete
+        threading.Thread(target=generate_dynamic_suggestions, daemon=True).start()
         return {"status": "success", "message": f"Đã xóa tài liệu '{name}' khỏi Vector DB"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi xóa tài liệu: {e}")
@@ -357,6 +464,9 @@ Văn bản cần phân tích:
         except Exception as extract_err:
             print(f"⚠️ Cảnh báo: Lỗi khi trích xuất gói cước bằng Gemini: {extract_err}")
             extracted_packages = []
+
+        # Cập nhật gợi ý động trong background thread để tránh làm chậm response upload
+        threading.Thread(target=generate_dynamic_suggestions, daemon=True).start()
 
         return {
             "status": "success",

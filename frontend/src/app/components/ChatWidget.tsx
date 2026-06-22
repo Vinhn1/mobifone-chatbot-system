@@ -35,7 +35,7 @@ function getAxiosErrorMessage(error: unknown): string {
   return responseData?.message || responseData?.detail || error.message;
 }
 
-const SUGGESTIONS = [
+const DEFAULT_SUGGESTIONS = [
   "Gói TK135 có gì?", "Đăng ký 5G?", "Xem ưu đãi hot", "Tư vấn gói phù hợp", "Hỗ trợ kỹ thuật",
 ];
 
@@ -159,7 +159,22 @@ export function ChatWidget() {
   // Lead capture values
   const [captureValue, setCaptureValue] = useState("");
 
+  const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
 
+  // Tải danh sách gợi ý câu hỏi động từ backend
+  useEffect(() => {
+    const fetchSuggestions = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/chat/suggestions");
+        if (Array.isArray(response.data) && response.data.length > 0) {
+          setSuggestions(response.data);
+        }
+      } catch (err) {
+        console.warn("Không thể tải gợi ý động, sử dụng gợi ý mặc định:", err);
+      }
+    };
+    fetchSuggestions();
+  }, []);
 
   // Initial greeting after opening
   useEffect(() => {
@@ -791,7 +806,7 @@ export function ChatWidget() {
                   {/* Suggestions list */}
                   <div style={{ background: "rgba(0,5,15,0.7)", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "10px 16px 6px" }}>
                     <div className="suggest-pills" style={{ display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
-                      {SUGGESTIONS.map(s => (
+                      {suggestions.map(s => (
                         <button
                           key={s}
                           onClick={() => send(s)}
