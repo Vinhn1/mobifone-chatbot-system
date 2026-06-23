@@ -176,11 +176,13 @@ class ConfigModel(BaseModel):
     fb_enabled: Optional[bool] = False
     fb_verify_token: Optional[str] = ""
     fb_page_token: Optional[str] = ""
+    fb_page_id: Optional[str] = ""
     zalo_enabled: Optional[bool] = False
     zalo_app_id: Optional[str] = ""
     zalo_secret_key: Optional[str] = ""
     zalo_access_token: Optional[str] = ""
     zalo_refresh_token: Optional[str] = ""
+    zalo_oa_id: Optional[str] = ""
 
 # Health check
 @app.get("/health")
@@ -224,11 +226,13 @@ def get_config():
                 data.setdefault("fb_enabled", False)
                 data.setdefault("fb_verify_token", "")
                 data.setdefault("fb_page_token", "")
+                data.setdefault("fb_page_id", "")
                 data.setdefault("zalo_enabled", False)
                 data.setdefault("zalo_app_id", "")
                 data.setdefault("zalo_secret_key", "")
                 data.setdefault("zalo_access_token", "")
                 data.setdefault("zalo_refresh_token", "")
+                data.setdefault("zalo_oa_id", "")
                 return data
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Không thể đọc file cấu hình: {e}")
@@ -242,11 +246,13 @@ def get_config():
             "fb_enabled": False,
             "fb_verify_token": "",
             "fb_page_token": "",
+            "fb_page_id": "",
             "zalo_enabled": False,
             "zalo_app_id": "",
             "zalo_secret_key": "",
             "zalo_access_token": "",
-            "zalo_refresh_token": ""
+            "zalo_refresh_token": "",
+            "zalo_oa_id": ""
         }
 
 # Cập nhật cấu hình Prompt Playground

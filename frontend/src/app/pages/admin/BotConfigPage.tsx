@@ -62,12 +62,14 @@ export function BotConfigPage() {
   const [fbEnabled, setFbEnabled] = useState(false);
   const [fbVerifyToken, setFbVerifyToken] = useState("");
   const [fbPageToken, setFbPageToken] = useState("");
+  const [fbPageId, setFbPageId] = useState("");
 
   const [zaloEnabled, setZaloEnabled] = useState(false);
   const [zaloAppId, setZaloAppId] = useState("");
   const [zaloSecretKey, setZaloSecretKey] = useState("");
   const [zaloAccessToken, setZaloAccessToken] = useState("");
   const [zaloRefreshToken, setZaloRefreshToken] = useState("");
+  const [zaloOaId, setZaloOaId] = useState("");
 
   // UI state
   const [showFbSecret, setShowFbSecret] = useState(false);
@@ -114,12 +116,14 @@ export function BotConfigPage() {
         setFbEnabled(!!data.fb_enabled);
         setFbVerifyToken(data.fb_verify_token || "");
         setFbPageToken(data.fb_page_token || "");
+        setFbPageId(data.fb_page_id || "");
 
         setZaloEnabled(!!data.zalo_enabled);
         setZaloAppId(data.zalo_app_id || "");
         setZaloSecretKey(data.zalo_secret_key || "");
         setZaloAccessToken(data.zalo_access_token || "");
         setZaloRefreshToken(data.zalo_refresh_token || "");
+        setZaloOaId(data.zalo_oa_id || "");
       }
     } catch (error) {
       console.error("Lỗi khi tải cấu hình bot:", error);
@@ -147,11 +151,13 @@ export function BotConfigPage() {
         fb_enabled: fbEnabled,
         fb_verify_token: fbVerifyToken,
         fb_page_token: fbPageToken,
+        fb_page_id: fbPageId,
         zalo_enabled: zaloEnabled,
         zalo_app_id: zaloAppId,
         zalo_secret_key: zaloSecretKey,
         zalo_access_token: zaloAccessToken,
         zalo_refresh_token: zaloRefreshToken,
+        zalo_oa_id: zaloOaId,
       };
 
       await axios.post("http://localhost:3000/chat/config", payload, config);
@@ -372,6 +378,14 @@ export function BotConfigPage() {
                         </button>
                       </div>
                     </div>
+                    <div>
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Facebook Page ID</label>
+                      <input
+                        type="text" value={fbPageId} onChange={e => setFbPageId(e.target.value)}
+                        placeholder="Mã Page ID của Facebook Fanpage..."
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
+                      />
+                    </div>
                     <div className="bg-blue-50/70 border border-dashed border-blue-200 rounded-xl p-3 text-xs text-blue-700 flex justify-between items-center gap-2">
                       <span className="font-semibold truncate">🔗 URL: <strong className="font-bold">http://localhost:3000/chat/webhook/facebook</strong></span>
                       <button
@@ -412,6 +426,14 @@ export function BotConfigPage() {
                       <input
                         type="text" value={zaloAppId} onChange={e => setZaloAppId(e.target.value)}
                         placeholder="Mã ID ứng dụng Zalo..."
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo Official Account ID (OA ID)</label>
+                      <input
+                        type="text" value={zaloOaId} onChange={e => setZaloOaId(e.target.value)}
+                        placeholder="Nhập Zalo OA ID để tạo liên kết chat..."
                         className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
                       />
                     </div>

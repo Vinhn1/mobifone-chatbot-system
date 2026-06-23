@@ -116,4 +116,22 @@ export class ChatController {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
+  @Get('public-config') // Lấy cấu hình công khai (Facebook/Zalo) cho Chat Widget (không yêu cầu JWT)
+  async getPublicConfig() {
+    try {
+      const config = await this.chatService.getRagConfig();
+      return {
+        fb_enabled: config?.fb_enabled ?? false,
+        fb_page_id: config?.fb_page_id ?? '',
+        zalo_enabled: config?.zalo_enabled ?? false,
+        zalo_oa_id: config?.zalo_oa_id ?? '',
+      };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
 }

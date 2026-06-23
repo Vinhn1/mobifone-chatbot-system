@@ -418,7 +418,7 @@ export class ChatService {
     answer = this.cleanMarkdown(answer);
 
     // 3. Gửi tin nhắn trả lời qua Zalo OpenAPI (chia nhỏ tin nhắn nếu dài hơn 2000 kí tự)
-    const zaloSendUrl = 'https://openapi.zalo.me/v3.0/oa/message/transaction';
+    const zaloSendUrl = 'https://openapi.zalo.me/v3.0/oa/message/cs';
     const chunks = this.splitMessage(answer, 2000);
 
     for (const chunk of chunks) {

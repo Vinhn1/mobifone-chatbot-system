@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Param, Res, HttpStatus, Req } from '@nestjs/common';
 import { AppService } from './app.service';
 import * as express from 'express';
 import * as fs from 'fs';
@@ -13,12 +13,15 @@ export class AppController {
     return this.appService.getHello();
   }
 
-  @Get('zalo_verifier:code.html')
+  @Get('zalo_verifier:code')
   async verifyZalo(
-    @Param('code') code: string,
+    @Req() req: express.Request,
     @Res() res: express.Response,
   ) {
-    const filename = `zalo_verifier${code}.html`;
+    const filename = req.path.substring(1);
+    const codeMatch = filename.match(/zalo_verifier(.*)\.html/);
+    const code = codeMatch ? codeMatch[1] : '';
+
     const pathsToTry = [
       path.join(process.cwd(), filename),
       path.join(process.cwd(), '..', filename),

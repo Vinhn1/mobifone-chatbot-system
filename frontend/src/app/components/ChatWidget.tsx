@@ -155,8 +155,8 @@ function renderText(text: string) {
   });
 }
 
-const FACEBOOK_MESSENGER_URL = "https://m.me/1215670604956653";
-const ZALO_OA_URL = "https://zalo.me/1192122707863776201";
+const DEFAULT_FACEBOOK_PAGE_ID = "1215670604956653";
+const DEFAULT_ZALO_OA_ID = "1192122707863776201";
 
 export function ChatWidget() {
   const { user } = useAuth();
@@ -179,6 +179,21 @@ export function ChatWidget() {
 
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
 
+  const [zaloOaId, setZaloOaId] = useState(DEFAULT_ZALO_OA_ID);
+  const [fbPageId, setFbPageId] = useState(DEFAULT_FACEBOOK_PAGE_ID);
+
+  const fetchPublicConfig = async () => {
+    try {
+      const response = await axios.get(`http://localhost:3000/chat/public-config?t=${Date.now()}`);
+      if (response.data) {
+        if (response.data.zalo_oa_id) setZaloOaId(response.data.zalo_oa_id);
+        if (response.data.fb_page_id) setFbPageId(response.data.fb_page_id);
+      }
+    } catch (err) {
+      console.warn("Không thể tải cấu hình kênh liên hệ động:", err);
+    }
+  };
+
   const fetchSuggestions = async () => {
     try {
       const response = await axios.get("http://localhost:3000/chat/suggestions");
@@ -193,6 +208,7 @@ export function ChatWidget() {
   // Tải danh sách gợi ý câu hỏi động từ backend
   useEffect(() => {
     fetchSuggestions();
+    fetchPublicConfig();
   }, []);
 
   // Initial greeting after opening
@@ -424,7 +440,7 @@ export function ChatWidget() {
                   whileTap={{ scale: 0.9 }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(ZALO_OA_URL, "_blank");
+                    window.open(`https://zalo.me/${zaloOaId || DEFAULT_ZALO_OA_ID}`, "_blank");
                   }}
                   style={{
                     width: 52,
@@ -477,7 +493,7 @@ export function ChatWidget() {
                   whileTap={{ scale: 0.9 }}
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(FACEBOOK_MESSENGER_URL, "_blank");
+                    window.open(`https://m.me/${fbPageId || DEFAULT_FACEBOOK_PAGE_ID}`, "_blank");
                   }}
                   style={{
                     width: 52,
@@ -509,7 +525,13 @@ export function ChatWidget() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
               style={{ position: "relative", cursor: "pointer" }}
-              onClick={() => setShowChannels(prev => !prev)}
+              onClick={() => {
+                const nextState = !showChannels;
+                setShowChannels(nextState);
+                if (nextState) {
+                  fetchPublicConfig();
+                }
+              }}
             >
               {/* Radar rings */}
               {[1,2,3].map(n => (
