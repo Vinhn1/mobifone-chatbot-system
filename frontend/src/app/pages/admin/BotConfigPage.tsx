@@ -373,9 +373,9 @@ export function BotConfigPage() {
                       </div>
                     </div>
                     <div className="bg-blue-50/70 border border-dashed border-blue-200 rounded-xl p-3 text-xs text-blue-700 flex justify-between items-center gap-2">
-                      <span className="font-semibold truncate">🔗 URL: <strong className="font-bold">http://localhost:3000/facebook/webhook</strong></span>
+                      <span className="font-semibold truncate">🔗 URL: <strong className="font-bold">http://localhost:3000/chat/webhook/facebook</strong></span>
                       <button
-                        onClick={() => { navigator.clipboard.writeText("http://localhost:3000/facebook/webhook"); alert("Đã copy URL Facebook Webhook!"); }}
+                        onClick={() => { navigator.clipboard.writeText("http://localhost:3000/chat/webhook/facebook"); alert("Đã copy URL Facebook Webhook!"); }}
                         className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg px-3 py-1 text-[10px] font-black text-blue-800 cursor-pointer shrink-0"
                       >
                         Copy URL
@@ -455,9 +455,9 @@ export function BotConfigPage() {
                       </div>
                     </div>
                     <div className="bg-blue-50/70 border border-dashed border-blue-200 rounded-xl p-3 text-xs text-blue-700 flex justify-between items-center gap-2">
-                      <span className="font-semibold truncate">🔗 URL: <strong className="font-bold">http://localhost:3000/zalo/webhook</strong></span>
+                      <span className="font-semibold truncate">🔗 URL: <strong className="font-bold">http://localhost:3000/chat/webhook/zalo</strong></span>
                       <button
-                        onClick={() => { navigator.clipboard.writeText("http://localhost:3000/zalo/webhook"); alert("Đã copy URL Zalo Webhook!"); }}
+                        onClick={() => { navigator.clipboard.writeText("http://localhost:3000/chat/webhook/zalo"); alert("Đã copy URL Zalo Webhook!"); }}
                         className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg px-3 py-1 text-[10px] font-black text-blue-800 cursor-pointer shrink-0"
                       >
                         Copy URL
