@@ -180,6 +180,7 @@ class ConfigModel(BaseModel):
     zalo_app_id: Optional[str] = ""
     zalo_secret_key: Optional[str] = ""
     zalo_access_token: Optional[str] = ""
+    zalo_refresh_token: Optional[str] = ""
 
 # Health check
 @app.get("/health")
@@ -227,6 +228,7 @@ def get_config():
                 data.setdefault("zalo_app_id", "")
                 data.setdefault("zalo_secret_key", "")
                 data.setdefault("zalo_access_token", "")
+                data.setdefault("zalo_refresh_token", "")
                 return data
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Không thể đọc file cấu hình: {e}")
@@ -243,7 +245,8 @@ def get_config():
             "zalo_enabled": False,
             "zalo_app_id": "",
             "zalo_secret_key": "",
-            "zalo_access_token": ""
+            "zalo_access_token": "",
+            "zalo_refresh_token": ""
         }
 
 # Cập nhật cấu hình Prompt Playground

@@ -66,10 +66,14 @@ export function BotConfigPage() {
   const [zaloEnabled, setZaloEnabled] = useState(false);
   const [zaloAppId, setZaloAppId] = useState("");
   const [zaloSecretKey, setZaloSecretKey] = useState("");
+  const [zaloAccessToken, setZaloAccessToken] = useState("");
+  const [zaloRefreshToken, setZaloRefreshToken] = useState("");
 
   // UI state
   const [showFbSecret, setShowFbSecret] = useState(false);
   const [showZaloSecret, setShowZaloSecret] = useState(false);
+  const [showZaloAccessToken, setShowZaloAccessToken] = useState(false);
+  const [showZaloRefreshToken, setShowZaloRefreshToken] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -114,6 +118,8 @@ export function BotConfigPage() {
         setZaloEnabled(!!data.zalo_enabled);
         setZaloAppId(data.zalo_app_id || "");
         setZaloSecretKey(data.zalo_secret_key || "");
+        setZaloAccessToken(data.zalo_access_token || "");
+        setZaloRefreshToken(data.zalo_refresh_token || "");
       }
     } catch (error) {
       console.error("Lỗi khi tải cấu hình bot:", error);
@@ -144,6 +150,8 @@ export function BotConfigPage() {
         zalo_enabled: zaloEnabled,
         zalo_app_id: zaloAppId,
         zalo_secret_key: zaloSecretKey,
+        zalo_access_token: zaloAccessToken,
+        zalo_refresh_token: zaloRefreshToken,
       };
 
       await axios.post("http://localhost:3000/chat/config", payload, config);
@@ -417,6 +425,32 @@ export function BotConfigPage() {
                         />
                         <button type="button" onClick={() => setShowZaloSecret(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
                           {showZaloSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo Access Token</label>
+                      <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
+                        <input
+                          type={showZaloAccessToken ? "text" : "password"} value={zaloAccessToken} onChange={e => setZaloAccessToken(e.target.value)}
+                          placeholder="Access Token cấp từ Zalo..."
+                          className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
+                        />
+                        <button type="button" onClick={() => setShowZaloAccessToken(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
+                          {showZaloAccessToken ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo Refresh Token</label>
+                      <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
+                        <input
+                          type={showZaloRefreshToken ? "text" : "password"} value={zaloRefreshToken} onChange={e => setZaloRefreshToken(e.target.value)}
+                          placeholder="Refresh Token cấp từ Zalo..."
+                          className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
+                        />
+                        <button type="button" onClick={() => setShowZaloRefreshToken(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
+                          {showZaloRefreshToken ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                       </div>
                     </div>
