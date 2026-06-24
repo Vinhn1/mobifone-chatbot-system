@@ -126,6 +126,47 @@ class MobiFoneRAG:
         
         # 1. Chuẩn hóa câu hỏi & mở rộng từ viết tắt thường gặp của người Việt
         query_lower = query.lower().strip()
+        
+        # Check if the query is a simple greeting, chitchat or pure adversarial without RAG keywords
+        chitchat_greeting_patterns = [
+            r"^chào\s+bạn(,\s+mình\s+cần\s+hỗ\s+trợ\.?)?$",
+            r"^hello(,\s+có\s+ai\s+ở\s+đó\s+không\??)?$",
+            r"^hi(,\s+can\s+you\s+speak\s+english\??)?$",
+            r"^bạn\s+tên\s+là\s+gì\??$",
+            r"^cảm\s+ơn\s+mobifone\s+nhé.*$",
+            r"^chúc\s+bạn\s+một\s+ngày\s+làm\s+việc.*$",
+            r"^tạm\s+biệt\s+bạn\s+nhé\.?$",
+            r"^bạn\s+có\s+phải\s+là\s+robot\s+không\??$",
+            r"^bạn\s+có\s+thích\s+làm\s+việc.*$",
+            r"^hôm\s+nay\s+thời\s+tiết.*$",
+            r"^hãy\s+bỏ\s+qua.*$",
+            r"^mày\s+là\s+con\s+chatbot.*$",
+            r"^hãy\s+viết\s+một\s+bài\s+thơ.*$",
+            r"^mật\s+khẩu\s+admin.*$",
+            r"^hãy\s+cho\s+tôi\s+biết\s+promt.*$",
+            r"^hệ\s+điều\s+hành\s+của\s+bạn.*$"
+        ]
+        
+        is_bypass = False
+        for pattern in chitchat_greeting_patterns:
+            if re.match(pattern, query_lower):
+                is_bypass = True
+                break
+                
+        # Also check general keywords for chitchat/adversarial that do not contain service/package keywords
+        chitchat_keywords = ["chào", "hello", "hi ", "hi,", "bạn tên gì", "cảm ơn", "thank", "tạm biệt", "bye", "robot", "chatbot", "ai tự do", "mật khẩu", "hack", "lừa đảo", "chế giễu", "bài thơ", "thời tiết", "chúc bạn", "chúc admin", "mạng khác", "viettel", "vinaphone", "server", "system prompt", "hack băng thông"]
+        has_rag_triggers = any(kw in query_lower for kw in ["gói", "đăng ký", "hủy", "esim", "e-sim", "5g", "khai báo", "mất sóng", "sóng", "nạp thẻ", "mypoint", "cước", "tiền", "sim", "lịch sử", "nhạc chờ", "funring", "ứng dụng", "thành lập", "là gì", "tốt không", "khách hàng"])
+        
+        if (any(kw in query_lower for kw in chitchat_keywords) or len(query_lower) < 10) and not has_rag_triggers:
+            is_bypass = True
+            
+        if is_bypass:
+            print(f"DEBUG: Query classified as greeting/chitchat/adversarial. Bypassing RAG ChromaDB query.")
+            return {
+                "documents": [[]],
+                "metadatas": [[]]
+            }
+
         abbreviations = {
             r"\bđk\b": "đăng ký",
             r"\bđki\b": "đăng ký",
@@ -440,21 +481,19 @@ class MobiFoneRAG:
         # 2. Đọc cấu hình động từ rag_config.json (nếu có)
         config_path = os.path.join(BASE_DIR, "rag_config.json")
         system_prompt = (
-            "Bạn là Chuyên viên chăm sóc khách hàng chuyên nghiệp của nhà mạng MobiFone.\n"
-            "Tuyệt đối KHÔNG tự nhận mình là trợ lý ảo, AI, chatbot hay AI Agent. Hãy xưng hô lịch sự là 'MobiFone' hoặc 'Chuyên viên chăm sóc khách hàng'.\n"
+            "Bạn là Mia - Chuyên viên Chăm sóc Khách hàng số chuyên nghiệp, thân thiện và tận tâm của nhà mạng MobiFone. 🌟\n"
+            "Tuyệt đối KHÔNG tự nhận mình là trợ lý ảo, AI, chatbot hay AI Agent. Hãy xưng hô lịch sự là 'Mia' hoặc 'Chuyên viên chăm sóc khách hàng'.\n"
             "Hãy trả lời câu hỏi của khách hàng một cách lịch sự, thân thiện, súc tích, ĐI THẲNG VÀO TRỌNG TÂM câu hỏi và CHỈ dựa trên thông tin ngữ cảnh chính thức được cung cấp dưới đây.\n\n"
+            "[Quy tắc định dạng bắt buộc (Formatting)]:\n"
+            "1. TẤT CẢ các phản hồi (bao gồm chào hỏi, chitchat xã giao, thông báo lỗi, từ chối, v.v.) BẮT BUỘC phải dùng định dạng Markdown rõ ràng (chữ in đậm để nhấn mạnh ý chính, dấu gạch đầu dòng phân biệt các mục) và bắt buộc sử dụng các biểu tượng cảm xúc (emoji/icon như 👋, 📶, 📱, 💸, 🌟, 🛠️, 🎁) để làm nổi bật thông tin. Tuyệt đối KHÔNG trả lời dưới dạng một đoạn văn thuần túy không có định dạng.\n"
+            "2. Khi liệt kê các thông số gói cước hoặc dịch vụ, hãy sử dụng các dấu gạch đầu dòng rõ ràng, không viết thành một đoạn văn dài dòng.\n"
+            "3. Nếu khách hàng hỏi bằng tiếng Anh (ví dụ: 'Hi, can you speak English?'), hãy phản hồi lịch sự bằng tiếng Anh rằng bạn có thể hỗ trợ khách hàng bằng cả tiếng Anh và tiếng Việt, và hỏi xem bạn có thể giúp gì cho họ.\n\n"
             "[Nguyên tắc phản hồi]:\n"
-            "1. Đối với câu chào hỏi, cảm ơn hoặc hỏi thăm xã giao (không yêu cầu tra cứu dịch vụ): Trả lời một cách tự nhiên, thân thiện, lịch sự và tuyệt đối KHÔNG yêu cầu khách hàng cung cấp Số điện thoại.\n"
-            "2. Trả lời trực tiếp và ngắn gọn dựa trên Ngữ cảnh được cung cấp, không giải thích dài dòng hoặc thừa thãi.\n"
-            "3. Sử dụng các ký tự icon (như 🌟, 📦, 📶, 💸, 📝) để phân tách thông tin, giúp người đọc dễ nhìn.\n"
-            "4. Định dạng câu trả lời rõ ràng bằng Markdown (in đậm từ khóa quan trọng, sử dụng danh sách gạch đầu dòng).\n"
-            "5. Nếu trả lời về gói cước di động, hãy nêu bật:\n"
-            "   - 📦 Tên gói cước: (in đậm)\n"
-            "   - 💸 Giá cước & Chu kỳ sử dụng\n"
-            "   - 📶 Ưu đãi Data và Gọi thoại (chi tiết)\n"
-            "   - 📝 Cú pháp đăng ký chuẩn (nếu có trong ngữ cảnh)\n"
-            "6. Đối với các câu hỏi nghiệp vụ (gói cước, eSIM, lỗi kỹ thuật, dịch vụ...) mà Ngữ cảnh KHÔNG cung cấp đủ thông tin chi tiết: Hãy dựa vào các thông tin hiện có trong ngữ cảnh để tư vấn/đề xuất giải pháp gần nhất hoặc gói cước có sẵn, kết hợp đặt câu hỏi gợi mở để tìm hiểu nhu cầu của khách hàng (ví dụ: Quý khách cần ưu đãi về Data hay thoại nhiều hơn?).\n"
-            "7. Tuyệt đối KHÔNG tự tiện yêu cầu Số điện thoại ngay từ đầu trừ khi khách hàng trực tiếp yêu cầu đăng ký/mua gói cước cụ thể, yêu cầu gặp chuyên viên hỗ trợ trực tiếp/khiếu nại, hoặc hỏi thông tin cá nhân/bảo mật tài khoản nằm ngoài kho tri thức."
+            "1. CHỈ TRẢ LỜI dựa trên thông tin có sẵn trong ngữ cảnh. Tuyệt đối KHÔNG tự bịa đặt thông số gói cước (giá tiền, dung lượng data, phút gọi) nếu ngữ cảnh không nhắc đến hoặc gói cước đó không tồn tại trong tài liệu được cung cấp.\n"
+            "2. Nếu khách hàng hỏi về một gói cước KHÔNG có trong ngữ cảnh (Ví dụ: MC99, gói cước lạ): Hãy lịch sự trả lời: \"Hiện tại hệ thống của MobiFone chưa cập nhật thông tin chi tiết về gói cước mà bạn quan tâm trong cơ sở dữ liệu hiện hành. Để hỗ trợ tốt nhất, bạn có thể để lại Số điện thoại, chuyên viên kỹ thuật sẽ kiểm tra trực tiếp trên thuê bao của bạn và gọi lại tư vấn ngay ạ.\"\n"
+            "3. Tuyệt đối KHÔNG sử dụng các kỹ thuật ép buộc hay hối thúc bán hàng giả tạo như \"chỉ còn 3 suất cuối\", \"áp dụng trong hôm nay\" hoặc tạo áp lực tâm lý để ép lấy thông tin cá nhân.\n"
+            "4. Khi khách hàng cung cấp số điện thoại, tuyệt đối KHÔNG lặp lại số điện thoại đó ở tin nhắn tiếp theo nhằm bảo mật thông tin cá nhân của khách hàng (Data Privacy).\n"
+            "5. Đối với câu chào hỏi, cảm ơn hoặc hỏi thăm xã giao (không yêu cầu tra cứu dịch vụ): Trả lời giới thiệu bản thân là Mia, luôn thân thiện, lịch sự và tuyệt đối KHÔNG yêu cầu khách hàng cung cấp Số điện thoại. Đồng thời gợi ý danh sách các chủ đề hỗ trợ (gói cước 4G/5G, đổi eSIM, hỗ trợ kỹ thuật...) bằng dấu gạch đầu dòng rõ ràng kèm emoji."
         )
         temperature = 0.3
         top_p = 0.9
@@ -569,7 +608,7 @@ if __name__ == "__main__":
     cau_hoi = "Gói cước TK135 có ưu đãi gì và đăng ký như thế nào?"
     print(f"\n💬 Câu hỏi thử nghiệm: {cau_hoi}")
     
-    answer, sources = bot.answer_question(cau_hoi)
+    answer, sources, _ = bot.answer_question(cau_hoi)
     print(f"\n🤖 Bot trả lời:\n{answer}")
     
     print("\n🔗 Nguồn tham khảo chính thống từ MobiFone:")
