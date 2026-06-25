@@ -397,18 +397,115 @@ export class ChatService {
     }
   }
 
+  // Hỗ trợ tự phân giải tên miền Zalo sang IP thực tế bằng DNS công cộng (Google & Cloudflare) để bỏ qua DNS bị hijack cục bộ
+  private async resolveZaloDomain(domain: string): Promise<string> {
+    return new Promise((resolve) => {
+      try {
+        const dns = require('dns');
+        const resolver = new dns.Resolver();
+        resolver.setServers(['8.8.8.8', '1.1.1.1']);
+        resolver.resolve4(domain, (err, addresses) => {
+          if (err || !addresses || addresses.length === 0) {
+            // Dự phòng IP mặc định nếu lỗi phân giải
+            if (domain === 'openapi.zalo.me') resolve('49.213.95.231');
+            else if (domain === 'oauth.zaloapp.com') resolve('49.213.95.209');
+            else resolve(domain);
+          } else {
+            resolve(addresses[0]);
+          }
+        });
+      } catch (err) {
+        console.error(`[ZALO-DNS] Lỗi khi tạo bộ phân giải DNS cho ${domain}:`, err.message);
+        if (domain === 'openapi.zalo.me') resolve('49.213.95.231');
+        else if (domain === 'oauth.zaloapp.com') resolve('49.213.95.209');
+        else resolve(domain);
+      }
+    });
+  }
+
+  // Khởi tạo httpsAgent với cơ chế Custom DNS Lookup bypass DNS hijacking cục bộ
+  private async getZaloHttpsAgent(): Promise<https.Agent> {
+    const realOpenApiIp = await this.resolveZaloDomain('openapi.zalo.me');
+    const realOAuthIp = await this.resolveZaloDomain('oauth.zaloapp.com');
+
+    return new https.Agent({
+      rejectUnauthorized: false,
+      lookup: (hostname, options, callback) => {
+        if (hostname === 'openapi.zalo.me') {
+          if (options.all) {
+            callback(null, [{ address: realOpenApiIp, family: 4 }]);
+          } else {
+            callback(null, realOpenApiIp, 4);
+          }
+        } else if (hostname === 'oauth.zaloapp.com') {
+          if (options.all) {
+            callback(null, [{ address: realOAuthIp, family: 4 }]);
+          } else {
+            callback(null, realOAuthIp, 4);
+          }
+        } else {
+          const dns = require('dns');
+          dns.lookup(hostname, options, callback);
+        }
+      }
+    });
+  }
+
+  // Tự động làm mới access token của Zalo OA khi hết hạn
+  async refreshZaloToken(config: any): Promise<string> {
+    console.log('[ZALO-TOKEN] Đang tự động làm mới access token Zalo...');
+    const url = 'https://oauth.zaloapp.com/v4/oa/access_token';
+
+    const params = new URLSearchParams();
+    params.append('refresh_token', config.zalo_refresh_token);
+    params.append('app_id', config.zalo_app_id);
+    params.append('grant_type', 'refresh_token');
+
+    try {
+      const zaloAgent = await this.getZaloHttpsAgent();
+      const response = await firstValueFrom(
+        this.httpService.post(url, params.toString(), {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'secret_key': config.zalo_secret_key
+          },
+          httpsAgent: zaloAgent
+        })
+      );
+
+      const data = response.data;
+      if (data && data.access_token && data.refresh_token) {
+        console.log('[ZALO-TOKEN] Làm mới access token Zalo thành công!');
+        const updatedConfig = {
+          ...config,
+          zalo_access_token: data.access_token,
+          zalo_refresh_token: data.refresh_token
+        };
+        await this.updateRagConfig(updatedConfig);
+        return data.access_token;
+      } else {
+        console.error('[ZALO-TOKEN] Phản hồi từ Zalo không hợp lệ:', JSON.stringify(data));
+        throw new Error(data?.error_name || data?.message || 'Không có access token/refresh token');
+      }
+    } catch (error) {
+      const errorDetail = error.response ? JSON.stringify(error.response.data) : error.message;
+      console.error('[ZALO-TOKEN] Lỗi khi làm mới access token Zalo:', errorDetail);
+      throw error;
+    }
+  }
+
   // Xử lý tin nhắn đến từ Zalo OA Webhook
   async handleZaloMessage(senderId: string, text: string) {
     console.log(`[ZALO-WEBHOOK] Nhận tin nhắn từ ${senderId}: "${text}"`);
     
     // 1. Lấy cấu hình động để kiểm tra xem Zalo có được bật hay không
-    const config = await this.getRagConfig();
+    let config = await this.getRagConfig();
     if (!config?.zalo_enabled) {
       console.warn('[ZALO-WEBHOOK] Kênh Zalo OA hiện đang TẮT trong cấu hình.');
       return;
     }
     
-    const zaloAccessToken = config.zalo_access_token;
+    let zaloAccessToken = config.zalo_access_token;
     if (!zaloAccessToken) {
       console.error('[ZALO-WEBHOOK] Thiếu zalo_access_token trong cấu hình!');
       return;
@@ -422,29 +519,103 @@ export class ChatService {
     answer = this.cleanMarkdown(answer);
 
     // 3. Gửi tin nhắn trả lời qua Zalo OpenAPI (chia nhỏ tin nhắn nếu dài hơn 2000 kí tự)
-    const zaloSendUrl = 'https://openapi.zalo.me/v3.0/oa/message/cs';
     const chunks = this.splitMessage(answer, 2000);
+    const zaloSendUrl = 'https://openapi.zalo.me/v3.0/oa/message/cs';
 
     for (const chunk of chunks) {
+      let currentToken = zaloAccessToken;
+      
       try {
-        await firstValueFrom(
-          this.httpService.post(zaloSendUrl, {
-            recipient: { user_id: senderId },
-            message: { text: chunk }
-          }, {
-            headers: {
-              'Content-Type': 'application/json',
-              'access_token': zaloAccessToken
-            },
-            httpsAgent: new https.Agent({ rejectUnauthorized: false })
-          })
-        );
-        console.log(`[ZALO-WEBHOOK] Đã phản hồi thành công một phần cho Zalo user ${senderId}`);
+        const zaloAgent = await this.getZaloHttpsAgent();
+        const sendRequest = async (tokenToUse: string) => {
+          return await firstValueFrom(
+            this.httpService.post(zaloSendUrl, {
+              recipient: { user_id: senderId },
+              message: { text: chunk }
+            }, {
+              headers: {
+                'Content-Type': 'application/json',
+                'access_token': tokenToUse
+              },
+              httpsAgent: zaloAgent
+            })
+          );
+        };
+
+        let response = await sendRequest(currentToken);
+        
+        // Zalo thỉnh thoảng trả về HTTP 200 kèm mã lỗi -216 trong body
+        if (response.data && response.data.error === -216) {
+          console.warn('[ZALO-WEBHOOK] Phát hiện token hết hạn (error -216) từ Zalo. Đang tự động làm mới token...');
+          try {
+            const newToken = await this.refreshZaloToken(config);
+            currentToken = newToken;
+            zaloAccessToken = newToken;
+            config = await this.getRagConfig();
+            
+            console.log('[ZALO-WEBHOOK] Đang gửi lại tin nhắn với token mới...');
+            const retryAgent = await this.getZaloHttpsAgent();
+            response = await firstValueFrom(
+              this.httpService.post(zaloSendUrl, {
+                recipient: { user_id: senderId },
+                message: { text: chunk }
+              }, {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'access_token': newToken
+                },
+                httpsAgent: retryAgent
+              })
+            );
+          } catch (refreshErr) {
+            console.error('[ZALO-WEBHOOK] Không thể làm mới token Zalo OA để gửi lại:', refreshErr.message);
+          }
+        }
+
+        if (response.data && response.data.error && response.data.error !== 0) {
+          console.error('[ZALO-WEBHOOK] Phản hồi lỗi từ Zalo OpenAPI:', JSON.stringify(response.data));
+        } else {
+          console.log(`[ZALO-WEBHOOK] Đã phản hồi thành công một phần cho Zalo user ${senderId}`);
+        }
+
       } catch (zaloError) {
-        const errorDetail = zaloError.response 
-          ? JSON.stringify(zaloError.response.data) 
-          : zaloError.message;
-        console.error('[ZALO-WEBHOOK] Lỗi khi gửi tin nhắn qua Zalo OpenAPI:', errorDetail);
+        // Bắt lỗi HTTP status khác 200 (ví dụ 400/401 do token hết hạn)
+        const responseData = zaloError.response?.data;
+        if (responseData && (responseData.error === -216 || (responseData.error && responseData.error.code === -216))) {
+          console.warn('[ZALO-WEBHOOK] Phát hiện token hết hạn (HTTP error -216) từ Zalo. Đang tự động làm mới token...');
+          try {
+            const newToken = await this.refreshZaloToken(config);
+            zaloAccessToken = newToken;
+            config = await this.getRagConfig();
+            
+            const retryAgent = await this.getZaloHttpsAgent();
+            const retryResponse = await firstValueFrom(
+              this.httpService.post(zaloSendUrl, {
+                recipient: { user_id: senderId },
+                message: { text: chunk }
+              }, {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'access_token': newToken
+                },
+                httpsAgent: retryAgent
+              })
+            );
+            
+            if (retryResponse.data && retryResponse.data.error && retryResponse.data.error !== 0) {
+              console.error('[ZALO-WEBHOOK] Phản hồi lỗi từ Zalo OpenAPI sau khi retry:', JSON.stringify(retryResponse.data));
+            } else {
+              console.log(`[ZALO-WEBHOOK] Đã phản hồi thành công một phần sau khi tự động refresh token cho Zalo user ${senderId}`);
+            }
+          } catch (retryErr) {
+            console.error('[ZALO-WEBHOOK] Lỗi khi gửi lại tin nhắn Zalo sau khi refresh token:', retryErr.message);
+          }
+        } else {
+          const errorDetail = zaloError.response 
+            ? JSON.stringify(zaloError.response.data) 
+            : zaloError.message;
+          console.error('[ZALO-WEBHOOK] Lỗi khi gửi tin nhắn qua Zalo OpenAPI:', errorDetail);
+        }
       }
     }
   }
