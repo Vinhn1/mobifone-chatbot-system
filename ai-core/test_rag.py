@@ -42,7 +42,7 @@ for q in queries:
         print(f"Doc {idx+1} (first 100 chars): {doc[:100]}...")
         
     print("\nCalling answer_question...")
-    answer, sources = bot.answer_question(q)
+    answer, sources, _ = bot.answer_question(q)
     print("ANSWER:")
     print(answer)
     print("SOURCES:", sources)

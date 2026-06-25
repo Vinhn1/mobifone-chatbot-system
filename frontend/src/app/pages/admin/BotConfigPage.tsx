@@ -52,6 +52,9 @@ export function BotConfigPage() {
   const { token, logout, user } = useAuth();
   const navigate = useNavigate();
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState("persona");
+
   // Model parameters state
   const [persona, setPersona] = useState(DEFAULT_PERSONA);
   const [temperature, setTemperature] = useState(0.4);
@@ -220,371 +223,401 @@ export function BotConfigPage() {
         </motion.button>
       </div>
 
-      {/* Main Configurations Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* LEFT COLUMN: Bot Core Brain & Parameters */}
-        <div className="flex flex-col gap-5">
-          {/* Persona Avatar Live Card */}
-          <div className="bg-gradient-to-br from-[#0A1628] to-[#0B2545] rounded-3xl p-6.5 border border-[#00B4FF]/20 flex flex-col items-center gap-5 shadow-xl shadow-slate-950/20">
-            <div className="w-full flex justify-between items-center">
-              <span className="text-white/40 text-[9px] font-black tracking-widest uppercase">Mia Live Core Agent</span>
-              <div className="flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 rounded-lg px-2.5 py-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#22C55E]" />
-                <span className="text-emerald-400 text-[10px] font-bold">Trực Tuyến</span>
-              </div>
-            </div>
-            
-            <motion.div
-              animate={{ y: [-4, 4, -4] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="filter drop-shadow-[0_12px_24px_rgba(0,180,255,0.3)] my-2"
+      {/* Tab Navigation */}
+      <div className="bg-slate-100/80 p-1 rounded-2xl flex flex-wrap gap-1 w-fit border border-slate-200/40 mb-6">
+        {[
+          { id: "persona", label: "Nhân dạng & Lời thoại", icon: Bot },
+          { id: "channels", label: "Kênh truyền thông & Webhook", icon: MessageSquare },
+          { id: "tuning", label: "Tham số & Kỹ thuật", icon: Zap },
+        ].map(tab => {
+          const Icon = tab.icon;
+          const active = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black tracking-wider uppercase transition-all duration-200 cursor-pointer border-none outline-none ${
+                active
+                  ? "bg-white text-[#0055A5] shadow-xs"
+                  : "bg-transparent text-slate-500 hover:text-slate-800"
+              }`}
             >
-              <RobotAvatar size={105} state="happy" />
-            </motion.div>
+              <Icon size={14} />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-            <div className="text-center">
-              <div className="text-white font-black text-lg tracking-wide">Mia AI Chatbot</div>
-              <div className="text-[#38BDF8] text-xs font-bold mt-1">Chuyên Viên Tư Vấn Viễn Thông MobiFone</div>
-            </div>
+      {/* Main Configurations Container */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.2 }}
+        >
+          {activeTab === "persona" && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+              {/* LEFT COLUMN: Avatar & Leads (4/12 cols) */}
+              <div className="lg:col-span-4 flex flex-col gap-6">
+                {/* Persona Avatar Live Card */}
+                <div className="bg-gradient-to-br from-[#0A1628] to-[#0B2545] rounded-3xl p-6 border border-[#00B4FF]/20 flex flex-col justify-between items-center gap-4 shadow-xl shadow-slate-950/20 min-h-[320px]">
+                  <div className="w-full flex justify-between items-center">
+                    <span className="text-white/40 text-[9px] font-black tracking-widest uppercase">Mia Live Core Agent</span>
+                    <div className="flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 rounded-lg px-2.5 py-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#22C55E]" />
+                      <span className="text-emerald-400 text-[10px] font-bold">Trực Tuyến</span>
+                    </div>
+                  </div>
+                  
+                  <motion.div
+                    animate={{ y: [-4, 4, -4] }}
+                    transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    className="filter drop-shadow-[0_12px_24px_rgba(0,180,255,0.3)] my-2"
+                  >
+                    <RobotAvatar size={90} state="happy" />
+                  </motion.div>
 
-            <div className="flex gap-2 w-full mt-1.5">
-              {[
-                { label: "Mô hình Core LLM", value: "Qwen 2.5 (14B)", color: "text-[#38BDF8]" },
-                { label: "Nhiệt độ (Temp)", value: temperature.toString(), color: "text-amber-400" },
-                { label: "Max Tokens", value: maxTokens.toString(), color: "text-emerald-400" },
-              ].map(s => (
-                <div key={s.label} className="flex-1 bg-white/5 border border-white/5 rounded-2xl py-3 px-1 text-center backdrop-blur-xs">
-                  <div className={`font-black text-sm mb-0.5 ${s.color}`}>{s.value}</div>
-                  <div className="text-white/45 text-[9px] font-bold tracking-wider uppercase">{s.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+                  <div className="text-center">
+                    <div className="text-white font-black text-base tracking-wide">Mia AI Chatbot</div>
+                    <div className="text-[#38BDF8] text-xs font-bold mt-1">Chuyên Viên Tư Vấn Viễn Thông MobiFone</div>
+                  </div>
 
-          {/* Model AI Parameters Sliders */}
-          <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs">
-            <div className="flex items-center gap-2 mb-1">
-              <Zap size={16} className="text-[#0055A5]" />
-              <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Tham số mô hình AI</div>
-            </div>
-            <p className="text-slate-400 text-xs font-semibold mb-6">Hiệu chỉnh tính sáng tạo và khối lượng từ ngữ phản hồi tối đa của Agent</p>
-            
-            <div className="flex flex-col gap-5">
-              {/* Temperature */}
-              <div>
-                <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
-                  <span>Nhiệt độ (Temperature)</span>
-                  <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{temperature}</span>
-                </div>
-                <input
-                  type="range" min="0" max="1" step="0.1"
-                  value={temperature} onChange={e => setTemperature(parseFloat(e.target.value))}
-                  className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
-                />
-                <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-2">
-                  <span>Chính xác & Logic (0.1)</span>
-                  <span>Sáng tạo & Đa dạng (1.0)</span>
-                </div>
-              </div>
-
-              {/* Top P */}
-              <div>
-                <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
-                  <span>Độ chọn lọc từ ngữ (Top P)</span>
-                  <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{topP}</span>
-                </div>
-                <input
-                  type="range" min="0.1" max="1.0" step="0.05"
-                  value={topP} onChange={e => setTopP(parseFloat(e.target.value))}
-                  className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
-                />
-              </div>
-
-              {/* Max Tokens */}
-              <div>
-                <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
-                  <span>Giới hạn từ tối đa (Max Tokens)</span>
-                  <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{maxTokens} từ</span>
-                </div>
-                <input
-                  type="range" min="64" max="1024" step="64"
-                  value={maxTokens} onChange={e => setMaxTokens(parseInt(e.target.value))}
-                  className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: Connection Channels & Strategy */}
-        <div className="flex flex-col gap-5">
-          {/* Telecom Channels Hub */}
-          <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs flex flex-col gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <MessageSquare size={16} className="text-[#E4002B]" />
-                <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Kênh truyền thông & Webhook</div>
-              </div>
-              <p className="text-slate-400 text-xs font-semibold">Kết nối chatbot với các kênh chính thống của MobiFone</p>
-            </div>
-
-            {/* Facebook Connection Card */}
-            <div className={`border rounded-2xl p-4.5 transition-all duration-200 ${fbEnabled ? "border-[#0055A5]/35 bg-slate-50/50" : "border-slate-200 bg-white"}`}>
-              <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center text-[#1877F2] font-black text-lg">f</div>
-                  <div>
-                    <div className="text-slate-800 font-bold text-xs">Tích hợp Facebook Messenger</div>
-                    <div className="text-slate-400 text-[10px] font-semibold mt-0.5">Đồng bộ chatbot vào Fanpage của MobiFone</div>
+                  <div className="flex gap-2 w-full mt-2">
+                    {[
+                      { label: "Core LLM", value: "Qwen 2.5", color: "text-[#38BDF8]" },
+                      { label: "Nhiệt độ", value: temperature.toString(), color: "text-amber-400" },
+                      { label: "Max Tokens", value: maxTokens.toString(), color: "text-emerald-400" },
+                    ].map(s => (
+                      <div key={s.label} className="flex-1 bg-white/5 border border-white/5 rounded-2xl py-2 px-1 text-center backdrop-blur-xs">
+                        <div className={`font-black text-xs mb-0.5 ${s.color}`}>{s.value}</div>
+                        <div className="text-white/45 text-[8px] font-bold tracking-wider uppercase">{s.label}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <Toggle value={fbEnabled} onChange={setFbEnabled} />
-              </div>
 
-              <AnimatePresence>
-                {fbEnabled && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="flex flex-col gap-3.5 overflow-hidden border-t border-slate-100 pt-3.5"
-                  >
-                    <div>
-                      <div className="flex justify-between mb-1.5">
-                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">Verify Token Webhook</label>
-                        <span
-                          onClick={() => { navigator.clipboard.writeText(fbVerifyToken); alert("Đã copy Verify Token!"); }}
-                          className="text-[#0055A5] text-[10px] font-bold cursor-pointer hover:underline"
+                {/* Lead Capture Fields Config */}
+                <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Shield size={16} className="text-[#0055A5]" />
+                      <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Dữ liệu phễu thu thập</div>
+                    </div>
+                    <p className="text-slate-400 text-[11px] font-semibold mb-4">Lấy thông tin khéo léo trong cuộc trò chuyện</p>
+
+                    <div className="flex flex-col gap-2">
+                      {fields.map((f, i) => (
+                        <div
+                          key={f.key}
+                          className={`flex items-center gap-3 border rounded-xl px-3.5 py-2 transition-all duration-200 ${
+                            f.active ? "bg-[#0055A5]/3 border-[#0055A5]/25" : "bg-slate-50 border-slate-200/60"
+                          }`}
                         >
-                          Sao chép
-                        </span>
-                      </div>
-                      <input
-                        type="text" value={fbVerifyToken} onChange={e => setFbVerifyToken(e.target.value)}
-                        placeholder="Nhập verify token tự định nghĩa..."
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
-                      />
+                          <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-white text-[10px] font-black ${
+                            f.active ? "bg-[#0055A5]" : "bg-slate-400"
+                          }`}>
+                            {f.priority}
+                          </div>
+                          <div className="flex-1 text-slate-700 font-bold text-xs">{f.label}</div>
+                          <Toggle value={f.active} onChange={v => setFields(prev => prev.map((fi, idx) => idx === i ? { ...fi, active: v } : fi))} />
+                        </div>
+                      ))}
                     </div>
-                    <div>
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Page Access Token</label>
-                      <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
-                        <input
-                          type={showFbSecret ? "text" : "password"} value={fbPageToken} onChange={e => setFbPageToken(e.target.value)}
-                          placeholder="Nhập token dài từ Facebook Developer portal (EAA...)"
-                          className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
-                        />
-                        <button type="button" onClick={() => setShowFbSecret(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
-                          {showFbSecret ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Facebook Page ID</label>
-                      <input
-                        type="text" value={fbPageId} onChange={e => setFbPageId(e.target.value)}
-                        placeholder="Mã Page ID của Facebook Fanpage..."
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
-                      />
-                    </div>
-                    <div className="bg-blue-50/70 border border-dashed border-blue-200 rounded-xl p-3 text-xs text-blue-700 flex justify-between items-center gap-2">
-                      <span className="font-semibold truncate">🔗 URL: <strong className="font-bold">http://localhost:3000/chat/webhook/facebook</strong></span>
-                      <button
-                        onClick={() => { navigator.clipboard.writeText("http://localhost:3000/chat/webhook/facebook"); alert("Đã copy URL Facebook Webhook!"); }}
-                        className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg px-3 py-1 text-[10px] font-black text-blue-800 cursor-pointer shrink-0"
-                      >
-                        Copy URL
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Zalo Connection Card */}
-            <div className={`border rounded-2xl p-4.5 transition-all duration-200 ${zaloEnabled ? "border-[#0055A5]/35 bg-slate-50/50" : "border-slate-200 bg-white"}`}>
-              <div className="flex justify-between items-center mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-sky-50 flex items-center justify-center text-[#0284C7] font-black text-lg">Z</div>
-                  <div>
-                    <div className="text-slate-800 font-bold text-xs">Tích hợp Zalo Official Account</div>
-                    <div className="text-slate-400 text-[10px] font-semibold mt-0.5">Cấu hình webhook phản hồi Zalo OA</div>
                   </div>
                 </div>
-                <Toggle value={zaloEnabled} onChange={setZaloEnabled} />
               </div>
 
-              <AnimatePresence>
-                {zaloEnabled && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="flex flex-col gap-3.5 overflow-hidden border-t border-slate-100 pt-3.5"
+              {/* RIGHT COLUMN: Prompt Editor (8/12 cols) */}
+              <div className="lg:col-span-8 bg-[#0E1B2E] rounded-3xl p-6 border border-[#00B4FF]/15 flex flex-col gap-4 shadow-xl shadow-slate-950/20 justify-between">
+                <div className="flex justify-between items-center gap-4">
+                  <div>
+                    <div className="text-white font-extrabold text-sm">RAG System Persona System Prompt</div>
+                    <div className="text-white/40 text-xs font-semibold mt-0.5">Định dạng tính cách, luật tương tác và hành vi chốt đơn</div>
+                  </div>
+                  <button
+                    onClick={handleReset}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap"
                   >
-                    <div>
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo App ID</label>
-                      <input
-                        type="text" value={zaloAppId} onChange={e => setZaloAppId(e.target.value)}
-                        placeholder="Mã ID ứng dụng Zalo..."
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo Official Account ID (OA ID)</label>
-                      <input
-                        type="text" value={zaloOaId} onChange={e => setZaloOaId(e.target.value)}
-                        placeholder="Nhập Zalo OA ID để tạo liên kết chat..."
-                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo App Secret Key</label>
-                      <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
-                        <input
-                          type={showZaloSecret ? "text" : "password"} value={zaloSecretKey} onChange={e => setZaloSecretKey(e.target.value)}
-                          placeholder="Secret Key cấp từ Zalo Developer..."
-                          className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
-                        />
-                        <button type="button" onClick={() => setShowZaloSecret(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
-                          {showZaloSecret ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo Access Token</label>
-                      <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
-                        <input
-                          type={showZaloAccessToken ? "text" : "password"} value={zaloAccessToken} onChange={e => setZaloAccessToken(e.target.value)}
-                          placeholder="Access Token cấp từ Zalo..."
-                          className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
-                        />
-                        <button type="button" onClick={() => setShowZaloAccessToken(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
-                          {showZaloAccessToken ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo Refresh Token</label>
-                      <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
-                        <input
-                          type={showZaloRefreshToken ? "text" : "password"} value={zaloRefreshToken} onChange={e => setZaloRefreshToken(e.target.value)}
-                          placeholder="Refresh Token cấp từ Zalo..."
-                          className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
-                        />
-                        <button type="button" onClick={() => setShowZaloRefreshToken(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
-                          {showZaloRefreshToken ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="bg-blue-50/70 border border-dashed border-blue-200 rounded-xl p-3 text-xs text-blue-700 flex justify-between items-center gap-2">
-                      <span className="font-semibold truncate">🔗 URL: <strong className="font-bold">http://localhost:3000/chat/webhook/zalo</strong></span>
-                      <button
-                        onClick={() => { navigator.clipboard.writeText("http://localhost:3000/chat/webhook/zalo"); alert("Đã copy URL Zalo Webhook!"); }}
-                        className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg px-3 py-1 text-[10px] font-black text-blue-800 cursor-pointer shrink-0"
-                      >
-                        Copy URL
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    <RefreshCw size={11} /> Khôi phục
+                  </button>
+                </div>
+                
+                <div className="relative w-full flex-1 flex flex-col">
+                  <textarea
+                    value={persona}
+                    onChange={e => setPersona(e.target.value)}
+                    className="w-full flex-1 box-border bg-[#0A1628]/60 border border-[#38BDF8]/30 rounded-2xl p-4 text-xs text-[#38BDF8] font-mono resize-none outline-none leading-relaxed shadow-inner h-[500px]"
+                  />
+                  <div className="absolute bottom-3 right-4 text-white/30 text-[9px] pointer-events-none font-bold">
+                    UTF-8 Mode · {persona.length} kí tự
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Sales Psychological Strategy Triggers */}
-          <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs">
-            <div className="flex items-center gap-2 mb-1">
-              <Target size={16} className="text-[#E4002B]" />
-              <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Kỹ thuật chốt đơn AI (Sales Strategy)</div>
-            </div>
-            <p className="text-slate-400 text-xs font-semibold mb-5">Kích hoạt các kỹ năng tâm lý tiếp cận khách hàng tự động</p>
-            
-            <div className="flex flex-col gap-4">
-              {[
-                { key: "urgencyMode", icon: Clock, label: "Tạo cảm giác khẩn cấp (Scarcity)", desc: "Ví dụ: \"Chỉ còn 3 suất khuyến mãi cuối cùng\"" },
-                { key: "socialProof", icon: Star, label: "Bằng chứng cộng đồng (Social Proof)", desc: "Ví dụ: \"23,000 người đã tin dùng và đăng ký\"" },
-                { key: "namePersonalization", icon: User, label: "Cá nhân hóa theo tên", desc: "Luôn tìm và xưng hô bằng tên riêng khách hàng" },
-                { key: "autoEscalate", icon: Zap, label: "Tự động chuyển nhân viên", desc: "Đẩy thẳng sang chat trực tiếp khi gặp ca khó" },
-              ].map(item => {
-                const Icon = item.icon;
-                return (
-                  <div key={item.key} className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                        <Icon size={14} className="text-[#0055A5]" />
+          {activeTab === "channels" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              {/* Facebook Connection Card */}
+              <div className={`bg-white rounded-3xl border p-6 shadow-xs transition-all duration-200 ${fbEnabled ? "border-[#0055A5]/35 bg-slate-50/20" : "border-slate-200/60"}`}>
+                <div className="flex justify-between items-center mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-[#1877F2] font-black text-xl">f</div>
+                    <div>
+                      <div className="text-slate-800 font-extrabold text-sm">Tích hợp Facebook Messenger</div>
+                      <div className="text-slate-400 text-xs font-semibold mt-0.5">Đồng bộ chatbot vào Fanpage MobiFone</div>
+                    </div>
+                  </div>
+                  <Toggle value={fbEnabled} onChange={setFbEnabled} />
+                </div>
+
+                <AnimatePresence>
+                  {fbEnabled && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex flex-col gap-4 overflow-hidden border-t border-slate-100 pt-4"
+                    >
+                      <div>
+                        <div className="flex justify-between mb-1.5">
+                          <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">Verify Token Webhook</label>
+                          <span
+                            onClick={() => { navigator.clipboard.writeText(fbVerifyToken); alert("Đã copy Verify Token!"); }}
+                            className="text-[#0055A5] text-[10px] font-bold cursor-pointer hover:underline"
+                          >
+                            Sao chép
+                          </span>
+                        </div>
+                        <input
+                          type="text" value={fbVerifyToken} onChange={e => setFbVerifyToken(e.target.value)}
+                          placeholder="Nhập verify token tự định nghĩa..."
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
+                        />
                       </div>
                       <div>
-                        <div className="text-slate-700 font-bold text-xs">{item.label}</div>
-                        <div className="text-slate-400 text-[10px] font-semibold mt-0.5">{item.desc}</div>
+                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Page Access Token</label>
+                        <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
+                          <input
+                            type={showFbSecret ? "text" : "password"} value={fbPageToken} onChange={e => setFbPageToken(e.target.value)}
+                            placeholder="Page Token từ FB Developer..."
+                            className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
+                          />
+                          <button type="button" onClick={() => setShowFbSecret(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
+                            {showFbSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <Toggle value={settings[item.key as keyof typeof settings]} onChange={v => setSettings(p => ({ ...p, [item.key]: v }))} />
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* LOWER SECTION: Lead Capture Fields & Persona Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-        {/* Lead Capture Fields Config */}
-        <div className="lg:col-span-5 bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs">
-          <div className="flex items-center gap-2 mb-1">
-            <Shield size={16} className="text-[#0055A5]" />
-            <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Dữ liệu phễu cần thu thập</div>
-          </div>
-          <p className="text-slate-400 text-xs font-semibold mb-5">Mia AI sẽ khéo léo lấy các thông tin này trong cuộc trò chuyện tự nhiên</p>
-
-          <div className="flex flex-col gap-2.5">
-            {fields.map((f, i) => (
-              <div
-                key={f.key}
-                className={`flex items-center gap-3 border rounded-2xl px-4 py-3 transition-all duration-200 ${
-                  f.active ? "bg-[#0055A5]/3 border-[#0055A5]/25" : "bg-slate-50 border-slate-200/60"
-                }`}
-              >
-                <div className={`w-5.5 h-5.5 rounded-full flex items-center justify-center shrink-0 text-white text-[10px] font-black ${
-                  f.active ? "bg-[#0055A5]" : "bg-slate-400"
-                }`}>
-                  {f.priority}
-                </div>
-                <div className="flex-1 text-slate-700 font-bold text-xs">{f.label}</div>
-                <Toggle value={f.active} onChange={v => setFields(prev => prev.map((fi, idx) => idx === i ? { ...fi, active: v } : fi))} />
+                      <div>
+                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Facebook Page ID</label>
+                        <input
+                          type="text" value={fbPageId} onChange={e => setFbPageId(e.target.value)}
+                          placeholder="Mã Page ID của Facebook Fanpage..."
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
+                        />
+                      </div>
+                      <div className="bg-blue-50/70 border border-dashed border-blue-200 rounded-xl p-3.5 text-[11px] text-blue-700 flex flex-col gap-1.5 mt-2">
+                        <div className="font-semibold break-all">🔗 URL: <strong className="font-bold">http://localhost:3000/chat/webhook/facebook</strong></div>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText("http://localhost:3000/chat/webhook/facebook"); alert("Đã copy URL Facebook Webhook!"); }}
+                          className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg py-1.5 text-[10px] font-black text-blue-800 cursor-pointer w-full text-center"
+                        >
+                          Copy URL
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {/* System Prompt Workspace */}
-        <div className="lg:col-span-7 bg-[#0E1B2E] rounded-3xl p-6 border border-[#00B4FF]/15 flex flex-col gap-4 shadow-xl shadow-slate-950/20">
-          <div className="flex justify-between items-center gap-4">
-            <div>
-              <div className="text-white font-extrabold text-sm">RAG System Persona System Prompt</div>
-              <div className="text-white/40 text-xs font-semibold mt-0.5">Định dạng tính cách, luật tương tác và hành vi chốt đơn viễn thông</div>
+              {/* Zalo Connection Card */}
+              <div className={`bg-white rounded-3xl border p-6 shadow-xs transition-all duration-200 ${zaloEnabled ? "border-[#0055A5]/35 bg-slate-50/20" : "border-slate-200/60"}`}>
+                <div className="flex justify-between items-center mb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center text-[#0284C7] font-black text-xl">Z</div>
+                    <div>
+                      <div className="text-slate-800 font-extrabold text-sm">Tích hợp Zalo Official Account</div>
+                      <div className="text-slate-400 text-xs font-semibold mt-0.5">Cấu hình webhook phản hồi Zalo OA</div>
+                    </div>
+                  </div>
+                  <Toggle value={zaloEnabled} onChange={setZaloEnabled} />
+                </div>
+
+                <AnimatePresence>
+                  {zaloEnabled && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="flex flex-col gap-4 overflow-hidden border-t border-slate-100 pt-4"
+                    >
+                      <div>
+                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo App ID</label>
+                        <input
+                          type="text" value={zaloAppId} onChange={e => setZaloAppId(e.target.value)}
+                          placeholder="Mã ID ứng dụng Zalo..."
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo Official Account ID (OA ID)</label>
+                        <input
+                          type="text" value={zaloOaId} onChange={e => setZaloOaId(e.target.value)}
+                          placeholder="Nhập Zalo OA ID..."
+                          className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-700 bg-white outline-none focus:border-[#0055A5]"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo App Secret Key</label>
+                        <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
+                          <input
+                            type={showZaloSecret ? "text" : "password"} value={zaloSecretKey} onChange={e => setZaloSecretKey(e.target.value)}
+                            placeholder="Secret Key cấp từ Zalo..."
+                            className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
+                          />
+                          <button type="button" onClick={() => setShowZaloSecret(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
+                            {showZaloSecret ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo Access Token</label>
+                        <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
+                          <input
+                            type={showZaloAccessToken ? "text" : "password"} value={zaloAccessToken} onChange={e => setZaloAccessToken(e.target.value)}
+                            placeholder="Access Token cấp từ Zalo..."
+                            className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
+                          />
+                          <button type="button" onClick={() => setShowZaloAccessToken(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
+                            {showZaloAccessToken ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1.5">Zalo Refresh Token</label>
+                        <div className="flex items-center border border-slate-200 rounded-lg px-3 py-1 bg-white focus-within:border-[#0055A5]">
+                          <input
+                            type={showZaloRefreshToken ? "text" : "password"} value={zaloRefreshToken} onChange={e => setZaloRefreshToken(e.target.value)}
+                            placeholder="Refresh Token cấp từ Zalo..."
+                            className="flex-1 border-none outline-none py-1.5 text-xs text-slate-700 font-mono"
+                          />
+                          <button type="button" onClick={() => setShowZaloRefreshToken(p => !p)} className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-500">
+                            {showZaloRefreshToken ? <EyeOff size={14} /> : <Eye size={14} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="bg-blue-50/70 border border-dashed border-blue-200 rounded-xl p-3.5 text-[11px] text-blue-700 flex flex-col gap-1.5 mt-2">
+                        <div className="font-semibold break-all">🔗 URL: <strong className="font-bold">http://localhost:3000/chat/webhook/zalo</strong></div>
+                        <button
+                          onClick={() => { navigator.clipboard.writeText("http://localhost:3000/chat/webhook/zalo"); alert("Đã copy URL Zalo Webhook!"); }}
+                          className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg py-1.5 text-[10px] font-black text-blue-800 cursor-pointer w-full text-center"
+                        >
+                          Copy URL
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 text-white text-[10px] font-bold transition-all cursor-pointer"
-            >
-              <RefreshCw size={11} /> Khôi phục mặc định
-            </button>
-          </div>
-          
-          <div className="relative w-full">
-            <textarea
-              value={persona}
-              onChange={e => setPersona(e.target.value)}
-              rows={12}
-              className="w-full box-border bg-[#0A1628]/60 border border-[#38BDF8]/30 rounded-2xl p-4 text-xs text-[#38BDF8] font-mono resize-y outline-none leading-relaxed shadow-inner"
-            />
-            <div className="absolute bottom-3 right-4 text-white/30 text-[9px] pointer-events-none font-bold">
-              UTF-8 Mode · {persona.length} kí tự
+          )}
+
+          {activeTab === "tuning" && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+              {/* Model AI Parameters Sliders */}
+              <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs">
+                <div className="flex items-center gap-2 mb-1">
+                  <Zap size={16} className="text-[#0055A5]" />
+                  <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Tham số mô hình AI</div>
+                </div>
+                <p className="text-slate-400 text-xs font-semibold mb-6">Hiệu chỉnh tính sáng tạo và khối lượng từ ngữ phản hồi tối đa của Agent</p>
+                
+                <div className="flex flex-col gap-5">
+                  {/* Temperature */}
+                  <div>
+                    <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
+                      <span>Nhiệt độ (Temperature)</span>
+                      <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{temperature}</span>
+                    </div>
+                    <input
+                      type="range" min="0" max="1" step="0.1"
+                      value={temperature} onChange={e => setTemperature(parseFloat(e.target.value))}
+                      className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
+                    />
+                    <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-2">
+                      <span>Chính xác & Logic (0.1)</span>
+                      <span>Sáng tạo & Đa dạng (1.0)</span>
+                    </div>
+                  </div>
+
+                  {/* Top P */}
+                  <div>
+                    <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
+                      <span>Độ chọn lọc từ ngữ (Top P)</span>
+                      <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{topP}</span>
+                    </div>
+                    <input
+                      type="range" min="0.1" max="1.0" step="0.05"
+                      value={topP} onChange={e => setTopP(parseFloat(e.target.value))}
+                      className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
+                    />
+                  </div>
+
+                  {/* Max Tokens */}
+                  <div>
+                    <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
+                      <span>Giới hạn từ tối đa (Max Tokens)</span>
+                      <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{maxTokens} từ</span>
+                    </div>
+                    <input
+                      type="range" min="64" max="1024" step="64"
+                      value={maxTokens} onChange={e => setMaxTokens(parseInt(e.target.value))}
+                      className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sales Psychological Strategy Triggers */}
+              <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs">
+                <div className="flex items-center gap-2 mb-1">
+                  <Target size={16} className="text-[#E4002B]" />
+                  <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Kỹ thuật chốt đơn AI (Sales Strategy)</div>
+                </div>
+                <p className="text-slate-400 text-xs font-semibold mb-5">Kích hoạt các kỹ năng tâm lý tiếp cận khách hàng tự động</p>
+                
+                <div className="flex flex-col gap-4">
+                  {[
+                    { key: "urgencyMode", icon: Clock, label: "Tạo cảm giác khẩn cấp (Scarcity)", desc: "Ví dụ: \"Chỉ còn 3 suất khuyến mãi cuối cùng\"" },
+                    { key: "socialProof", icon: Star, label: "Bằng chứng cộng đồng (Social Proof)", desc: "Ví dụ: \"23,000 người đã tin dùng và đăng ký\"" },
+                    { key: "namePersonalization", icon: User, label: "Cá nhân hóa theo tên", desc: "Luôn tìm và xưng hô bằng tên riêng khách hàng" },
+                    { key: "autoEscalate", icon: Zap, label: "Tự động chuyển nhân viên", desc: "Đẩy thẳng sang chat trực tiếp khi gặp ca khó" },
+                  ].map(item => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={item.key} className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                            <Icon size={14} className="text-[#0055A5]" />
+                          </div>
+                          <div>
+                            <div className="text-slate-700 font-bold text-xs">{item.label}</div>
+                            <div className="text-slate-400 text-[10px] font-semibold mt-0.5">{item.desc}</div>
+                          </div>
+                        </div>
+                        <Toggle value={settings[item.key as keyof typeof settings]} onChange={v => setSettings(p => ({ ...p, [item.key]: v }))} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

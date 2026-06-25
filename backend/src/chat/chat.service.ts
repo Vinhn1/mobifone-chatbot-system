@@ -8,6 +8,8 @@ import { ChatHistoryService } from '../chat-history/chat-history.service';
 import { LeadsService } from '../leads/leads.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Package } from '../subscribers/package.entity';
+import * as https from 'https';
+
 
 @Injectable()
 export class ChatService {
@@ -381,6 +383,8 @@ export class ChatService {
             recipient: { id: senderId },
             messaging_type: 'RESPONSE',
             message: messagePayload
+          }, {
+            httpsAgent: new https.Agent({ rejectUnauthorized: false })
           })
         );
         console.log(`[FB-WEBHOOK] Đã phản hồi thành công một phần cho ${senderId}`);
@@ -431,7 +435,8 @@ export class ChatService {
             headers: {
               'Content-Type': 'application/json',
               'access_token': zaloAccessToken
-            }
+            },
+            httpsAgent: new https.Agent({ rejectUnauthorized: false })
           })
         );
         console.log(`[ZALO-WEBHOOK] Đã phản hồi thành công một phần cho Zalo user ${senderId}`);
