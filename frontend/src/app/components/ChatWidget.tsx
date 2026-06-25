@@ -225,10 +225,10 @@ export function ChatWidget() {
         type: "bot",
         text: name
           ? `Chào mừng **${name}** quay lại với MobiFone! 🎉\n\nHôm nay, bạn có **ưu đãi đặc biệt** dành riêng cho thành viên **${user?.tier}**:\n📶 Gia hạn gói **TK135** → tặng thêm **15GB data**\n⭐ Nhân đôi điểm tích lũy thành viên đến hết tuần này.\n\nBạn cần chuyên viên hỗ trợ tư vấn dịch vụ nào không? 😊`
-          : `Xin chào! Tôi là **Mia** — Chuyên viên chăm sóc khách hàng của MobiFone! 📞✨\n\n🎁 **Ưu đãi độc quyền hôm nay:** Tặng thêm **10GB** data tốc độ cao khi đăng ký gói cước di động trực tuyến!\n\nBạn tên là gì để tôi dễ dàng xưng hô và tư vấn tốt nhất nhé?`,
+          : `Xin chào! Tôi là **Mia** — Chuyên viên chăm sóc khách hàng của MobiFone! 📞✨\n\nHôm nay MobiFone đang có rất nhiều ưu đãi gói cước data tốc độ cao cực hot và dịch vụ eSIM tiện lợi.\n\nBạn đang quan tâm đến gói cước dung lượng lớn hay dịch vụ nào khác của MobiFone, hãy chia sẻ để Mia hỗ trợ bạn ngay nhé! 🎁`,
         quickReplies: name
           ? ["Gia hạn gói cước", "Kiểm tra ưu đãi", "Cần tư vấn thêm"]
-          : ["Tôi tên Nam", "Gọi tôi là Vy", "Không cần giới thiệu"],
+          : ["Đăng ký gói cước", "Đổi eSIM miễn phí", "Xem ưu đãi hot"],
       }]);
     }, 1200);
   }, [open]);
@@ -253,11 +253,20 @@ export function ChatWidget() {
       if (m) setLeadData(p => ({ ...p, name: m[1] }));
     }
 
+    const userInfo = {
+      name: user?.name || leadData.name,
+      phone: user?.phone || leadData.phone,
+      tier: user?.tier,
+      package: user?.package || leadData.currentPackage,
+      packageExpiry: user?.packageExpiry
+    };
+
     try {
       // Try to get live response from backend
       const response = await axios.post("http://localhost:3000/chat", {
         message: textToSend,
         sessionId,
+        userInfo,
       });
 
       const botAnswer = response.data?.answer || "";

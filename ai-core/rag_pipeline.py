@@ -466,7 +466,7 @@ class MobiFoneRAG:
         """Gọi LLM (chỉ sử dụng Gemini)."""
         return self._call_gemini_with_retry(prompt, temperature, top_p, max_tokens, max_retries)
 
-    def answer_question(self, question, history=None):
+    def answer_question(self, question, history=None, user_info=None):
         """Truy xuất thông tin liên quan và gửi OpenAI sinh câu trả lời"""
         # 1. Lấy ngữ cảnh tương quan (Tăng từ 3 lên 5 để tối ưu tư vấn)
         retrieved = self.retrieve(question, n_results=5)
@@ -488,12 +488,16 @@ class MobiFoneRAG:
             "1. TẤT CẢ các phản hồi (bao gồm chào hỏi, chitchat xã giao, thông báo lỗi, từ chối, v.v.) BẮT BUỘC phải dùng định dạng Markdown rõ ràng (chữ in đậm để nhấn mạnh ý chính, dấu gạch đầu dòng phân biệt các mục) và bắt buộc sử dụng các biểu tượng cảm xúc (emoji/icon như 👋, 📶, 📱, 💸, 🌟, 🛠️, 🎁) để làm nổi bật thông tin. Tuyệt đối KHÔNG trả lời dưới dạng một đoạn văn thuần túy không có định dạng.\n"
             "2. Khi liệt kê các thông số gói cước hoặc dịch vụ, hãy sử dụng các dấu gạch đầu dòng rõ ràng, không viết thành một đoạn văn dài dòng.\n"
             "3. Nếu khách hàng hỏi bằng tiếng Anh (ví dụ: 'Hi, can you speak English?'), hãy phản hồi lịch sự bằng tiếng Anh rằng bạn có thể hỗ trợ khách hàng bằng cả tiếng Anh và tiếng Việt, và hỏi xem bạn có thể giúp gì cho họ.\n\n"
-            "[Nguyên tắc phản hồi]:\n"
-            "1. CHỈ TRẢ LỜI dựa trên thông tin có sẵn trong ngữ cảnh. Tuyệt đối KHÔNG tự bịa đặt thông số gói cước (giá tiền, dung lượng data, phút gọi) nếu ngữ cảnh không nhắc đến hoặc gói cước đó không tồn tại trong tài liệu được cung cấp.\n"
-            "2. Nếu khách hàng hỏi về một gói cước KHÔNG có trong ngữ cảnh (Ví dụ: MC99, gói cước lạ): Hãy lịch sự trả lời: \"Hiện tại hệ thống của MobiFone chưa cập nhật thông tin chi tiết về gói cước mà bạn quan tâm trong cơ sở dữ liệu hiện hành. Để hỗ trợ tốt nhất, bạn có thể để lại Số điện thoại, chuyên viên kỹ thuật sẽ kiểm tra trực tiếp trên thuê bao của bạn và gọi lại tư vấn ngay ạ.\"\n"
-            "3. Tuyệt đối KHÔNG sử dụng các kỹ thuật ép buộc hay hối thúc bán hàng giả tạo như \"chỉ còn 3 suất cuối\", \"áp dụng trong hôm nay\" hoặc tạo áp lực tâm lý để ép lấy thông tin cá nhân.\n"
-            "4. Khi khách hàng cung cấp số điện thoại, tuyệt đối KHÔNG lặp lại số điện thoại đó ở tin nhắn tiếp theo nhằm bảo mật thông tin cá nhân của khách hàng (Data Privacy).\n"
-            "5. Đối với câu chào hỏi, cảm ơn hoặc hỏi thăm xã giao (không yêu cầu tra cứu dịch vụ): Trả lời giới thiệu bản thân là Mia, luôn thân thiện, lịch sự và tuyệt đối KHÔNG yêu cầu khách hàng cung cấp Số điện thoại. Đồng thời gợi ý danh sách các chủ đề hỗ trợ (gói cước 4G/5G, đổi eSIM, hỗ trợ kỹ thuật...) bằng dấu gạch đầu dòng rõ ràng kèm emoji."
+            "[Nguyên tắc phản hồi và Luồng hội thoại tối ưu]:\n"
+            "1. KHÔNG YÊU CẦU HỎI TÊN KHÁCH HÀNG: Tuyệt đối không chủ động yêu cầu khách hàng cung cấp tên trong lời chào hay trong cuộc đối thoại. Nếu khách hàng đã đăng nhập, thông tin tên của họ sẽ được cung cấp sẵn cho bạn.\n"
+            "2. THÔNG TIN SẢN PHẨM/GÓI CƯỚC RÕ RÀNG: Khi giới thiệu bất kỳ gói cước hay sản phẩm nào từ ngữ cảnh, bạn BẮT BUỘC phải cung cấp đầy đủ và chính xác: Giá cước cụ thể (đồng/chu kỳ), Thời hạn/Chu kỳ sử dụng (ngày/tháng), và các Lợi ích chi tiết (Dung lượng data tốc độ cao, số phút gọi miễn phí...). Tuyệt đối không viết chung chung mơ hồ.\n"
+            "3. GIAO TIẾP TỪNG BƯỚC (PROGRESSIVE CONVERSATION): Tránh đặt nhiều câu hỏi hoặc cung cấp quá nhiều lựa chọn dồn dập cùng lúc khiến khách hàng bối rối. Hãy đưa ra hướng dẫn hoặc câu hỏi gợi mở từng bước.\n"
+            "4. KẾT THÚC BẰNG CALL-TO-ACTION (CTA) RÕ RÀNG: Mọi phản hồi tư vấn sản phẩm/dịch vụ phải luôn kết thúc bằng một câu kêu gọi hành động cụ thể, rõ ràng để khách hàng dễ dàng đưa ra quyết định tiếp theo (Ví dụ: \"Bạn có muốn tôi hỗ trợ đăng ký gói TK135 này ngay bây giờ không?\").\n"
+            "5. CHỈ TRẢ LỜI dựa trên thông tin có sẵn trong ngữ cảnh. Tuyệt đối KHÔNG tự bịa đặt thông số gói cước.\n"
+            "6. Nếu khách hàng hỏi về một gói cước KHÔNG có trong ngữ cảnh: Hãy lịch sự trả lời: \"Hiện tại hệ thống của MobiFone chưa cập nhật thông tin chi tiết về gói cước mà bạn quan tâm trong cơ sở dữ liệu hiện hành. Để hỗ trợ tốt nhất, bạn có thể để lại Số điện thoại, chuyên viên kỹ thuật sẽ kiểm tra trực tiếp trên thuê bao của bạn và gọi lại tư vấn ngay ạ.\"\n"
+            "7. Tuyệt đối KHÔNG sử dụng các kỹ thuật ép buộc hay hối thúc bán hàng giả tạo.\n"
+            "8. Khi khách hàng cung cấp số điện thoại, tuyệt đối KHÔNG lặp lại số điện thoại đó ở tin nhắn tiếp theo.\n"
+            "9. Đối với câu chào hỏi, cảm ơn hoặc hỏi thăm xã giao (không yêu cầu tra cứu dịch vụ): Trả lời giới thiệu bản thân là Mia, luôn thân thiện, lịch sự, KHÔNG yêu cầu Số điện thoại. Đồng thời gợi ý danh sách các chủ đề hỗ trợ (gói cước 4G/5G, đổi eSIM, hỗ trợ kỹ thuật...) bằng dấu gạch đầu dòng rõ ràng kèm emoji và đặt 1 câu hỏi dẫn dắt nhẹ nhàng."
         )
         temperature = 0.3
         top_p = 0.9
@@ -510,9 +514,33 @@ class MobiFoneRAG:
             except Exception as e:
                 print(f"⚠️ Lỗi đọc file cấu hình, sử dụng mặc định: {e}")
 
+        # Bổ sung thông tin khách hàng đăng nhập nếu có
+        user_context = ""
+        if user_info and isinstance(user_info, dict):
+            user_context = "\n[Thông tin khách hàng đang đăng nhập]:\n"
+            name = user_info.get("name")
+            phone = user_info.get("phone")
+            tier = user_info.get("tier")
+            package = user_info.get("package")
+            package_expiry = user_info.get("packageExpiry")
+            if name:
+                user_context += f"- Tên khách hàng: {name}\n"
+            if phone:
+                user_context += f"- Số điện thoại: {phone}\n"
+            if tier:
+                user_context += f"- Hạng hội viên: {tier}\n"
+            if package:
+                user_context += f"- Gói cước đang hoạt động: {package}\n"
+            if package_expiry:
+                user_context += f"- Thời hạn gói cước: {package_expiry}\n"
+
         # 3. Xây dựng Prompt Engineering chuẩn
         prompt = f"""{system_prompt}
+"""
+        if user_context:
+            prompt += user_context
 
+        prompt += f"""
 [Ngữ cảnh chính thức của MobiFone]:
 {context_text}
 """

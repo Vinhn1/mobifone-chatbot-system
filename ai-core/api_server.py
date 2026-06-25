@@ -162,6 +162,7 @@ class MessageModel(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     history: Optional[List[MessageModel]] = None
+    userInfo: Optional[dict] = None
 
 class ChatResponse(BaseModel):
     answer: str
@@ -201,7 +202,7 @@ def chat(request: ChatRequest):
         if request.history:
             history_list = [{"role": msg.role, "message": msg.message} for msg in request.history]
             
-        answer, sources, suggested_questions = bot.answer_question(request.message, history=history_list)
+        answer, sources, suggested_questions = bot.answer_question(request.message, history=history_list, user_info=request.userInfo)
         return ChatResponse(answer=answer, sources=sources, suggested_questions=suggested_questions)
     except AIServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)

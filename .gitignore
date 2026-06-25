@@ -48,3 +48,20 @@ ai-agent/
 ai-agent
 .agents
 agent-skills
+
+# TypeScript build caches
+*.tsbuildinfo
+
+# Chroma DB
+ai-core/chroma_db/
+**/chroma_db/
+
+# Temporary suggestions/eval/out files
+ai-core/dynamic_suggestions.json
+ai-core/eval_dataset_100.json
+ai-core/out.txt
+
+# Verification files and test scripts
+*zalo_verifier*.html
+backend/resolve_zalo.js
+backend/test_zalo.js

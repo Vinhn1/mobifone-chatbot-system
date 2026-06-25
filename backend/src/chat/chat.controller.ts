@@ -12,12 +12,13 @@ export class ChatController {
   async handleChat(
     @Body('message') message: string,
     @Body('sessionId') sessionId?: string,
+    @Body('userInfo') userInfo?: any,
   ) {
     if (!message) {
       throw new HttpException('Tin nhắn không được để trống', HttpStatus.BAD_REQUEST);
     }
     try {
-      const result = await this.chatService.sendMessageToAi(message, sessionId);
+      const result = await this.chatService.sendMessageToAi(message, sessionId, userInfo);
       return result;
     } catch (error) {
       if (error instanceof HttpException) {

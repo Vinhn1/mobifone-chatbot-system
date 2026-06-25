@@ -8,6 +8,7 @@ import { ChatHistoryService } from '../chat-history/chat-history.service';
 import { LeadsService } from '../leads/leads.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Package } from '../subscribers/package.entity';
+import { Subscriber } from '../subscribers/subscriber.entity';
 import * as https from 'https';
 
 
@@ -24,6 +25,8 @@ export class ChatService {
     private readonly notificationsService: NotificationsService,
     @InjectRepository(Package)
     private readonly packageRepository: Repository<Package>,
+    @InjectRepository(Subscriber)
+    private readonly subscriberRepository: Repository<Subscriber>,
   ) {
     this.aiServiceBaseUrl = this.configService.get<string>('AI_SERVICE_BASE_URL', 'http://localhost:8001');
     this.aiRequestTimeoutMs = this.configService.get<number>('AI_SERVICE_TIMEOUT_MS', 60000);
@@ -53,7 +56,7 @@ export class ChatService {
     return match ? match[0] : null;
   }
 
-  async sendMessageToAi(message: string, sessionId?: string) {
+  async sendMessageToAi(message: string, sessionId?: string, userInfo?: any) {
     const aiServiceUrl = this.getAiServiceUrl('/chat');
     let historyPayload: { role: string; message: string }[] = [];
 
@@ -83,6 +86,42 @@ export class ChatService {
       }
     }
 
+    // Tự động tìm kiếm thông tin subscriber nếu userInfo chưa được truyền từ kênh chat
+    if (!userInfo) {
+      let phoneToSearch = extractedPhone;
+      if (!phoneToSearch && sessionId) {
+        // Quét lịch sử chat để tìm SĐT đã được nhập trước đó
+        const chatLogs = await this.chatHistoryService.getHistory(sessionId, 20);
+        for (const log of chatLogs) {
+          if (log.role === 'user') {
+            const found = this.extractPhoneNumber(log.message);
+            if (found) {
+              phoneToSearch = found;
+              break;
+            }
+          }
+        }
+      }
+
+      if (phoneToSearch) {
+        try {
+          const subscriber = await this.subscriberRepository.findOneBy({ phoneNumber: phoneToSearch });
+          if (subscriber) {
+            userInfo = {
+              name: subscriber.name || `Khách hàng ${subscriber.phoneNumber.slice(-4)}`,
+              phone: subscriber.phoneNumber,
+              tier: 'Gold',
+              package: subscriber.currentPackage || 'Không có gói',
+              packageExpiry: subscriber.packageExpiry ? new Date(subscriber.packageExpiry).toLocaleDateString('vi-VN') : 'N/A'
+            };
+            console.log(`[AUTO-USERINFO] Đã tìm thấy subscriber tương ứng SĐT: ${phoneToSearch}`);
+          }
+        } catch (err) {
+          console.error('Lỗi khi tự động lấy thông tin subscriber từ DB:', err.message);
+        }
+      }
+    }
+
     // Phát sự kiện tin nhắn User đến Admin Dashboard
     try {
       this.notificationsService.emitNotification('new-message', {
@@ -95,11 +134,12 @@ export class ChatService {
     }
 
     try {
-      // 2. Gửi sang AI Service kèm history
+      // 2. Gửi sang AI Service kèm history và userInfo
       const response = await firstValueFrom(
         this.httpService.post(aiServiceUrl, { 
           message,
-          history: historyPayload
+          history: historyPayload,
+          userInfo
         }, {
           timeout: this.aiRequestTimeoutMs,
         })
