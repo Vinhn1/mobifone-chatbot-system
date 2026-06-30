@@ -5,6 +5,8 @@ sys.stdout.reconfigure(encoding='utf-8')
 bot = MobiFoneRAG()
 
 queries = [
+    "SIM vật lý 4G MobiFone tồn cuối kỳ là bao nhiêu cái?",
+    "Kỳ này MobiFone nhập tổng cộng bao nhiêu sản phẩm?",
     "Cách đổi sang eSIM MobiFone trực tuyến như thế nào và có mất phí không?",
     "Điện thoại của tôi bị mất sóng không gọi điện được thì làm thế nào?"
 ]

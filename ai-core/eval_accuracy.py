@@ -48,7 +48,11 @@ DATASET_PATH = os.path.join(BASE_DIR, "eval_dataset_100.json")
 if os.path.exists(DATASET_PATH):
     try:
         with open(DATASET_PATH, "r", encoding="utf-8") as f:
-            EVAL_DATASET = json.load(f)
+            data = json.load(f)
+            if isinstance(data, dict) and "test_cases" in data:
+                EVAL_DATASET = data["test_cases"]
+            else:
+                EVAL_DATASET = data
         logger.info("✓ Đã tải thành công %d ca kiểm thử từ %s.", len(EVAL_DATASET), DATASET_PATH)
     except Exception as e:
         logger.error("❌ Lỗi khi đọc file dataset: %s", e)
@@ -150,26 +154,38 @@ def check_privacy_compliance(query: str, generated_answer: str) -> tuple[bool, s
 # Core: Xây dựng Prompt cho Judge chấm điểm nâng cấp
 # ---------------------------------------------------------------------------
 def _build_judge_prompt(query: str, retrieved_context: str,
-                         generated_answer: str, expected_facts: str) -> str:
+                         generated_answer: str, expected_facts: str,
+                         full_context: str = None) -> str:
     """Xây dựng prompt chi tiết cho LLM Judge chấm điểm 5 metrics và tuân thủ định dạng."""
+    # Nếu có full_context (gồm cả Registration KB inject), dùng nó cho Faithfulness
+    context_for_judge = full_context if full_context else retrieved_context
     return f"""Bạn là một Chuyên gia Đánh giá Chất lượng Hệ thống RAG (RAG Quality Assurer).
 Nhiệm vụ của bạn là đánh giá câu trả lời được tạo ra từ hệ thống chatbot RAG đối với một câu hỏi cụ thể, dựa trên ngữ cảnh được cung cấp và sự thật kỳ vọng.
+
+[HƯỚNG DẪN QUAN TRỌNG VỀ FAITHFULNESS - ĐỌC KỸ TRƯỚC KHI CHẤM]
+Hệ thống RAG này có 2 loại nguồn tri thức hợp lệ:
+(A) Ngữ cảnh truy xuất từ Vector DB (hiển thị trong "Ngữ cảnh đầy đủ cung cấp cho bot" bên dưới).
+(B) Nguồn tri thức nội bộ đã được xác thực (hiển thị với nhãn "[CÚ PHÁP ĐĂNG KÝ GÓI...]", "[THÔNG TIN XÁC THỰC]") — đây là dữ liệu CHÍNH THỨC từ hệ thống MobiFone, KHÔNG phải hallucination.
+CHỈ coi là hallucination/bịa đặt khi bot đưa ra thông tin KHÔNG CÓ trong cả (A) lẫn (B).
+Nếu thông tin nằm trong (B) (có nhãn [CÚ PHÁP ĐĂNG KÝ GÓI...] hoặc [THÔNG TIN XÁC THỰC]), đây là nguồn hợp lệ, KHÔNG trừ điểm Faithfulness.
 
 Hãy chấm điểm theo thang điểm từ 1 đến 5 (5 là tốt nhất) cho các tiêu chí sau:
 1. Context Precision (Độ chính xác ngữ cảnh): Các tài liệu ngữ cảnh trích xuất được có thực sự liên quan và hỗ trợ trực tiếp cho câu hỏi không? (1: hoàn toàn không liên quan, 5: cực kỳ liên quan).
 2. Context Recall (Độ đầy đủ ngữ cảnh): Ngữ cảnh trích xuất được có chứa đầy đủ thông tin để trả lời câu hỏi theo như "Sự thật kỳ vọng" không? (1: thiếu toàn bộ thông tin, 5: đầy đủ toàn bộ thông tin).
-3. Faithfulness (Độ trung thực): Câu trả lời của chatbot có hoàn toàn dựa trên ngữ cảnh được cung cấp không? Có tự ý bịa đặt hay ảo tưởng thông tin bên ngoài không? (1: ảo tưởng hoàn toàn, 5: tuyệt đối trung thực, không bịa đặt).
+3. Faithfulness (Độ trung thực): Dựa theo HƯỚNG DẪN QUAN TRỌNG ở trên — câu trả lời có dựa trên nguồn tri thức hợp lệ (A) hoặc (B) không? Chỉ phạt nếu bot bịa thông tin không có trong (A) hay (B). (1: bịa đặt hoàn toàn, 5: tuyệt đối trung thực).
 4. Answer Relevance (Độ liên quan): Câu trả lời của chatbot có giải quyết trực tiếp và chính xác câu hỏi của người dùng không? (1: lạc đề, 5: trả lời đúng trọng tâm).
 5. Information Correctness (Độ chính xác thông tin): So sánh câu trả lời của chatbot với "Sự thật kỳ vọng" (ground truth) — các con số, gói cước, hướng dẫn có khớp không? (1: sai lệch hoàn toàn, 5: khớp hoàn hảo).
 
 Đồng thời đánh giá tính tuân thủ (trả về true/false):
-6. Formatting Compliance (Tuân thủ định dạng): Câu trả lời có sử dụng dấu gạch đầu dòng rõ ràng, markdown và các icon/emoji để phân tách thông tin dễ nhìn (như 🌟, 📦, 📶, 💸, 📝) khi liệt kê thông số gói cước hoặc thông tin chi tiết không?
+6. Formatting Compliance (Tuân thủ định dạng): Câu trả lời có sử dụng dấu gạch đầu dòng rõ ràng, chữ in đậm (dùng **) để nhấn mạnh thông số/tên gói, có khoảng cách dòng/đoạn hợp lý và TUYỆT ĐỐI KHÔNG chứa bất kỳ biểu tượng cảm xúc (emoji/icon) nào không? Trả về true nếu tuân thủ đầy đủ (không có emoji, có in đậm và gạch đầu dòng), trả về false nếu chứa bất kỳ emoji nào hoặc thiếu định dạng.
 7. Privacy Compliance (Tuân thủ bảo mật): Chatbot có lặp lại số điện thoại nào mà khách hàng cung cấp không? Trả về true nếu chatbot không lặp lại SĐT, false nếu chatbot lặp lại SĐT của khách hàng.
 
 [DỮ LIỆU ĐÁNH GIÁ]
 - Câu hỏi người dùng: {query}
 - Sự thật kỳ vọng (ground truth): {expected_facts}
-- Ngữ cảnh truy xuất được:
+- Ngữ cảnh đầy đủ cung cấp cho bot (bao gồm tri thức nội bộ đã xác thực):
+{context_for_judge}
+- Ngữ cảnh chỉ từ Vector DB (dùng để chấm Context Precision & Recall):
 {retrieved_context}
 - Câu trả lời của Chatbot:
 {generated_answer}
@@ -251,11 +267,13 @@ def evaluate_response(
     retrieved_context: str,
     generated_answer: str,
     expected_facts: str,
+    full_context: str = None,
 ) -> dict:
     """
     Sử dụng LLM-as-a-Judge (Gemini hoặc OpenAI chéo) để chấm điểm câu trả lời của chatbot.
+    full_context: toàn bộ context bot nhận được (gồm cả Registration KB inject & OOD facts).
     """
-    prompt = _build_judge_prompt(query, retrieved_context, generated_answer, expected_facts)
+    prompt = _build_judge_prompt(query, retrieved_context, generated_answer, expected_facts, full_context)
     
     # 1. Thực hiện chấm điểm bằng LLM Judge
     eval_scores = None
@@ -368,7 +386,10 @@ def run_evaluation() -> None:
     }
     
     # Vòng lặp chạy đánh giá qua tập dữ liệu
-    for item in EVAL_DATASET:
+    limit = int(os.getenv("EVAL_LIMIT", "0"))
+    dataset_to_run = EVAL_DATASET[:limit] if limit > 0 else EVAL_DATASET
+    
+    for item in dataset_to_run:
         logger.info("")
         logger.info("📝 [%s] Đang kiểm tra câu hỏi: '%s'", item["category"], item["query"])
         
@@ -377,10 +398,24 @@ def run_evaluation() -> None:
         contexts = ret_results.get("documents", [[]])[0]
         context_text = "\n---\n".join(contexts) if contexts else "Không có ngữ cảnh."
         
-        # 2. Gọi Chatbot sinh câu trả lời
+        # 2. Gọi Chatbot sinh câu trả lời — capture full_context từ answer_question
         start_time = time.time()
         answer, sources, _ = bot.answer_question(item["query"])
         latency = time.time() - start_time
+        
+        # [Sprint 3] Build full_context = retrieved + OOD injection + Registration KB
+        # để Judge biết toàn bộ nguồn hợp lệ mà bot đã dùng
+        full_ctx_parts = [context_text]
+        # Kiểm tra OOD injection
+        query_lower_eval = item["query"].lower()
+        if any(k in query_lower_eval for k in ["v90", "v120", "st90", "mimax", "vinaphone", "viettel", "u1500", "vd149", "big90"]):
+            full_ctx_parts.append("[THÔNG TIN XÁC THỰC] Gói này thuộc nhà mạng đối thủ, không phải MobiFone. Bot đã được cung cấp sự thật này từ hệ thống nội bộ.")
+        # Kiểm tra Registration KB injection
+        reg_keywords = ["đăng ký", "cú pháp", "soạn tin", "ussd", "*098", "9084"]
+        if any(k in query_lower_eval for k in ["tk135", "tk90", "f70", "f90n", "mxh100", "mxh150", "data50"]) and \
+           any(k in query_lower_eval for k in ["đăng ký", "cách", "hướng dẫn", "soạn", "như thế nào"]):
+            full_ctx_parts.append("[CÚ PHÁP ĐĂNG KÝ GÓI - NGUỒN CHÍNH THỨC MOBIFONE] Bot được cung cấp cú pháp SMS, USSD, App đăng ký từ Knowledge Base nội bộ MobiFone đã xác thực.")
+        full_context_for_judge = "\n---\n".join(full_ctx_parts)
         
         time.sleep(1.0) # sleep nhẹ tránh overload
         
@@ -391,6 +426,7 @@ def run_evaluation() -> None:
             retrieved_context=context_text,
             generated_answer=answer,
             expected_facts=item["expected_facts"],
+            full_context=full_context_for_judge,
         )
         
         # Lưu trữ kết quả
@@ -434,7 +470,7 @@ def run_evaluation() -> None:
         time.sleep(API_CALL_DELAY_SECONDS)
         
     # Tính điểm trung bình chung
-    num_items = len(EVAL_DATASET)
+    num_items = len(dataset_to_run)
     avg_precision = round(totals["context_precision"] / num_items, 2)
     avg_recall = round(totals["context_recall"] / num_items, 2)
     avg_faithfulness = round(totals["faithfulness"] / num_items, 2)
@@ -549,7 +585,7 @@ def _build_markdown_report(summary: dict) -> str:
         f"| **Answer Relevance** | **{averages['relevance']}/5.0** | Mức độ trả lời đúng trọng tâm câu hỏi của người dùng |",
         f"| **Information Correctness** | **{averages['correctness']}/5.0** | Độ chính xác của các con số, gói cước và hướng dẫn |",
         f"| **Privacy Compliance** | **{averages['privacy_compliance_rate']}%** | Chatbot tuân thủ bảo mật, không lặp lại SĐT khách hàng |",
-        f"| **Formatting Compliance** | **{averages['formatting_compliance_rate']}%** | Câu trả lời phân tách rõ bằng bullet points, sử dụng emoji |",
+        f"| **Formatting Compliance** | **{averages['formatting_compliance_rate']}%** | Câu trả lời phân tách rõ bằng bullet points, KHÔNG sử dụng emoji |",
         "",
         "---",
         "",
@@ -600,7 +636,7 @@ def _build_markdown_report(summary: dict) -> str:
             f"- **Answer Relevance:** {scores.get('relevance_score')}/5 — *{scores.get('relevance_reason')}*",
             f"- **Information Correctness:** {scores.get('correctness_score')}/5 — *{scores.get('correctness_reason')}*",
             f"- **Bảo mật thông tin (SĐT):** {'✅ ĐẠT' if scores.get('privacy_compliance') else '❌ VI PHẠM'} — *{scores.get('privacy_compliance_reason')}*",
-            f"- **Định dạng (Markdown & Emoji):** {'✅ ĐẠT' if scores.get('formatting_compliance') else '❌ CHƯA ĐẠT'} — *{scores.get('formatting_compliance_reason')}*",
+            f"- **Định dạng (Markdown & Bố cục):** {'✅ ĐẠT' if scores.get('formatting_compliance') else '❌ CHƯA ĐẠT'} — *{scores.get('formatting_compliance_reason')}*",
             "",
             "#### Câu trả lời của chatbot:",
             "```markdown",

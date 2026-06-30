@@ -49,28 +49,28 @@ function getSalesResponse(text: string, lead: LeadData, user: any): {
   if (lower.includes("tên") || lower.includes("là ")) {
     const match = text.match(/(?:tên|là)\s+(.+)/i);
     if (match) return {
-      text: `Chào **${match[1]}**! 🎉 Rất vui được gặp bạn!\n\nTôi là **Mia** — Chuyên viên chăm sóc khách hàng của MobiFone 📞✨\n\nBạn đang sử dụng mạng di động nào? Để tôi tìm gói cước **tiết kiệm & phù hợp nhất** cho bạn nhé!`,
+      text: `Chào **${match[1]}**! Rất vui được gặp bạn!\n\nTôi là **Mia** — Chuyên viên chăm sóc khách hàng của MobiFone.\n\nBạn đang sử dụng mạng di động nào? Để tôi tìm gói cước **tiết kiệm & phù hợp nhất** cho bạn nhé!`,
       quickReplies: ["Đang dùng Viettel", "Đang dùng Vinaphone", "Đang dùng MobiFone"],
       robotState: "happy",
     };
   }
 
   if (lower.includes("tk135") || lower.includes("135")) return {
-    text: `🔥 **TK135 — GÓI CƯỚC BÁN CHẠY NHẤT MOBIFONE!**\n\n📶 **4GB data tốc độ cao/ngày** (120GB/tháng)\n📞 **Miễn phí hoàn toàn** cuộc gọi nội mạng dưới 10 phút\n📲 **Tặng thêm 20 phút** gọi ngoại mạng mỗi tháng\n🌐 Tự động kết nối mạng **5G siêu tốc**\n💰 Chỉ **135.000đ/tháng**\n\n⚡ Đặc biệt: Hôm nay chỉ còn **12 suất** đăng ký nhận thêm **+10GB data bonus**!\n\nBạn có muốn đăng ký ngay gói cước này để nhận khuyến mại không? 🎁`,
+    text: `**TK135 — GÓI CƯỚC BÁN CHẠY NHẤT MOBIFONE!**\n\n- **4GB data tốc độ cao/ngày** (120GB/tháng)\n- **Miễn phí hoàn toàn** cuộc gọi nội mạng dưới 10 phút\n- **Tặng thêm 20 phút** gọi ngoại mạng mỗi tháng\n- Tự động kết nối mạng **5G siêu tốc**\n- Chỉ **135.000đ/tháng**\n\nĐặc biệt: Hôm nay chỉ còn **12 suất** đăng ký nhận thêm **+10GB data bonus**!\n\nBạn có muốn đăng ký ngay gói cước này để nhận khuyến mại không?`,
     sources: ["mobifone.vn/tk135"],
     quickReplies: ["Đăng ký ngay!", "Xem gói khác", "So sánh với TK99"],
     robotState: "talking",
   };
 
   if (lower.includes("5g") || lower.includes("tốc độ")) return {
-    text: `⚡ **Mạng 5G MobiFone — Trải nghiệm tốc độ ánh sáng!**\n\n🚀 Tốc độ tải thực tế lên tới **1.5 Gbps**\n📡 Phủ sóng diện rộng tại các thành phố lớn\n📶 Không giới hạn data tốc độ cao\n💰 Đa dạng gói cước chỉ từ **99.000đ/tháng**\n\n🎁 Nhận ngay eSIM 5G **miễn phí** khi đăng ký hôm nay!\n\nĐể kích hoạt nhanh, hãy cung cấp số điện thoại của bạn nhé! 📱`,
+    text: `**Mạng 5G MobiFone — Trải nghiệm tốc độ siêu cao!**\n\n- Tốc độ tải thực tế lên tới **1.5 Gbps**\n- Phủ sóng diện rộng tại các thành phố lớn\n- Không giới hạn data tốc độ cao\n- Đa dạng gói cước chỉ từ **99.000đ/tháng**\n\nNhận ngay eSIM 5G **miễn phí** khi đăng ký hôm nay!\n\nĐể kích hoạt nhanh, hãy cung cấp số điện thoại của bạn nhé!`,
     quickReplies: ["Đăng ký eSIM 5G", "Xem vùng phủ sóng", "Gửi số điện thoại"],
     leadCapture: { field: "phone", label: "Số điện thoại nhận tư vấn" },
     robotState: "happy",
   };
 
   if (lower.includes("khuyến mãi") || lower.includes("ưu đãi") || lower.includes("giảm")) return {
-    text: `🎊 **Cơ hội vàng duy nhất hôm nay!**\n\n🔥 Gói cước TK199 giảm trực tiếp **30%** → chỉ còn **139k/tháng**\n🎁 Đổi eSIM **miễn phí hoàn toàn** trực tuyến\n⭐ Hoàn tiền **20%** khi nạp thẻ qua ứng dụng\n\n💡 Ưu đãi độc quyền: Đăng ký qua Mia được tặng thêm **+5GB data** tốc độ cao!\n\nBạn quan tâm đến ưu đãi nào dưới đây? 🎯`,
+    text: `**Cơ hội vàng duy nhất hôm nay!**\n\n- Gói cước TK199 giảm trực tiếp **30%** → chỉ còn **139k/tháng**\n- Đổi eSIM **miễn phí hoàn toàn** trực tuyến\n- Hoàn tiền **20%** khi nạp thẻ qua ứng dụng\n\nƯu đãi độc quyền: Đăng ký qua Mia được tặng thêm **+5GB data** tốc độ cao!\n\nBạn quan tâm đến ưu đãi nào dưới đây?`,
     quickReplies: ["Gói TK199 giảm 30%", "Đổi eSIM miễn phí", "Nạp thẻ nhận hoàn tiền"],
     robotState: "happy",
   };
@@ -82,7 +82,7 @@ function getSalesResponse(text: string, lead: LeadData, user: any): {
   };
 
   if (lower.includes("youtube") || lower.includes("tiktok") || lower.includes("data")) return {
-    text: `📱 Tuyệt vời! Đối với nhu cầu giải trí và xem video liên tục, bạn cần gói cước có **dung lượng lớn & tốc độ ổn định**.\n\n🏆 **Đề xuất tốt nhất dành cho bạn:**\n\n**Gói TK135** — 4GB/ngày, miễn phí data truy cập ứng dụng giải trí chỉ với **4.500đ/ngày**!\n\nBạn có muốn Mia hỗ trợ đăng ký dùng thử 7 ngày miễn phí không? 🎁`,
+    text: `Tuyệt vời! Đối với nhu cầu giải trí và xem video liên tục, bạn cần gói cước có **dung lượng lớn & tốc độ ổn định**.\n\n**Đề xuất tốt nhất dành cho bạn:**\n\n**Gói TK135** — 4GB/ngày, miễn phí data truy cập ứng dụng giải trí chỉ với **4.500đ/ngày**!\n\nBạn có muốn Mia hỗ trợ đăng ký dùng thử 7 ngày miễn phí không?`,
     quickReplies: ["Đăng ký ngay", "Tìm hiểu thêm", "Tư vấn gói nhỏ hơn"],
     robotState: "happy",
   };
@@ -96,19 +96,19 @@ function getSalesResponse(text: string, lead: LeadData, user: any): {
   }
 
   if (lower.match(/^0\d{9}$/)) return {
-    text: `✅ **Mia đã ghi nhận số điện thoại của bạn!**\n\n📞 Chuyên viên tư vấn MobiFone sẽ liên hệ lại với bạn qua số **${text}** trong vòng **15 phút**.\n\n🎁 Quà tặng ưu tiên đi kèm:\n• **Tặng thêm 10GB** data tốc độ cao\n• **Miễn phí** cước phát hành eSIM mới\n\nCảm ơn bạn đã tin tưởng dịch vụ MobiFone! 💙`,
+    text: `**Mia đã ghi nhận số điện thoại của bạn!**\n\nChuyên viên tư vấn MobiFone sẽ liên hệ lại với bạn qua số **${text}** trong vòng **15 phút**.\n\nQuà tặng ưu tiên đi kèm:\n- **Tặng thêm 10GB** data tốc độ cao\n- **Miễn phí** cước phát hành eSIM mới\n\nCảm ơn bạn đã tin tưởng dịch vụ MobiFone!`,
     quickReplies: ["Xem các gói cước khác", "Trở lại trang chủ"],
     robotState: "happy",
   };
 
   if (lower.includes("hỗ trợ") || lower.includes("kỹ thuật") || lower.includes("sự cố")) return {
-    text: `🔧 Mia rất tiếc vì sự bất tiện bạn đang gặp phải!\n\nĐể được xử lý kỹ thuật lập tức:\n📞 **Tổng đài chăm sóc khách hàng:** 18001090 (Miễn phí)\n🏪 Hoặc ghé cửa hàng MobiFone gần nhất.\n\nBạn có thể mô tả cụ thể sự cố để tôi chuyển thông tin tới đội kỹ thuật nhé!`,
+    text: `Mia rất tiếc vì sự bất tiện bạn đang gặp phải!\n\nĐể được xử lý kỹ thuật lập tức:\n- **Tổng đài chăm sóc khách hàng:** 18001090 (Miễn phí)\n- Hoặc ghé cửa hàng MobiFone gần nhất.\n\nBạn có thể mô tả cụ thể sự cố để tôi chuyển thông tin tới đội kỹ thuật nhé!`,
     quickReplies: ["Mất kết nối Internet", "Không nhận được cuộc gọi", "Lỗi thẻ nạp"],
     robotState: "thinking",
   };
 
   return {
-    text: `Tôi đã nhận được thông tin: "${text}".\n\nTôi là chuyên viên chăm sóc khách hàng của MobiFone, tôi luôn sẵn sàng tư vấn gói cước, đăng ký sim 5G và xử lý sự cố. Bạn cần hỗ trợ gì thêm không? 😊`,
+    text: `Tôi đã nhận được thông tin: "${text}".\n\nTôi là chuyên viên chăm sóc khách hàng của MobiFone, tôi luôn sẵn sàng tư vấn gói cước, đăng ký sim 5G và xử lý sự cố. Bạn cần hỗ trợ gì thêm không?`,
     quickReplies: ["Tư vấn gói cước", "Các gói khuyến mãi hot", "Hỗ trợ sự cố"],
     robotState: "idle",
   };
@@ -131,28 +131,83 @@ function TypingBubble() {
 
 function renderText(text: string) {
   if (!text) return "";
-  // 1. Chuyển các gạch đầu dòng dạng "* " hoặc "- " thành "• "
-  const formattedText = text.replace(/^\s*[\*\-]\s+/gm, "• ");
 
-  // 2. Tách chuỗi theo các phần in đậm (**), loại bỏ dấu * đơn lẻ ở phần văn bản thường
-  return formattedText.split(/(\*\*[^*]+\*\*)/g).map((p, i) => {
-    if (p.startsWith("**") && p.endsWith("**")) {
-      return (
-        <strong key={i} style={{ fontWeight: 700, color: "white" }}>
-          {p.slice(2, -2)}
-        </strong>
-      );
-    } else {
-      // Loại bỏ các dấu * đơn lẻ còn sót lại trong văn bản thường
-      const cleanSeg = p.replace(/\*/g, "");
-      return cleanSeg.split("\n").map((l, j, a) => (
-        <span key={`${i}-${j}`}>
-          {l}
-          {j < a.length - 1 && <br />}
-        </span>
-      ));
-    }
-  });
+  // 1. Loại bỏ các icon/emoji để có văn bản sạch, chuyên nghiệp
+  const emojiRegex = /[\u{1F300}-\u{1F9FF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu;
+  let cleanText = text.replace(emojiRegex, "");
+
+  // 2. Tự động chuyển đổi các gạch đầu dòng viết liền dòng sau dấu câu thành xuống dòng để hiển thị đẹp mắt
+  cleanText = cleanText.replace(/([\.\!\?\:])\s*[\-\–\—•\*]\s+/g, "$1\n\n- ");
+  // Thêm dòng trống trước các gạch đầu dòng
+  cleanText = cleanText.replace(/\n\s*([\-\*•–—]\s+)/g, "\n\n$1");
+  // Thêm dòng trống trước danh sách đánh số
+  cleanText = cleanText.replace(/\n\s*(\d+\.\s+)/g, "\n\n$1");
+  // Normalize multiple newlines
+  cleanText = cleanText.replace(/\n{3,}/g, "\n\n");
+
+  // Tránh khoảng trắng thừa đầu cuối
+  cleanText = cleanText.trim();
+
+  // 3. Tách văn bản thành các dòng
+  const lines = cleanText.split("\n");
+
+  const parseInline = (segment: string) => {
+    // Tách theo phần in đậm **
+    return segment.split(/(\*\*[^*]+\*\*)/g).map((part, idx) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={idx} style={{ fontWeight: 700, color: "white" }}>
+            {part.slice(2, -2)}
+          </strong>
+        );
+      } else {
+        // Loại bỏ các dấu * đơn lẻ còn sót lại
+        return part.replace(/\*/g, "");
+      }
+    });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+      {lines.map((line, lineIdx) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          // Tạo khoảng cách dòng trống giữa các đoạn văn thoáng và đẹp mắt
+          return <div key={lineIdx} style={{ height: "8px" }} />;
+        }
+
+        // Kiểm tra gạch đầu dòng dạng bullet: "- ", "* ", "• ", "– ", "— "
+        const bulletMatch = trimmed.match(/^[\-\*•–—]\s+(.*)$/);
+        if (bulletMatch) {
+          return (
+            <div key={lineIdx} style={{ display: "flex", alignItems: "flex-start", gap: "6px", paddingLeft: "8px", margin: "2px 0" }}>
+              <span style={{ color: "#30B0EB", flexShrink: 0, marginTop: "2px" }}>•</span>
+              <span style={{ flex: 1 }}>{parseInline(bulletMatch[1])}</span>
+            </div>
+          );
+        }
+
+        // Kiểm tra gạch đầu dòng dạng số: "1. ", "2. " hoặc "*1. ", etc.
+        const numMatch = trimmed.match(/^(\*?\d+\.?\*?)\s+(.*)$/) || trimmed.match(/^(\d+\.)\s+(.*)$/);
+        if (numMatch) {
+          const numLabel = numMatch[1].replace(/\*/g, ""); // Xóa dấu *
+          return (
+            <div key={lineIdx} style={{ display: "flex", alignItems: "flex-start", gap: "6px", paddingLeft: "8px", margin: "2px 0" }}>
+              <span style={{ color: "#30B0EB", fontWeight: 700, flexShrink: 0 }}>{numLabel}</span>
+              <span style={{ flex: 1 }}>{parseInline(numMatch[2])}</span>
+            </div>
+          );
+        }
+
+        // Dòng văn bản bình thường (Paragraph)
+        return (
+          <div key={lineIdx} style={{ margin: "2px 0", lineHeight: "1.6" }}>
+            {parseInline(trimmed)}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 const DEFAULT_FACEBOOK_PAGE_ID = "1215670604956653";
@@ -224,8 +279,8 @@ export function ChatWidget() {
         id: 1,
         type: "bot",
         text: name
-          ? `Chào mừng **${name}** quay lại với MobiFone! 🎉\n\nHôm nay, bạn có **ưu đãi đặc biệt** dành riêng cho thành viên **${user?.tier}**:\n📶 Gia hạn gói **TK135** → tặng thêm **15GB data**\n⭐ Nhân đôi điểm tích lũy thành viên đến hết tuần này.\n\nBạn cần chuyên viên hỗ trợ tư vấn dịch vụ nào không? 😊`
-          : `Xin chào! Tôi là **Mia** — Chuyên viên chăm sóc khách hàng của MobiFone! 📞✨\n\nHôm nay MobiFone đang có rất nhiều ưu đãi gói cước data tốc độ cao cực hot và dịch vụ eSIM tiện lợi.\n\nBạn đang quan tâm đến gói cước dung lượng lớn hay dịch vụ nào khác của MobiFone, hãy chia sẻ để Mia hỗ trợ bạn ngay nhé! 🎁`,
+          ? `Chào mừng **${name}** quay lại với MobiFone!\n\nHôm nay, bạn có **ưu đãi đặc biệt** dành riêng cho thành viên **${user?.tier}**:\n- Gia hạn gói **TK135** → tặng thêm **15GB data**\n- Nhân đôi điểm tích lũy thành viên đến hết tuần này.\n\nBạn cần chuyên viên hỗ trợ tư vấn dịch vụ nào không?`
+          : `Xin chào! Tôi là **Mia** — Chuyên viên chăm sóc khách hàng của MobiFone!\n\nHôm nay MobiFone đang có rất nhiều ưu đãi gói cước data tốc độ cao cực hot và dịch vụ eSIM tiện lợi.\n\nBạn đang quan tâm đến gói cước dung lượng lớn hay dịch vụ nào khác của MobiFone, hãy chia sẻ để Mia hỗ trợ bạn ngay nhé!`,
         quickReplies: name
           ? ["Gia hạn gói cước", "Kiểm tra ưu đãi", "Cần tư vấn thêm"]
           : ["Đăng ký gói cước", "Đổi eSIM miễn phí", "Xem ưu đãi hot"],

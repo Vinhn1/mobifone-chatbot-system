@@ -368,11 +368,18 @@ export class ChatService {
   // Làm sạch các định dạng markdown cho tin nhắn chat app (Messenger/Zalo)
   private cleanMarkdown(text: string): string {
     if (!text) return '';
-    // 1. Chuyển các gạch đầu dòng dạng "* " hoặc "- " thành "• "
-    let cleaned = text.replace(/^\s*[\*\-]\s+/gm, '• ');
-    // 2. Loại bỏ các dấu * dùng để in đậm/in nghiêng
+    // 0. Đảm bảo xuống dòng trước các dấu gạch đầu dòng / chấm tròn nếu chúng đang viết liền trên cùng một dòng
+    let cleaned = text.replace(/([\.\!\?\:])\s*[\-\–\—•\*]\s+/g, "$1\n\n- ");
+    // 1. Chuyển các gạch đầu dòng dạng "* " hoặc "• " hoặc "– " hoặc "— " hoặc "+ " thành "- " để hiển thị chuẩn và đẹp trên Zalo
+    cleaned = cleaned.replace(/^\s*[\*\-\–\—•\+]\s+/gm, '- ');
+    // 2. Chuyển đổi các dòng gạch đầu dòng / danh sách số để ngăn cách bằng dòng trống (tránh dính liền)
+    cleaned = cleaned.replace(/\n\s*([\-\+\•]\s+)/g, '\n\n- ');
+    cleaned = cleaned.replace(/\n\s*(\d+\.\s+)/g, '\n\n$1');
+    // Normalize newlines to avoid excessive blank lines
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+    // 3. Loại bỏ các dấu * dùng để in đậm/in nghiêng vì chat app (Zalo/FB) không hỗ trợ
     cleaned = cleaned.replace(/\*/g, '');
-    return cleaned;
+    return cleaned.trim();
   }
 
   // Xử lý tin nhắn đến từ Facebook Messenger Webhook

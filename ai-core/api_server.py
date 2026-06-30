@@ -356,7 +356,20 @@ async def upload_document(file: UploadFile = File(...)):
         elif file_ext in [".docx", ".doc"]:
             import docx
             doc = docx.Document(temp_file_path)
-            text_content = "\n".join([p.text for p in doc.paragraphs])
+            docx_parts = []
+            for p in doc.paragraphs:
+                if p.text.strip():
+                    docx_parts.append(p.text)
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = [cell.text.strip().replace("\n", " ") for cell in row.cells]
+                    # Loại bỏ các ô trùng lặp liên tiếp do merge cell để văn bản sạch hơn
+                    cleaned_row = []
+                    for val in row_text:
+                        if not cleaned_row or val != cleaned_row[-1]:
+                            cleaned_row.append(val)
+                    docx_parts.append(" | ".join(cleaned_row))
+            text_content = "\n".join(docx_parts)
         elif file_ext in [".xlsx", ".xls"]:
             import pandas as pd
             df_dict = pd.read_excel(temp_file_path, sheet_name=None)
