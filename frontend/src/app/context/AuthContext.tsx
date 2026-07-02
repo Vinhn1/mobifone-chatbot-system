@@ -23,15 +23,17 @@ export type AuthUser = {
   joinDate: string;
   address: string;
   dob: string;
+  twoFaEnabled?: boolean;
 };
 
 type AuthContextType = {
   user: AuthUser | null;
   token: string | null;
-  login: (identifier: string, password: string) => Promise<"user" | "admin" | "error">;
+  login: (identifier: string, password: string) => Promise<"user" | "admin" | "require_2fa" | "error">;
   register: (phone: string, password: string, name?: string) => Promise<"success" | "error">;
   logout: () => void;
   updateUser: (patch: Partial<AuthUser>) => void;
+  verify2faLogin: (username: string, otpCode: string) => Promise<"admin" | "error">;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -41,6 +43,7 @@ const AuthContext = createContext<AuthContextType>({
   register: async () => "error",
   logout: () => {},
   updateUser: () => {},
+  verify2faLogin: async () => "error",
 });
 
 const API_BASE = "http://localhost:3000";
@@ -66,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
       (error) => {
-        const isLoginRequest = error.config?.url?.includes("/auth/login");
+        const isLoginRequest = error.config?.url?.includes("/auth/login") || error.config?.url?.includes("/auth/verify-2fa");
         if (error.response?.status === 401 && !isLoginRequest) {
           // Token hết hạn hoặc không hợp lệ → logout
           localStorage.removeItem("mobifone_admin_token");
@@ -163,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 address: adminData.address || "MobiFone HQ, Hà Nội",
                 dob: adminData.dob || "1988-05-12",
                 avatar: adminData.avatar || undefined,
+                twoFaEnabled: adminData.twoFaEnabled || false,
               };
               localStorage.setItem("mobifone_admin_user", JSON.stringify(mappedUser));
               return mappedUser;
@@ -178,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchAdminProfile();
   }, []);
 
-  const login = async (identifier: string, password: string): Promise<"user" | "admin" | "error"> => {
+  const login = async (identifier: string, password: string): Promise<"user" | "admin" | "require_2fa" | "error"> => {
     // Chỉ xóa các token phiên làm việc đang có
     localStorage.removeItem("mobifone_admin_token");
     localStorage.removeItem("mobifone_portal_token");
@@ -194,6 +198,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           username: "admin",
           password: password,
         });
+        
+        if (response.data?.require2fa) {
+          return "require_2fa";
+        }
+
         const apiToken = response.data?.access_token;
         const apiUser = response.data?.user;
         if (apiToken && apiUser) {
@@ -219,6 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             address: apiUser.address || "MobiFone HQ, Hà Nội",
             dob: apiUser.dob || "1988-05-12",
             avatar: apiUser.avatar || undefined,
+            twoFaEnabled: apiUser.twoFaEnabled || false,
           };
           localStorage.setItem("mobifone_admin_user", JSON.stringify(adminUser));
           setUser(adminUser);
@@ -276,6 +286,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return "error";
   };
 
+  const verify2faLogin = async (username: string, otpCode: string): Promise<"admin" | "error"> => {
+    try {
+      const response = await axios.post(`${API_BASE}/auth/verify-2fa`, {
+        username,
+        otpCode,
+      });
+      const apiToken = response.data?.access_token;
+      const apiUser = response.data?.user;
+      if (apiToken && apiUser) {
+        localStorage.setItem("mobifone_admin_token", apiToken);
+        setToken(apiToken);
+        const adminUser: AuthUser = {
+          id: String(apiUser.id),
+          name: apiUser.name || "MobiFone Administrator",
+          phone: apiUser.phone || "0987654321",
+          email: apiUser.email || "admin@mobifone.vn",
+          role: "admin",
+          tier: "Diamond",
+          package: "Staff",
+          packageCode: "STAFF",
+          packageExpiry: "31/12/2026",
+          dataUsedGB: 0,
+          dataTotalGB: 0,
+          voiceUsedMin: 0,
+          voiceTotalMin: 0,
+          balance: 0,
+          points: 0,
+          joinDate: "01/01/2020",
+          address: apiUser.address || "MobiFone HQ, Hà Nội",
+          dob: apiUser.dob || "1988-05-12",
+          avatar: apiUser.avatar || undefined,
+          twoFaEnabled: apiUser.twoFaEnabled || false,
+        };
+        localStorage.setItem("mobifone_admin_user", JSON.stringify(adminUser));
+        setUser(adminUser);
+        return "admin";
+      }
+      return "error";
+    } catch (error) {
+      console.error("Lỗi xác thực OTP 2FA login:", error);
+      return "error";
+    }
+  };
+
   const register = async (phone: string, password: string, name?: string): Promise<"success" | "error"> => {
     try {
       await axios.post(`${API_BASE}/auth/register`, {
@@ -315,7 +369,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, updateUser, verify2faLogin }}>
       {children}
     </AuthContext.Provider>
   );

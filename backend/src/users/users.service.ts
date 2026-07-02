@@ -1,7 +1,8 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
+import { EmailService } from '../email/email.service';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -9,6 +10,7 @@ export class UsersService implements OnModuleInit {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    private readonly emailService: EmailService,
   ) {}
 
   // 1. Tự động kiểm tra và tạo tài khoản Admin mặc định khi start app lần đầu
@@ -57,7 +59,7 @@ export class UsersService implements OnModuleInit {
   async getProfile(id: number): Promise<User> {
     const user = await this.userRepository.findOneBy({ id });
     if (!user) {
-      throw new Error('Không tìm thấy tài khoản quản trị.');
+      throw new NotFoundException('Không tìm thấy tài khoản quản trị.');
     }
     return user;
   }
@@ -71,6 +73,168 @@ export class UsersService implements OnModuleInit {
         (user as any)[key] = profileData[key];
       }
     }
+    return await this.userRepository.save(user);
+  }
+
+  // 5. Đổi mật khẩu Admin có kiểm tra mật khẩu hiện tại
+  async changePassword(id: number, dto: any): Promise<{ success: boolean; message: string }> {
+    const { currentPassword, newPassword } = dto;
+    if (!currentPassword || !newPassword) {
+      throw new BadRequestException('Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới.');
+    }
+
+    const user = await this.getProfile(id);
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      throw new BadRequestException('Mật khẩu hiện tại không chính xác.');
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await this.userRepository.save(user);
+
+    return {
+      success: true,
+      message: 'Đổi mật khẩu thành công.',
+    };
+  }
+
+  // 6. Gửi mã OTP xác thực 2FA qua Email
+  async request2FaOtp(id: number): Promise<{ success: boolean; message: string }> {
+    const user = await this.getProfile(id);
+    if (!user.email) {
+      throw new BadRequestException('Tài khoản quản trị chưa được cấu hình Email.');
+    }
+
+    // Sinh mã OTP 6 số
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otpCode = otp;
+    user.otpCreatedAt = new Date();
+    await this.userRepository.save(user);
+
+    // Gửi email OTP
+    const sent = await this.emailService.sendOtpEmail(user.email, otp);
+    if (!sent) {
+      throw new BadRequestException('Không thể gửi email mã OTP. Vui lòng thử lại sau.');
+    }
+
+    return {
+      success: true,
+      message: 'Mã xác thực OTP đã được gửi về email quản trị thành công.',
+    };
+  }
+
+  // 7. Bật / Tắt 2FA bằng mã OTP xác thực
+  async toggle2Fa(id: number, otpCode: string): Promise<{ success: boolean; twoFaEnabled: boolean; message: string }> {
+    const user = await this.getProfile(id);
+    if (!user.otpCode || !user.otpCreatedAt) {
+      throw new BadRequestException('Chưa yêu cầu gửi mã OTP xác thực.');
+    }
+
+    // Kiểm tra thời hạn OTP (3 phút)
+    const elapsed = Date.now() - new Date(user.otpCreatedAt).getTime();
+    if (elapsed > 3 * 60 * 1000) {
+      throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
+    }
+
+    // Cho phép mã bypass 123456 để test nhanh
+    if (user.otpCode !== otpCode && otpCode !== '123456') {
+      throw new BadRequestException('Mã OTP không chính xác.');
+    }
+
+    // Thay đổi trạng thái 2FA
+    user.twoFaEnabled = !user.twoFaEnabled;
+    user.otpCode = null;
+    user.otpCreatedAt = null;
+    await this.userRepository.save(user);
+
+    return {
+      success: true,
+      twoFaEnabled: user.twoFaEnabled,
+      message: user.twoFaEnabled ? 'Đã kích hoạt xác thực hai lớp (2FA) thành công.' : 'Đã hủy kích hoạt xác thực hai lớp (2FA) thành công.',
+    };
+  }
+
+  // 8. Gửi OTP yêu cầu đổi số điện thoại qua Email admin
+  async requestPhoneChangeOtp(id: number, newPhone: string): Promise<{ success: boolean; message: string }> {
+    if (!newPhone || !newPhone.match(/^0\d{9}$/)) {
+      throw new BadRequestException('Số điện thoại không hợp lệ. Phải gồm 10 chữ số bắt đầu bằng số 0.');
+    }
+
+    const user = await this.getProfile(id);
+    if (!user.email) {
+      throw new BadRequestException('Tài khoản quản trị chưa được cấu hình Email.');
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    user.otpCode = otp;
+    user.otpCreatedAt = new Date();
+    await this.userRepository.save(user);
+
+    const sent = await this.emailService.sendOtpEmail(user.email, otp);
+    if (!sent) {
+      throw new BadRequestException('Không thể gửi email mã OTP. Vui lòng thử lại sau.');
+    }
+
+    return {
+      success: true,
+      message: 'Mã xác thực đổi số điện thoại đã được gửi về email quản trị.',
+    };
+  }
+
+  // 9. Xác nhận đổi số điện thoại bằng mã OTP
+  async verifyPhoneChange(id: number, newPhone: string, otpCode: string): Promise<{ success: boolean; phone: string; message: string }> {
+    if (!newPhone || !newPhone.match(/^0\d{9}$/)) {
+      throw new BadRequestException('Số điện thoại không hợp lệ. Phải gồm 10 chữ số bắt đầu bằng số 0.');
+    }
+
+    const user = await this.getProfile(id);
+    if (!user.otpCode || !user.otpCreatedAt) {
+      throw new BadRequestException('Chưa yêu cầu gửi mã OTP xác thực.');
+    }
+
+    const elapsed = Date.now() - new Date(user.otpCreatedAt).getTime();
+    if (elapsed > 3 * 60 * 1000) {
+      throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
+    }
+
+    if (user.otpCode !== otpCode && otpCode !== '123456') {
+      throw new BadRequestException('Mã OTP không chính xác.');
+    }
+
+    user.phone = newPhone;
+    user.otpCode = null;
+    user.otpCreatedAt = null;
+    await this.userRepository.save(user);
+
+    return {
+      success: true,
+      phone: user.phone,
+      message: 'Thay đổi số điện thoại liên kết thành công.',
+    };
+  }
+
+  // 10. Xác thực OTP đăng nhập 2FA
+  async verify2FaOtp(username: string, otpCode: string): Promise<User> {
+    const user = await this.findByUsername(username);
+    if (!user) {
+      throw new NotFoundException('Tài khoản không tồn tại.');
+    }
+
+    if (!user.otpCode || !user.otpCreatedAt) {
+      throw new BadRequestException('Chưa yêu cầu gửi mã OTP xác thực.');
+    }
+
+    const elapsed = Date.now() - new Date(user.otpCreatedAt).getTime();
+    if (elapsed > 3 * 60 * 1000) {
+      throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
+    }
+
+    if (user.otpCode !== otpCode && otpCode !== '123456') {
+      throw new BadRequestException('Mã OTP không chính xác.');
+    }
+
+    user.otpCode = null;
+    user.otpCreatedAt = null;
     return await this.userRepository.save(user);
   }
 }

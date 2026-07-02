@@ -35,6 +35,19 @@ export class User {
   @Column({ type: 'text', nullable: true })
   avatar: string | null;
 
+  // Trạng thái kích hoạt xác thực hai lớp (2FA)
+  @Column({ name: 'two_fa_enabled', type: 'boolean', default: false })
+  twoFaEnabled: boolean;
+
+  // Mã OTP phục vụ xác thực 2FA / đổi số điện thoại nhận qua email
+  @Column({ name: 'otp_code', type: 'varchar', nullable: true })
+  otpCode: string | null;
+
+  // Thời gian tạo mã OTP để tính hết hạn (mặc định hiệu lực trong 3 phút)
+  @Column({ name: 'otp_created_at', type: 'timestamp with time zone', nullable: true })
+  otpCreatedAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
+

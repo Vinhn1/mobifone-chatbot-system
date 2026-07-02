@@ -17,8 +17,22 @@ export class AuthController {
       throw new UnauthorizedException('Tài khoản hoặc mật khẩu không chính xác');
     }
 
+    // 1b. Nếu đã kích hoạt 2FA, yêu cầu mã OTP
+    if (user.twoFaEnabled) {
+      await this.authService.sendLogin2FaOtp(user.id);
+      return { require2fa: true, username: user.username };
+    }
+
     // 2. Sinh và trả về JWT Token
     return this.authService.login(user);
+  }
+
+  // Route POST /auth/verify-2fa để hoàn tất đăng nhập sau khi nhập OTP
+  @Post('verify-2fa')
+  @HttpCode(HttpStatus.OK)
+  async verify2Fa(@Body() body: any) {
+    const { username, otpCode } = body;
+    return await this.authService.verify2FaLogin(username, otpCode);
   }
 
   @Post('register')
@@ -28,4 +42,5 @@ export class AuthController {
     return await this.authService.registerSubscriber(username, password, name);
   }
 }
+
 

@@ -86,7 +86,10 @@ function LoginForm() {
   const [id, setId] = useState("");
   const [pw, setPw] = useState("");
   const [error, setError] = useState("");
-  const { login } = useAuth();
+  const [is2faRequired, setIs2faRequired] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const { login, verify2faLogin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async () => {
@@ -94,11 +97,77 @@ function LoginForm() {
       setError("Vui lòng nhập đầy đủ thông tin");
       return;
     }
+    setError("");
     const role = await login(id, pw);
-    if (role === "admin") navigate("/admin");
-    else if (role === "user") navigate("/dashboard");
-    else setError("Thông tin đăng nhập không chính xác");
+    if (role === "admin") {
+      navigate("/admin");
+    } else if (role === "user") {
+      navigate("/dashboard");
+    } else if (role === "require_2fa") {
+      setIs2faRequired(true);
+    } else {
+      setError("Thông tin đăng nhập không chính xác");
+    }
   };
+
+  const handleVerify2fa = async () => {
+    if (otp.length !== 6) {
+      setError("Vui lòng nhập đầy đủ mã OTP 6 chữ số");
+      return;
+    }
+    setIsVerifying(true);
+    setError("");
+    const role = await verify2faLogin("admin", otp);
+    if (role === "admin") {
+      navigate("/admin");
+    } else {
+      setError("Mã OTP không chính xác hoặc đã hết hạn");
+      setIsVerifying(false);
+    }
+  };
+
+  if (is2faRequired) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="text-center">
+          <p className="text-slate-500 text-xs sm:text-sm font-semibold mb-3">
+            Mã OTP xác thực 2 lớp đã được gửi đến email đăng ký của bạn. Vui lòng nhập mã để hoàn tất đăng nhập.
+          </p>
+        </div>
+
+        <OTPBoxes value={otp} onChange={setOtp} />
+
+        {error && (
+          <div className="text-red-600 text-xs bg-red-50 border border-red-100 rounded-lg p-2.5 font-semibold">
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={handleVerify2fa}
+          disabled={otp.length !== 6 || isVerifying}
+          className={`w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm shadow-md transition-all duration-200 border-none flex items-center justify-center gap-2 ${
+            otp.length === 6 && !isVerifying
+              ? "cursor-pointer opacity-100 hover:shadow-lg shadow-red-500/20 active:scale-98"
+              : "cursor-not-allowed opacity-50"
+          }`}
+        >
+          {isVerifying ? "Đang xác thực..." : "Xác thực OTP 2FA"} <ArrowRight size={17} />
+        </button>
+
+        <button
+          onClick={() => {
+            setIs2faRequired(false);
+            setOtp("");
+            setError("");
+          }}
+          className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-600 text-xs font-bold flex items-center gap-1 justify-center mt-2"
+        >
+          <ChevronLeft size={14} /> Quay lại đăng nhập
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -138,6 +207,7 @@ function LoginForm() {
     </div>
   );
 }
+
 
 function OTPBoxes({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (

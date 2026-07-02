@@ -45,8 +45,21 @@ export class AuthService {
         address: user.address,
         dob: user.dob,
         avatar: user.avatar,
+        twoFaEnabled: user.twoFaEnabled,
       },
     };
   }
+
+  // 3. Gửi OTP 2FA khi đăng nhập
+  async sendLogin2FaOtp(userId: number) {
+    return await this.usersService.request2FaOtp(userId);
+  }
+
+  // 4. Xác nhận đăng nhập bằng OTP 2FA
+  async verify2FaLogin(username: string, otpCode: string) {
+    const user = await this.usersService.verify2FaOtp(username, otpCode);
+    return this.login(user);
+  }
 }
+
 
