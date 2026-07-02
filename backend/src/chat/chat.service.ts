@@ -224,10 +224,13 @@ export class ChatService {
   async uploadDocument(file: any) {
     const aiServiceUrl = this.getAiServiceUrl('/upload');
     
+    // Giải mã tên file từ latin1 sang utf8 để tránh lỗi hiển thị tiếng Việt của Multer
+    const originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    
     // Phát trạng thái bắt đầu đồng bộ
     try {
       this.notificationsService.emitNotification('doc-status', {
-        name: file.originalname,
+        name: originalname,
         status: 'processing',
         progress: 30,
         message: 'Đang tải file và trích xuất dữ liệu...',
@@ -239,7 +242,7 @@ export class ChatService {
     // Sử dụng standard Node.js/Web FormData
     const formData = new FormData();
     const blob = new Blob([file.buffer], { type: file.mimetype });
-    formData.append('file', blob, file.originalname);
+    formData.append('file', blob, originalname);
 
     try {
       const response = await firstValueFrom(
@@ -250,7 +253,7 @@ export class ChatService {
 
       // Lưu trữ/đồng bộ hóa các gói cước trích xuất được từ tài liệu vào cơ sở dữ liệu
       if (resultData && resultData.packages && Array.isArray(resultData.packages)) {
-        console.log(`[SYNC] Trích xuất được ${resultData.packages.length} gói cước từ file '${file.originalname}'. Bắt đầu đồng bộ...`);
+        console.log(`[SYNC] Trích xuất được ${resultData.packages.length} gói cước từ file '${originalname}'. Bắt đầu đồng bộ...`);
         for (const pkg of resultData.packages) {
           if (!pkg.id) continue;
           
@@ -302,7 +305,7 @@ export class ChatService {
       // Phát trạng thái đồng bộ thành công
       try {
         this.notificationsService.emitNotification('doc-status', {
-          name: file.originalname,
+          name: originalname,
           status: 'synced',
           progress: 100,
           message: 'Đã hoàn thành đồng bộ tri thức!',
@@ -316,7 +319,7 @@ export class ChatService {
       // Phát trạng thái đồng bộ lỗi
       try {
         this.notificationsService.emitNotification('doc-status', {
-          name: file.originalname,
+          name: originalname,
           status: 'error',
           progress: 0,
           message: `Lỗi nạp tri thức: ${error.message || 'Lỗi kết nối AI Service'}`,
