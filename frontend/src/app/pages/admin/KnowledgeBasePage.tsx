@@ -276,11 +276,37 @@ export function KnowledgeBasePage() {
   const totalVectors = docs.filter(d => d.status === "Synced").reduce((a, d) => a + d.vectors, 0);
   const totalDocs = docs.filter(d => d.status === "Synced").length;
 
-  const filtered = docs.filter(d => {
-    const matchSearch = d.name.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = filter === "all" || d.status === filter;
-    return matchSearch && matchFilter;
-  });
+  const parseDocDate = (d: Doc) => {
+    if (d.status === "chunking" || d.status === "vectorizing") return Infinity;
+    if (d.upload_date === "Vừa xong" || d.upload_date === "Hôm nay") return Infinity - 1;
+    if (!d.upload_date || d.upload_date === "N/A") return 0;
+    
+    const parts = d.upload_date.split(" ");
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const monthStr = parts[1];
+      const year = parseInt(parts[2], 10);
+      const months: { [key: string]: number } = {
+        Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
+        Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
+      };
+      const month = months[monthStr] !== undefined ? months[monthStr] : 0;
+      return new Date(year, month, day).getTime();
+    }
+    return 0;
+  };
+
+  const filtered = docs
+    .filter(d => {
+      const matchSearch = d.name.toLowerCase().includes(search.toLowerCase());
+      const matchFilter = filter === "all" || d.status === filter;
+      return matchSearch && matchFilter;
+    })
+    .sort((a, b) => {
+      const diff = parseDocDate(b) - parseDocDate(a);
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name);
+    });
 
   return (
     <div className="font-outfit flex flex-col gap-5 pb-8">

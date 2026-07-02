@@ -293,6 +293,7 @@ def get_documents():
             doc_type = meta.get("type", "UNKNOWN")
             size_bytes = meta.get("size_bytes", 0)
             upload_date = meta.get("upload_date", "N/A")
+            timestamp = meta.get("timestamp", 0)
             
             if title not in docs_dict:
                 docs_dict[title] = {
@@ -303,13 +304,38 @@ def get_documents():
                     "progress": 100,
                     "chunks": 0,
                     "vectors": 0,
-                    "upload_date": upload_date
+                    "upload_date": upload_date,
+                    "timestamp": timestamp
                 }
             
             docs_dict[title]["chunks"] += 1
             docs_dict[title]["vectors"] += 1
             
-        return list(docs_dict.values())
+            # Cập nhật timestamp lớn nhất nếu trùng tên
+            if timestamp > docs_dict[title].get("timestamp", 0):
+                docs_dict[title]["timestamp"] = timestamp
+                docs_dict[title]["upload_date"] = upload_date
+            
+        import datetime
+        docs_list = list(docs_dict.values())
+        
+        def get_sort_key(doc):
+            ts = doc.get("timestamp", 0)
+            if not ts:
+                date_str = doc.get("upload_date", "N/A")
+                if date_str != "N/A":
+                    try:
+                        dt = datetime.datetime.strptime(date_str, "%d %b %Y")
+                        ts = int(dt.timestamp())
+                    except Exception:
+                        ts = 0
+            return ts
+            
+        # Sắp xếp ổn định (stable sort): theo tên tăng dần trước, sau đó theo timestamp giảm dần
+        docs_list.sort(key=lambda x: x.get("name", "").lower())
+        docs_list.sort(key=get_sort_key, reverse=True)
+        
+        return docs_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi truy xuất tài liệu: {e}")
 
@@ -583,6 +609,7 @@ async def upload_document(file: UploadFile = File(...)):
                 "type": "PPTX",
                 "size_bytes": size_bytes,
                 "upload_date": upload_date,
+                "timestamp": int(time.time()),
                 "slide_index": item["metadata"]["slide_index"],
                 "images": item["metadata"]["images"]
             })
@@ -614,6 +641,7 @@ async def upload_document(file: UploadFile = File(...)):
                 "type": file_ext.replace(".", "").upper(),
                 "size_bytes": size_bytes,
                 "upload_date": upload_date,
+                "timestamp": int(time.time()),
                 "images": chunk_images
             })
             ids.append(f"upload_{filename}_{int(time.time())}_{idx}")
