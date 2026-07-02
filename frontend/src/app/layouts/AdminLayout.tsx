@@ -7,14 +7,15 @@ import {
   LogOut, Zap, Bot, ChevronDown, User
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import axios from "axios";
 
 const NAV_GROUPS = [
   {
     label: "CRM & LEADS",
     items: [
       { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
-      { icon: Users, label: "Leads & Khách hàng", path: "/admin/leads", badge: "24" },
-      { icon: MessageSquare, label: "Hội thoại Bot", path: "/admin/conversations", badge: "3" },
+      { icon: Users, label: "Leads & Khách hàng", path: "/admin/leads" },
+      { icon: MessageSquare, label: "Hội thoại Bot", path: "/admin/conversations" },
     ]
   },
   {
@@ -38,6 +39,99 @@ export function AdminLayout() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [toast, setToast] = useState<{ message: string; visible: boolean; type?: string } | null>(null);
 
+  // States cho các chỉ số thông báo thời gian thực
+  const [leadsCount, setLeadsCount] = useState<number>(0);
+  const [activeChatsCount, setActiveChatsCount] = useState<number>(0);
+  const [chatSessionsActivity, setChatSessionsActivity] = useState<Record<string, number>>({});
+
+  // 1. Tải số lượng leads chưa liên hệ và lịch sử hội thoại ban đầu để khởi tạo đếm
+  useEffect(() => {
+    const adminToken = localStorage.getItem("mobifone_admin_token");
+    if (!adminToken) return;
+
+    const config = {
+      headers: { Authorization: `Bearer ${adminToken}` },
+    };
+
+    // Tải danh sách leads thực tế và lọc các lead có trạng thái "Chưa liên hệ"
+    axios.get("http://localhost:3000/leads", config)
+      .then(res => {
+        const list = res.data || [];
+        const uncontacted = list.filter((l: any) => l.status === "Chưa liên hệ" || l.status === "new");
+        setLeadsCount(uncontacted.length);
+      })
+      .catch(err => console.error("Lỗi khi tải leads count ban đầu:", err));
+
+    // Tải lịch sử chat để khởi tạo bản đồ hoạt động các phiên chat
+    axios.get("http://localhost:3000/chat/history", config)
+      .then(res => {
+        const rawLogs = res.data || [];
+        const activityMap: Record<string, number> = {};
+        
+        rawLogs.forEach((log: any) => {
+          const t = new Date(log.createdAt).getTime();
+          if (!activityMap[log.sessionId] || t > activityMap[log.sessionId]) {
+            activityMap[log.sessionId] = t;
+          }
+        });
+
+        setChatSessionsActivity(activityMap);
+
+        // Tính toán số phiên hoạt động trong 10 phút gần nhất
+        const now = Date.now();
+        const tenMinsMs = 10 * 60 * 1000;
+        let active = 0;
+        Object.values(activityMap).forEach(time => {
+          if (now - time < tenMinsMs) {
+            active++;
+          }
+        });
+        setActiveChatsCount(active);
+      })
+      .catch(err => console.error("Lỗi khi tải chat history count ban đầu:", err));
+  }, [user]);
+
+  // 2. Lắng nghe sự kiện thay đổi trạng thái lead để cập nhật số lượng leads tức thì
+  useEffect(() => {
+    const handleLeadStatusUpdate = () => {
+      const adminToken = localStorage.getItem("mobifone_admin_token");
+      if (!adminToken) return;
+      const config = {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      };
+      axios.get("http://localhost:3000/leads", config)
+        .then(res => {
+          const list = res.data || [];
+          const uncontacted = list.filter((l: any) => l.status === "Chưa liên hệ" || l.status === "new");
+          setLeadsCount(uncontacted.length);
+        })
+        .catch(err => console.error("Lỗi khi đồng bộ leads count sau khi update:", err));
+    };
+
+    window.addEventListener('lead-status-updated', handleLeadStatusUpdate);
+    return () => {
+      window.removeEventListener('lead-status-updated', handleLeadStatusUpdate);
+    };
+  }, []);
+
+  // 3. Tự động tính toán lại số lượng phiên hoạt động mỗi 30 giây
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const tenMinsMs = 10 * 60 * 1000;
+      let active = 0;
+      Object.values(chatSessionsActivity).forEach(time => {
+        if (now - time < tenMinsMs) {
+          active++;
+        }
+      });
+      setActiveChatsCount(active);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [chatSessionsActivity]);
+
+  // 4. Kết nối SSE để nhận sự kiện realtime từ Backend
   useEffect(() => {
     const adminToken = localStorage.getItem("mobifone_admin_token");
     if (!adminToken) return;
@@ -57,17 +151,42 @@ export function AdminLayout() {
         
         setNotifications(prev => [newNotif, ...prev].slice(0, 50));
 
-        // Hiển thị Toast
+        // Xử lý hiển thị Toast và cập nhật các chỉ số thông báo thời gian thực
         if (data.type === 'new-lead') {
           setToast({
             message: `Khách hàng mới: ${data.payload.phone} vừa quan tâm gói cước!`,
             visible: true,
             type: 'lead'
           });
+          
+          // Cộng thêm vào leadsCount nếu là lead mới chưa liên hệ
+          if (data.payload.status === "Chưa liên hệ" || data.payload.status === "new") {
+            setLeadsCount(prev => prev + 1);
+          }
+        } else if (data.type === 'new-message') {
+          // data.payload có cấu trúc: { sessionId, sender, message }
+          const sessId = data.payload.sessionId || 'anonymous';
+          const now = Date.now();
+
+          // Cập nhật bản đồ thời gian hoạt động của các phiên
+          setChatSessionsActivity(prev => {
+            const updated = { ...prev, [sessId]: now };
+            
+            // Tính toán lại ngay lập tức số phiên đang active
+            const tenMinsMs = 10 * 60 * 1000;
+            let active = 0;
+            Object.values(updated).forEach(time => {
+              if (now - time < tenMinsMs) {
+                active++;
+              }
+            });
+            setActiveChatsCount(active);
+            return updated;
+          });
         } else if (data.type === 'doc-status') {
           setToast({
             message: `${data.payload.name}: ${data.payload.message}`,
-            visible: data.payload.status !== 'synced', // Show toast if not immediately done, or just show everything
+            visible: data.payload.status !== 'synced',
             type: 'doc'
           });
         }
@@ -295,7 +414,7 @@ export function AdminLayout() {
             }} />
             <div>
               <div style={{ color: "#22C55E", fontSize: 11, fontWeight: 700 }}>Mia đang chạy</div>
-              <div style={{ color: "rgba(255, 255, 255, 0.35)", fontSize: 10, marginTop: 1 }}>5 phiên hoạt động</div>
+              <div style={{ color: "rgba(255, 255, 255, 0.35)", fontSize: 10, marginTop: 1 }}>{activeChatsCount} phiên hoạt động</div>
             </div>
             <style>{`
               @keyframes pulse {
@@ -328,55 +447,64 @@ export function AdminLayout() {
                   textTransform: "uppercase"
                 }}>{group.label}</div>
               )}
-              {group.items.map(({ icon: Icon, label, path, badge }) => (
-                <NavLink
-                  key={path}
-                  to={path}
-                  end={path === "/admin"}
-                  style={({ isActive }) => ({
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: collapsed ? "12px" : "10px 14px",
-                    borderRadius: 12,
-                    textDecoration: "none",
-                    justifyContent: collapsed ? "center" : "flex-start",
-                    background: isActive ? "linear-gradient(135deg, #0055A5, #0077D5)" : "transparent",
-                    border: isActive ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid transparent",
-                    color: isActive ? "white" : "rgba(255, 255, 255, 0.5)",
-                    boxShadow: isActive ? "0 8px 20px rgba(0, 85, 165, 0.25)" : "none",
-                    transition: "all 0.2s ease",
-                    position: "relative",
-                  })}
-                  className="sidebar-link"
-                >
-                  <Icon size={18} style={{ flexShrink: 0 }} />
-                  {!collapsed && <span style={{ fontWeight: 600, fontSize: 13.5, flex: 1 }}>{label}</span>}
-                  {!collapsed && badge && (
-                    <span style={{
-                      background: "#EF4444",
-                      color: "white",
-                      borderRadius: 20,
-                      padding: "1px 7px",
-                      fontSize: 10,
-                      fontWeight: 800,
-                      flexShrink: 0
-                    }}>{badge}</span>
-                  )}
-                  {collapsed && badge && (
-                    <div style={{
-                      position: "absolute",
-                      top: 8,
-                      right: 8,
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      background: "#EF4444",
-                      boxShadow: "0 0 6px #EF4444"
-                    }} />
-                  )}
-                </NavLink>
-              ))}
+              {group.items.map(({ icon: Icon, label, path }) => {
+                // Xác định badge động cho các trang quản trị
+                const dynamicBadge = path === "/admin/leads"
+                  ? (leadsCount > 0 ? leadsCount.toString() : undefined)
+                  : path === "/admin/conversations"
+                    ? (activeChatsCount > 0 ? activeChatsCount.toString() : undefined)
+                    : undefined;
+
+                return (
+                  <NavLink
+                    key={path}
+                    to={path}
+                    end={path === "/admin"}
+                    style={({ isActive }) => ({
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: collapsed ? "12px" : "10px 14px",
+                      borderRadius: 12,
+                      textDecoration: "none",
+                      justifyContent: collapsed ? "center" : "flex-start",
+                      background: isActive ? "linear-gradient(135deg, #0055A5, #0077D5)" : "transparent",
+                      border: isActive ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid transparent",
+                      color: isActive ? "white" : "rgba(255, 255, 255, 0.5)",
+                      boxShadow: isActive ? "0 8px 20px rgba(0, 85, 165, 0.25)" : "none",
+                      transition: "all 0.2s ease",
+                      position: "relative",
+                    })}
+                    className="sidebar-link"
+                  >
+                    <Icon size={18} style={{ flexShrink: 0 }} />
+                    {!collapsed && <span style={{ fontWeight: 600, fontSize: 13.5, flex: 1 }}>{label}</span>}
+                    {!collapsed && dynamicBadge && (
+                      <span style={{
+                        background: "#EF4444",
+                        color: "white",
+                        borderRadius: 20,
+                        padding: "1px 7px",
+                        fontSize: 10,
+                        fontWeight: 800,
+                        flexShrink: 0
+                      }}>{dynamicBadge}</span>
+                    )}
+                    {collapsed && dynamicBadge && (
+                      <div style={{
+                        position: "absolute",
+                        top: 8,
+                        right: 8,
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: "#EF4444",
+                        boxShadow: "0 0 6px #EF4444"
+                      }} />
+                    )}
+                  </NavLink>
+                );
+              })}
             </div>
           ))}
         </nav>

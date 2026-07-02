@@ -505,6 +505,9 @@ export function LeadsPage() {
       const newStatus = mapStageToStatus(newStage);
       await axios.patch(`http://localhost:3000/leads/${id}/status`, { status: newStatus }, config);
       
+      // Phát sự kiện custom event để Sidebar AdminLayout tự động đồng bộ lại số lượng Leads chưa liên hệ
+      window.dispatchEvent(new CustomEvent('lead-status-updated', { detail: { id, stage: newStage } }));
+
       setLeads(prev => prev.map(l => l.id === id ? { ...l, stage: newStage } : l));
       if (selectedLead && selectedLead.id === id) {
         setSelectedLead(prev => prev ? { ...prev, stage: newStage } : null);
