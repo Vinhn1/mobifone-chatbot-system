@@ -686,5 +686,18 @@ export class ChatService {
       ];
     }
   }
+
+  // Lấy ảnh trích xuất từ AI Service (Proxy)
+  async getExtractedImage(filename: string): Promise<any> {
+    const url = `${this.aiServiceBaseUrl}/static/extracted_images/${filename}`;
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, { responseType: 'arraybuffer', timeout: this.aiRequestTimeoutMs })
+      );
+      return response.data;
+    } catch (error) {
+      this.handleAiServiceError(error, `Lỗi khi lấy ảnh trích xuất ${filename}`);
+    }
+  }
 }
 

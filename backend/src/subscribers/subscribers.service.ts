@@ -5,6 +5,7 @@ import { Subscriber } from './subscriber.entity';
 import { Package } from './package.entity';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class SubscribersService implements OnModuleInit {
@@ -14,6 +15,7 @@ export class SubscribersService implements OnModuleInit {
     @InjectRepository(Package)
     private readonly packageRepository: Repository<Package>,
     private readonly jwtService: JwtService,
+    private readonly emailService: EmailService,
   ) {}
 
   async onModuleInit() {
@@ -50,17 +52,31 @@ export class SubscribersService implements OnModuleInit {
     }
   }
 
-  // 1. Gửi OTP giả lập (Tạo mới thuê bao nếu chưa có trong DB)
-  async sendOtp(phoneNumber: string): Promise<{ success: boolean; message: string; otpCode: string }> {
-    if (!phoneNumber || !phoneNumber.match(/^0\d{9}$/)) {
-      throw new BadRequestException('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại gồm 10 chữ số bắt đầu bằng số 0.');
+  // 1. Gửi OTP qua Email (Tạo mới hoặc cập nhật thông tin email cho thuê bao)
+  async sendOtp(email: string): Promise<{ success: boolean; message: string }> {
+    if (!email || !email.includes('@')) {
+      throw new BadRequestException('Địa chỉ Email không hợp lệ.');
     }
 
-    let subscriber = await this.subscriberRepository.findOneBy({ phoneNumber });
+    const emailLower = email.toLowerCase().trim();
+    let subscriber = await this.subscriberRepository.findOneBy({ email: emailLower });
+    
     if (!subscriber) {
+      // Tự động sinh số điện thoại duy nhất cho Email đăng ký mới
+      let uniquePhone = '';
+      while (true) {
+        const rand = '09' + Math.floor(10000000 + Math.random() * 90000000).toString();
+        const existing = await this.subscriberRepository.findOneBy({ phoneNumber: rand });
+        if (!existing) {
+          uniquePhone = rand;
+          break;
+        }
+      }
+
       // Khởi tạo thuê bao mới với các thông tin mặc định
       subscriber = this.subscriberRepository.create({
-        phoneNumber,
+        phoneNumber: uniquePhone,
+        email: emailLower,
         currentPackage: null,
         dataTotalGB: 0,
         dataUsedGB: 0,
@@ -68,27 +84,36 @@ export class SubscribersService implements OnModuleInit {
       });
     }
 
-    // Sinh mã OTP 6 chữ số (mặc định 123456 cho sandbox, hoặc ngẫu nhiên)
-    // Để tiện lợi kiểm thử, chúng ta sẽ sinh mã ngẫu nhiên nhưng cũng cho phép 123456
+    // Sinh mã OTP 6 chữ số ngẫu nhiên
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     subscriber.otpCode = otp;
     subscriber.otpCreatedAt = new Date();
 
     await this.subscriberRepository.save(subscriber);
 
-    // Trả về OTP trong response luôn để frontend hiển thị giả lập trên widget
+    // Gửi OTP qua email thật (hoặc ghi log dev fallback nếu chưa cấu hình SMTP)
+    const emailSent = await this.emailService.sendOtpEmail(emailLower, otp);
+    if (!emailSent) {
+      throw new BadRequestException('Không thể gửi email chứa mã OTP. Vui lòng thử lại sau.');
+    }
+
+    // BẢO MẬT: Không trả về mã otpCode trong response của API nữa
     return {
       success: true,
-      message: 'Mã OTP đã được gửi giả lập thành công.',
-      otpCode: otp,
+      message: 'Mã OTP đã được gửi đến email của bạn thành công.',
     };
   }
 
   // 2. Xác thực OTP đăng nhập thuê bao
-  async verifyOtp(phoneNumber: string, otpCode: string): Promise<{ token: string; subscriber: Subscriber }> {
-    const subscriber = await this.subscriberRepository.findOneBy({ phoneNumber });
+  async verifyOtp(email: string, otpCode: string): Promise<{ token: string; subscriber: Subscriber }> {
+    if (!email || !email.includes('@')) {
+      throw new BadRequestException('Địa chỉ Email không hợp lệ.');
+    }
+
+    const emailLower = email.toLowerCase().trim();
+    const subscriber = await this.subscriberRepository.findOneBy({ email: emailLower });
     if (!subscriber) {
-      throw new NotFoundException('Không tìm thấy thông tin thuê bao.');
+      throw new NotFoundException('Không tìm thấy thông tin thuê bao liên kết với email này.');
     }
 
     if (!subscriber.otpCode || !subscriber.otpCreatedAt) {
@@ -121,37 +146,42 @@ export class SubscribersService implements OnModuleInit {
     };
   }
 
-  // Đăng nhập demo cho thuê bao di động bằng số điện thoại
-  async loginDemo(phoneNumber: string, password?: string): Promise<{ token: string; subscriber: Subscriber }> {
-    // Chuẩn hóa số điện thoại: bỏ khoảng trắng, dấu chấm, dấu gạch ngang
-    const cleanPhone = phoneNumber.replace(/[\s.-]/g, "");
-    if (!cleanPhone || !cleanPhone.match(/^0\d{9}$/)) {
-      throw new BadRequestException('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại gồm 10 chữ số bắt đầu bằng số 0.');
+  // Đăng nhập demo cho thuê bao di động bằng số điện thoại hoặc email
+  async loginDemo(identifier: string, password?: string): Promise<{ token: string; subscriber: Subscriber }> {
+    if (!identifier) {
+      throw new BadRequestException('Vui lòng cung cấp Số điện thoại hoặc Email.');
     }
 
-    let subscriber = await this.subscriberRepository.findOneBy({ phoneNumber: cleanPhone });
-    if (!subscriber) {
-      // Khởi tạo thuê bao mới với các thông tin mặc định nếu chưa tồn tại
-      subscriber = this.subscriberRepository.create({
-        phoneNumber: cleanPhone,
-        currentPackage: null,
-        dataTotalGB: 0,
-        dataUsedGB: 0,
-        packageExpiry: null,
-      });
-      if (password) {
-        subscriber.password = await bcrypt.hash(password, 10);
+    const isEmail = identifier.includes('@');
+    let subscriber: Subscriber | null = null;
+
+    if (isEmail) {
+      const emailLower = identifier.toLowerCase().trim();
+      subscriber = await this.subscriberRepository.findOneBy({ email: emailLower });
+      if (!subscriber) {
+        throw new BadRequestException('Không tìm thấy tài khoản thuê bao nào liên kết với Email này.');
       }
-      await this.subscriberRepository.save(subscriber);
     } else {
-      if (subscriber.password) {
-        if (!password) {
-          throw new BadRequestException('Vui lòng nhập mật khẩu.');
+      // Chuẩn hóa số điện thoại: bỏ khoảng trắng, dấu chấm, dấu gạch ngang
+      const cleanPhone = identifier.replace(/[\s.-]/g, "");
+      if (!cleanPhone || !cleanPhone.match(/^0\d{9}$/)) {
+        throw new BadRequestException('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại gồm 10 chữ số bắt đầu bằng số 0.');
+      }
+
+      subscriber = await this.subscriberRepository.findOneBy({ phoneNumber: cleanPhone });
+      if (!subscriber) {
+        // Khởi tạo thuê bao mới với các thông tin mặc định nếu chưa tồn tại
+        subscriber = this.subscriberRepository.create({
+          phoneNumber: cleanPhone,
+          currentPackage: null,
+          dataTotalGB: 0,
+          dataUsedGB: 0,
+          packageExpiry: null,
+        });
+        if (password) {
+          subscriber.password = await bcrypt.hash(password, 10);
         }
-        const isMatch = await bcrypt.compare(password, subscriber.password);
-        if (!isMatch) {
-          throw new BadRequestException('Mật khẩu không chính xác.');
-        }
+        await this.subscriberRepository.save(subscriber);
       }
     }
 

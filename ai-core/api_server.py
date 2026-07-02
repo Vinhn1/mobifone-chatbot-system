@@ -11,7 +11,7 @@ from rag_pipeline import AIServiceError, MobiFoneRAG
 
 # Tự động kiểm tra và cài đặt các thư viện đọc tài liệu nếu thiếu
 def install_dependencies():
-    packages = ["pypdf", "python-docx", "openpyxl", "pandas"]
+    packages = ["pypdf", "python-docx", "openpyxl", "pandas", "python-pptx"]
     for package in packages:
         try:
             if package == "pypdf":
@@ -22,6 +22,8 @@ def install_dependencies():
                 import openpyxl
             elif package == "pandas":
                 import pandas
+            elif package == "python-pptx":
+                import pptx
         except ImportError:
             print(f"📦 Đang tự động cài đặt thư viện thiếu: {package}...")
             try:
@@ -48,6 +50,12 @@ app.add_middleware(
 # Khởi tạo RAG bot
 bot = MobiFoneRAG()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Cấu hình StaticFiles để phục vụ ảnh trích xuất
+from fastapi.staticfiles import StaticFiles
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+os.makedirs(os.path.join(STATIC_DIR, "extracted_images"), exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 import threading
 
 # Đường dẫn lưu file cache gợi ý động
@@ -168,6 +176,7 @@ class ChatResponse(BaseModel):
     answer: str
     sources: list
     suggested_questions: Optional[List[str]] = []
+    images: Optional[List[str]] = []
 
 class ConfigModel(BaseModel):
     system_prompt: str
@@ -202,8 +211,8 @@ def chat(request: ChatRequest):
         if request.history:
             history_list = [{"role": msg.role, "message": msg.message} for msg in request.history]
             
-        answer, sources, suggested_questions = bot.answer_question(request.message, history=history_list, user_info=request.userInfo)
-        return ChatResponse(answer=answer, sources=sources, suggested_questions=suggested_questions)
+        answer, sources, suggested_questions, images = bot.answer_question(request.message, history=history_list, user_info=request.userInfo)
+        return ChatResponse(answer=answer, sources=sources, suggested_questions=suggested_questions, images=images)
     except AIServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
     except Exception as e:
@@ -315,6 +324,180 @@ def delete_document(name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi xóa tài liệu: {e}")
 
+# Helper functions for image extraction and document processing
+import hashlib
+
+def save_extracted_image(img_bytes: bytes, original_filename: str, ext: str = ".png") -> str:
+    # Sử dụng mã hash MD5 của dữ liệu ảnh để làm tên file, tránh trùng lặp
+    hasher = hashlib.md5()
+    hasher.update(img_bytes)
+    img_hash = hasher.hexdigest()
+    
+    # Loại bỏ ký tự đặc biệt khỏi tên file gốc
+    safe_filename = "".join(c for c in os.path.splitext(original_filename)[0] if c.isalnum() or c in ("-", "_")).strip()
+    if not safe_filename:
+        safe_filename = "doc"
+        
+    filename = f"{safe_filename}_{img_hash}{ext}"
+    
+    # Lưu vào thư mục static/extracted_images
+    dest_dir = os.path.join(BASE_DIR, "static", "extracted_images")
+    os.makedirs(dest_dir, exist_ok=True)
+    dest_path = os.path.join(dest_dir, filename)
+    with open(dest_path, "wb") as f:
+        f.write(img_bytes)
+        
+    return filename
+
+def extract_docx_images_and_text(temp_file_path: str, filename: str) -> str:
+    import docx
+    doc = docx.Document(temp_file_path)
+    docx_parts = []
+    
+    # Duyệt qua các paragraph
+    for p in doc.paragraphs:
+        p_text = p.text.strip()
+        
+        # Tìm các thẻ blip chứa ảnh
+        blip_elements = p._element.xpath('.//*[local-name()="blip"]')
+        p_images = []
+        for blip in blip_elements:
+            rId = None
+            for attr_name, attr_val in blip.items():
+                if attr_name.endswith('embed'):
+                    rId = attr_val
+                    break
+            if rId:
+                try:
+                    image_part = doc.part.related_parts[rId]
+                    image_bytes = image_part.blob
+                    _, ext = os.path.splitext(image_part.partname)
+                    if not ext:
+                        ext = ".png"
+                    img_filename = save_extracted_image(image_bytes, filename, ext)
+                    p_images.append(img_filename)
+                except Exception as img_err:
+                    print(f"⚠️ Lỗi lấy dữ liệu ảnh từ rId {rId}: {img_err}")
+                    
+        if p_images:
+            img_placeholders = " ".join([f"[IMAGE:{img}]" for img in p_images])
+            if p_text:
+                p_text = f"{p_text} {img_placeholders}"
+            else:
+                p_text = img_placeholders
+                
+        if p_text:
+            docx_parts.append(p_text)
+            
+    # Duyệt qua các bảng
+    for table in doc.tables:
+        for row in table.rows:
+            row_text = []
+            for cell in row.cells:
+                cell_text = cell.text.strip().replace("\n", " ")
+                
+                blip_elements = cell._element.xpath('.//*[local-name()="blip"]')
+                cell_images = []
+                for blip in blip_elements:
+                    rId = None
+                    for attr_name, attr_val in blip.items():
+                        if attr_name.endswith('embed'):
+                            rId = attr_val
+                            break
+                    if rId:
+                        try:
+                            image_part = doc.part.related_parts[rId]
+                            image_bytes = image_part.blob
+                            _, ext = os.path.splitext(image_part.partname)
+                            if not ext:
+                                ext = ".png"
+                            img_filename = save_extracted_image(image_bytes, filename, ext)
+                            cell_images.append(img_filename)
+                        except Exception as img_err:
+                            print(f"⚠️ Lỗi lấy ảnh từ cell rId {rId}: {img_err}")
+                            
+                if cell_images:
+                    img_placeholders = " ".join([f"[IMAGE:{img}]" for img in cell_images])
+                    if cell_text:
+                        cell_text = f"{cell_text} {img_placeholders}"
+                    else:
+                        cell_text = img_placeholders
+                        
+                row_text.append(cell_text)
+                
+            cleaned_row = []
+            for val in row_text:
+                if not cleaned_row or val != cleaned_row[-1]:
+                    cleaned_row.append(val)
+            if cleaned_row:
+                docx_parts.append(" | ".join(cleaned_row))
+                
+    return "\n".join(docx_parts)
+
+def extract_pptx_slides_and_text(temp_file_path: str, filename: str) -> list:
+    from pptx import Presentation
+    prs = Presentation(temp_file_path)
+    slide_chunks = []
+    
+    def extract_images_from_shape(shape, original_filename, extracted_imgs):
+        # MSO_SHAPE_TYPE.PICTURE = 13
+        if shape.shape_type == 13 or hasattr(shape, "image"):
+            try:
+                image = shape.image
+                ext = f".{image.ext}" if image.ext else ".png"
+                img_filename = save_extracted_image(image.blob, original_filename, ext)
+                extracted_imgs.append(img_filename)
+            except Exception as e:
+                print(f"⚠️ Lỗi trích xuất ảnh từ shape: {e}")
+        elif shape.shape_type == 6: # MSO_SHAPE_TYPE.GROUP
+            for sub_shape in shape.shapes:
+                extract_images_from_shape(sub_shape, original_filename, extracted_imgs)
+                
+    for slide_idx, slide in enumerate(prs.slides):
+        slide_text_parts = []
+        slide_images = []
+        
+        for shape in slide.shapes:
+            # Trích xuất text
+            if hasattr(shape, "text") and shape.text.strip():
+                slide_text_parts.append(shape.text.strip())
+                
+            # Trích xuất text từ table nếu có
+            if shape.has_table:
+                for row in shape.table.rows:
+                    row_text = [cell.text.strip().replace("\n", " ") for cell in row.cells]
+                    cleaned_row = []
+                    for val in row_text:
+                        if not cleaned_row or val != cleaned_row[-1]:
+                            cleaned_row.append(val)
+                    if cleaned_row:
+                        slide_text_parts.append(" | ".join(cleaned_row))
+                        
+            # Trích xuất ảnh
+            extract_images_from_shape(shape, filename, slide_images)
+            
+        slide_text = "\n".join(slide_text_parts).strip()
+        
+        # Nếu slide không có text nhưng có hình ảnh, tạo text mặc định mô tả slide
+        if not slide_text and slide_images:
+            slide_text = f"Hình ảnh minh họa/sơ đồ từ Slide {slide_idx + 1} của tài liệu {filename}"
+            
+        if slide_text or slide_images:
+            # Thêm placeholder ảnh trực tiếp vào slide_text để hỗ trợ tìm kiếm ngữ cảnh có ảnh
+            if slide_images:
+                img_placeholders = " ".join([f"[IMAGE:{img}]" for img in slide_images])
+                slide_text = f"{slide_text}\n{img_placeholders}"
+                
+            slide_chunks.append({
+                "text": slide_text,
+                "metadata": {
+                    "slide_index": slide_idx + 1,
+                    "images": ",".join(slide_images) if slide_images else ""
+                }
+            })
+            
+    return slide_chunks
+
 # Upload tài liệu và nạp vector tức thì (Hot-reload Ingestion)
 @app.post("/upload")
 async def upload_document(file: UploadFile = File(...)):
@@ -335,6 +518,8 @@ async def upload_document(file: UploadFile = File(...)):
         
     text_content = ""
     file_ext = os.path.splitext(filename)[1].lower()
+    is_pptx = False
+    pptx_chunks = []
     
     # 2. Phân tách và trích xuất text tùy theo định dạng file
     try:
@@ -354,22 +539,7 @@ async def upload_document(file: UploadFile = File(...)):
                 text_list.append(page.extract_text() or "")
             text_content = "\n".join(text_list)
         elif file_ext in [".docx", ".doc"]:
-            import docx
-            doc = docx.Document(temp_file_path)
-            docx_parts = []
-            for p in doc.paragraphs:
-                if p.text.strip():
-                    docx_parts.append(p.text)
-            for table in doc.tables:
-                for row in table.rows:
-                    row_text = [cell.text.strip().replace("\n", " ") for cell in row.cells]
-                    # Loại bỏ các ô trùng lặp liên tiếp do merge cell để văn bản sạch hơn
-                    cleaned_row = []
-                    for val in row_text:
-                        if not cleaned_row or val != cleaned_row[-1]:
-                            cleaned_row.append(val)
-                    docx_parts.append(" | ".join(cleaned_row))
-            text_content = "\n".join(docx_parts)
+            text_content = extract_docx_images_and_text(temp_file_path, filename)
         elif file_ext in [".xlsx", ".xls"]:
             import pandas as pd
             df_dict = pd.read_excel(temp_file_path, sheet_name=None)
@@ -377,8 +547,11 @@ async def upload_document(file: UploadFile = File(...)):
             for sheet_name, df in df_dict.items():
                 text_list.append(f"Sheet: {sheet_name}\n" + df.to_string())
             text_content = "\n".join(text_list)
+        elif file_ext == ".pptx":
+            is_pptx = True
+            pptx_chunks = extract_pptx_slides_and_text(temp_file_path, filename)
         else:
-            raise HTTPException(status_code=400, detail="Định dạng file không hỗ trợ. Chỉ nhận TXT, JSON, PDF, DOCX, XLSX.")
+            raise HTTPException(status_code=400, detail="Định dạng file không hỗ trợ. Chỉ nhận TXT, JSON, PDF, DOCX, XLSX, PPTX.")
     except Exception as e:
         # Dọn dẹp file temp
         if os.path.exists(temp_file_path):
@@ -389,41 +562,61 @@ async def upload_document(file: UploadFile = File(...)):
     if os.path.exists(temp_file_path):
         os.remove(temp_file_path)
         
-    if not text_content.strip() or len(text_content.strip()) < 10:
+    if not is_pptx and (not text_content.strip() or len(text_content.strip()) < 10):
         raise HTTPException(status_code=400, detail="Nội dung file trống hoặc quá ngắn, không thể nạp vector.")
 
-    # 3. Chia nhỏ văn bản (Chunking)
-    words = text_content.split()
-    chunk_size = 300  # số từ mỗi mảnh
-    overlap = 50
-    step = chunk_size - overlap
-    
-    chunks = []
-    for i in range(0, len(words), step):
-        chunk = " ".join(words[i:i + chunk_size])
-        if chunk.strip():
-            chunks.append(chunk)
-            
-    if not chunks:
-        raise HTTPException(status_code=400, detail="Không thể tạo các mảnh dữ liệu văn bản.")
-
-    # 4. Nạp vào ChromaDB
+    # 3. Chia nhỏ văn bản (Chunking) & Nạp vào ChromaDB
     documents = []
     metadatas = []
     ids = []
     upload_date = time.strftime("%d %b %Y")
     
-    for idx, chunk in enumerate(chunks):
-        documents.append(chunk)
-        metadatas.append({
-            "source_title": filename,
-            "source_url": f"upload://{filename}",
-            "type": file_ext.replace(".", "").upper(),
-            "size_bytes": size_bytes,
-            "upload_date": upload_date
-        })
-        ids.append(f"upload_{filename}_{int(time.time())}_{idx}")
+    if is_pptx:
+        if not pptx_chunks:
+            raise HTTPException(status_code=400, detail="Không thể trích xuất nội dung từ file PPTX.")
+        for idx, item in enumerate(pptx_chunks):
+            documents.append(item["text"])
+            metadatas.append({
+                "source_title": filename,
+                "source_url": f"upload://{filename}",
+                "type": "PPTX",
+                "size_bytes": size_bytes,
+                "upload_date": upload_date,
+                "slide_index": item["metadata"]["slide_index"],
+                "images": item["metadata"]["images"]
+            })
+            ids.append(f"upload_{filename}_{int(time.time())}_{idx}")
+    else:
+        words = text_content.split()
+        chunk_size = 300  # số từ mỗi mảnh
+        overlap = 50
+        step = chunk_size - overlap
         
+        chunks = []
+        for i in range(0, len(words), step):
+            chunk = " ".join(words[i:i + chunk_size])
+            if chunk.strip():
+                chunks.append(chunk)
+                
+        if not chunks:
+            raise HTTPException(status_code=400, detail="Không thể tạo các mảnh dữ liệu văn bản.")
+            
+        for idx, chunk in enumerate(chunks):
+            import re
+            img_matches = re.findall(r'\[IMAGE:(.*?)\]', chunk)
+            chunk_images = ",".join(list(set(img_matches)))
+            
+            documents.append(chunk)
+            metadatas.append({
+                "source_title": filename,
+                "source_url": f"upload://{filename}",
+                "type": file_ext.replace(".", "").upper(),
+                "size_bytes": size_bytes,
+                "upload_date": upload_date,
+                "images": chunk_images
+            })
+            ids.append(f"upload_{filename}_{int(time.time())}_{idx}")
+
     try:
         # Tự động xóa các vector cũ cùng tên (nếu có) để tránh trùng lặp dữ liệu
         try:

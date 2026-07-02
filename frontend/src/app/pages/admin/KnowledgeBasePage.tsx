@@ -35,6 +35,8 @@ const TYPE_STYLES: Record<string, { text: string; bg: string; border: string }> 
   TXT: { text: "text-slate-500", bg: "bg-slate-50/80", border: "border-slate-100" },
   DOCX: { text: "text-indigo-600", bg: "bg-indigo-50/80", border: "border-indigo-100" },
   DOC: { text: "text-indigo-600", bg: "bg-indigo-50/80", border: "border-indigo-100" },
+  PPTX: { text: "text-orange-600", bg: "bg-orange-50/80", border: "border-orange-100" },
+  PPT: { text: "text-orange-600", bg: "bg-orange-50/80", border: "border-orange-100" },
   XLSX: { text: "text-emerald-600", bg: "bg-emerald-50/80", border: "border-emerald-100" },
   XLS: { text: "text-emerald-600", bg: "bg-emerald-50/80", border: "border-emerald-100" },
   DEFAULT: { text: "text-slate-500", bg: "bg-slate-50/80", border: "border-slate-100" }
@@ -79,7 +81,7 @@ function DropZone({ onUpload, uploading }: { onUpload: (file: globalThis.File) =
           : "border-slate-200 bg-white/40 hover:border-slate-300 hover:bg-white/60"
       } ${uploading ? "opacity-60 cursor-not-allowed" : "opacity-100"}`}
     >
-      <input ref={inputRef} type="file" accept=".pdf,.json,.txt,.docx,.doc,.xlsx,.xls" className="hidden" onChange={handleFileChange} disabled={uploading} />
+      <input ref={inputRef} type="file" accept=".pdf,.json,.txt,.docx,.doc,.pptx,.ppt,.xlsx,.xls" className="hidden" onChange={handleFileChange} disabled={uploading} />
       <motion.div animate={{ y: dragging ? -4 : 0 }}>
         <div
           className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 border transition-all duration-200 ${
@@ -98,10 +100,10 @@ function DropZone({ onUpload, uploading }: { onUpload: (file: globalThis.File) =
           {uploading ? "Đang xử lý tài liệu tri thức..." : dragging ? "Thả file để bắt đầu tải lên" : "Kéo & thả file tài liệu tri thức tại đây"}
         </div>
         <div className="text-slate-400 text-xs font-semibold mb-5">
-          {uploading ? "AI đang lập chỉ mục vector và trích xuất dữ liệu" : "hoặc nhấn để duyệt tệp từ máy tính · TXT, JSON, PDF, WORD, EXCEL"}
+          {uploading ? "AI đang lập chỉ mục vector và trích xuất dữ liệu" : "hoặc nhấn để duyệt tệp từ máy tính · TXT, JSON, PDF, WORD, POWERPOINT, EXCEL"}
         </div>
         <div className="flex gap-2 justify-center flex-wrap">
-          {["PDF", "JSON", "TXT", "DOCX", "XLSX"].map(t => {
+          {["PDF", "JSON", "TXT", "DOCX", "PPTX", "XLSX"].map(t => {
             const style = getFileTypeStyle(t);
             return (
               <span

@@ -6,21 +6,23 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 export class SubscribersController {
   constructor(private readonly subscribersService: SubscribersService) {}
 
-  // 1. Gửi OTP đến số điện thoại di động
+  // 1. Gửi OTP qua Email
   @Post('otp/send')
   @HttpCode(HttpStatus.OK)
-  async sendOtp(@Body('phoneNumber') phoneNumber: string) {
-    return await this.subscribersService.sendOtp(phoneNumber);
+  async sendOtp(
+    @Body('email') email: string,
+  ) {
+    return await this.subscribersService.sendOtp(email);
   }
 
   // 2. Xác thực OTP và đăng nhập nhận JWT Token
   @Post('otp/verify')
   @HttpCode(HttpStatus.OK)
   async verifyOtp(
-    @Body('phoneNumber') phoneNumber: string,
+    @Body('email') email: string,
     @Body('otpCode') otpCode: string,
   ) {
-    return await this.subscribersService.verifyOtp(phoneNumber, otpCode);
+    return await this.subscribersService.verifyOtp(email, otpCode);
   }
 
   // 2.1 Đăng nhập demo không cần OTP (Có hỗ trợ kiểm tra mật khẩu)

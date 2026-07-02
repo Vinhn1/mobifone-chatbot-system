@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { SubscribersModule } from './subscribers/subscribers.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     SubscribersModule,
 
     NotificationsModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards, UseInterceptors, UploadedFile, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards, UseInterceptors, UploadedFile, Param, Delete, Res } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -128,6 +128,28 @@ export class ChatController {
         zalo_enabled: config?.zalo_enabled ?? false,
         zalo_oa_id: config?.zalo_oa_id ?? '',
       };
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Get('images/:filename') // Lấy ảnh trích xuất từ tài liệu (không yêu cầu JWT để Widget hiển thị)
+  async getExtractedImage(@Param('filename') filename: string, @Res() res: any) {
+    try {
+      const buffer = await this.chatService.getExtractedImage(filename);
+      let contentType = 'image/png';
+      if (filename.toLowerCase().endsWith('.jpg') || filename.toLowerCase().endsWith('.jpeg')) {
+        contentType = 'image/jpeg';
+      } else if (filename.toLowerCase().endsWith('.gif')) {
+        contentType = 'image/gif';
+      } else if (filename.toLowerCase().endsWith('.svg')) {
+        contentType = 'image/svg+xml';
+      }
+      res.setHeader('Content-Type', contentType);
+      res.send(Buffer.from(buffer));
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;

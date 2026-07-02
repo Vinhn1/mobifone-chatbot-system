@@ -7,11 +7,12 @@ import { PackagesController } from './packages.controller';
 import { SubscribersService } from './subscribers.service';
 import { Subscriber } from './subscriber.entity';
 import { Package } from './package.entity';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
-    // Đăng ký Entity Subscriber và Package với TypeORM
     TypeOrmModule.forFeature([Subscriber, Package]),
+    EmailModule,
     
     // Cấu hình JwtModule tương thích với AuthModule để xác thực đồng bộ
     JwtModule.registerAsync({
