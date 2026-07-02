@@ -29,13 +29,17 @@ export class WebhookController {
   @Post('facebook')
   async handleFacebookWebhook(@Body() body: any, @Res() res: express.Response) {
     if (body.object === 'page') {
+      const host = res.req.headers.host || 'localhost:3000';
+      const protocol = res.req.headers['x-forwarded-proto'] || res.req.protocol || 'http';
+      const baseUrl = `${protocol}://${host}`;
+
       for (const entry of body.entry || []) {
         for (const event of entry.messaging || []) {
           if (event.message && event.message.text) {
             const senderId = event.sender.id;
             const text = event.message.text;
             // Gọi AI service và gửi trả lời bất đồng bộ
-            this.chatService.handleFacebookMessage(senderId, text).catch(err => {
+            this.chatService.handleFacebookMessage(senderId, text, baseUrl).catch(err => {
               console.error('[FB-WEBHOOK] Lỗi bất đồng bộ xử lý tin nhắn Facebook:', err);
             });
           }
@@ -56,8 +60,12 @@ export class WebhookController {
       const senderId = body.sender.id;
       const text = body.message.text;
       
+      const host = res.req.headers.host || 'localhost:3000';
+      const protocol = res.req.headers['x-forwarded-proto'] || res.req.protocol || 'http';
+      const baseUrl = `${protocol}://${host}`;
+
       // Gọi xử lý bất đồng bộ
-      this.chatService.handleZaloMessage(senderId, text).catch(err => {
+      this.chatService.handleZaloMessage(senderId, text, baseUrl).catch(err => {
         console.error('[ZALO-WEBHOOK] Lỗi bất đồng bộ xử lý tin nhắn Zalo:', err);
       });
     }
