@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutDashboard, Users, MessageSquare, Database, Code2,
   ChevronLeft, ChevronRight, Bell, Search,
-  LogOut, Zap, Bot, ChevronDown
+  LogOut, Zap, Bot, ChevronDown, User
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
@@ -35,6 +35,7 @@ export function AdminLayout() {
 
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const [toast, setToast] = useState<{ message: string; visible: boolean; type?: string } | null>(null);
 
   useEffect(() => {
@@ -750,42 +751,143 @@ export function AdminLayout() {
           </div>
 
           {/* User drop */}
-          <div 
-            onClick={() => navigate("/admin/profile")}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              background: "rgba(255, 255, 255, 0.8)",
-              border: "1px solid rgba(0, 0, 0, 0.08)",
-              borderRadius: 10,
-              padding: "4px 10px 4px 4px",
-              cursor: "pointer"
-            }}
-          >
-            <div style={{
-              width: 30,
-              height: 30,
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #F39C12, #E4002B)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontSize: 12,
-              fontWeight: 800,
-              overflow: "hidden"
-            }}>
-              {user?.avatar ? (
-                <img src={user.avatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                user?.name?.charAt(0) ?? "A"
-              )}
+          {/* User drop */}
+          <div style={{ position: "relative" }}>
+            <div 
+              onClick={() => setShowUserMenu(!showUserMenu)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "rgba(255, 255, 255, 0.8)",
+                border: "1px solid rgba(0, 0, 0, 0.08)",
+                borderRadius: 10,
+                padding: "4px 10px 4px 4px",
+                cursor: "pointer",
+                userSelect: "none"
+              }}
+            >
+              <div style={{
+                width: 30,
+                height: 30,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #F39C12, #E4002B)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: 12,
+                fontWeight: 800,
+                overflow: "hidden"
+              }}>
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="Avatar" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  user?.name?.charAt(0) ?? "A"
+                )}
+              </div>
+              <span style={{ color: "#334155", fontSize: 13, fontWeight: 700 }}>
+                {user?.name?.split(" ").pop()}
+              </span>
+              <ChevronDown size={14} style={{ color: "#94A3B8", transform: showUserMenu ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
             </div>
-            <span style={{ color: "#334155", fontSize: 13, fontWeight: 700 }}>
-              {user?.name?.split(" ").pop()}
-            </span>
-            <ChevronDown size={14} style={{ color: "#94A3B8" }} />
+
+            <AnimatePresence>
+              {showUserMenu && (
+                <>
+                  {/* Overlay to close when clicking outside */}
+                  <div 
+                    onClick={() => setShowUserMenu(false)}
+                    style={{
+                      position: "fixed",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 998
+                    }}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    style={{
+                      position: "absolute",
+                      top: 44,
+                      right: 0,
+                      width: 180,
+                      background: "rgba(255, 255, 255, 0.98)",
+                      backdropFilter: "blur(20px)",
+                      border: "1px solid rgba(0, 0, 0, 0.08)",
+                      borderRadius: 12,
+                      boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
+                      padding: 6,
+                      zIndex: 999,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4
+                    }}
+                  >
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        navigate("/admin/profile");
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "8px 12px",
+                        background: "none",
+                        border: "none",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                        color: "#334155",
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        textAlign: "left",
+                        fontFamily: "'Outfit', sans-serif",
+                        transition: "all 0.15s"
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = "rgba(0, 0, 0, 0.04)"}
+                      onMouseLeave={e => e.currentTarget.style.background = "none"}
+                    >
+                      <User size={14} style={{ color: "#64748B" }} />
+                      Trang cá nhân
+                    </button>
+                    <div style={{ height: 1, background: "rgba(0, 0, 0, 0.05)", margin: "2px 4px" }} />
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        handleLogout();
+                      }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "8px 12px",
+                        background: "none",
+                        border: "none",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                        color: "#EF4444",
+                        fontSize: 12.5,
+                        fontWeight: 700,
+                        textAlign: "left",
+                        fontFamily: "'Outfit', sans-serif",
+                        transition: "all 0.15s"
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = "#FEF2F2"}
+                      onMouseLeave={e => e.currentTarget.style.background = "none"}
+                    >
+                      <LogOut size={14} style={{ color: "#EF4444" }} />
+                      Đăng xuất
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
         </header>
 

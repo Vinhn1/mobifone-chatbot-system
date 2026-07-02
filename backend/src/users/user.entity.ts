@@ -17,6 +17,24 @@ export class User {
   @Column({ default: 'admin' })
   role: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  name: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  phone: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  email: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  dob: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  address: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  avatar: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { motion } from "motion/react";
-import { User, Mail, Phone, MapPin, Calendar, Lock, Bell, Shield, Camera, Check, ChevronRight, Star } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { User, Mail, Phone, MapPin, Calendar, Lock, Bell, Shield, Camera, Check, ChevronRight, Star, AlertCircle, LogOut } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router";
 import axios from "axios";
 
 const TIER_STYLE = {
@@ -10,8 +11,8 @@ const TIER_STYLE = {
   Diamond: "bg-purple-50 text-purple-700 border-purple-200/60 shadow-xs shadow-purple-500/5",
 };
 
-function InfoRow({ icon: Icon, label, value, editable = false, onEdit }: {
-  icon: React.ElementType; label: string; value: string; editable?: boolean; onEdit?: () => void;
+function InfoRow({ icon: Icon, label, value }: {
+  icon: React.ElementType; label: string; value: string;
 }) {
   return (
     <div className="flex items-center gap-3.5 py-4 border-b border-slate-100 font-outfit">
@@ -22,25 +23,29 @@ function InfoRow({ icon: Icon, label, value, editable = false, onEdit }: {
         <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase mb-0.5">{label}</div>
         <div className="text-slate-800 font-bold text-sm">{value}</div>
       </div>
-      {editable && (
-        <button
-          onClick={onEdit}
-          className="text-[#0055A5] hover:text-[#00448A] text-xs font-bold bg-transparent border-none cursor-pointer transition-colors"
-        >
-          Sửa
-        </button>
-      )}
     </div>
   );
 }
 
+const formatDateForDisplay = (dateStr?: string | null) => {
+  if (!dateStr) return "Chưa cập nhật";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    const [year, month, day] = dateStr.split("-");
+    return `${day}/${month}/${year}`;
+  }
+  return dateStr;
+};
+
 export function UserProfile() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
+  const navigate = useNavigate();
+  const [showAvatarMenu, setShowAvatarMenu] = useState(false);
   const [tab, setTab] = useState<"info" | "security" | "notifications">("info");
-  const [editing, setEditing] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [formValues, setFormValues] = useState({ name: "", email: "", dob: "", address: "" });
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [notifications, setNotifications] = useState({
     sms: true, email: true, promo: true, renewal: true, news: false, security: true
   });
@@ -53,9 +58,6 @@ export function UserProfile() {
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64 = reader.result as string;
-      updateUser({ avatar: base64 });
-
-      // Gửi lên backend
       try {
         const portalToken = localStorage.getItem("mobifone_portal_token");
         if (portalToken) {
@@ -68,28 +70,27 @@ export function UserProfile() {
               },
             }
           );
+          updateUser({ avatar: base64 });
         }
       } catch (error) {
         console.error("Lỗi đồng bộ avatar lên backend:", error);
+        alert("Không thể cập nhật ảnh đại diện. Vui lòng thử lại!");
       }
     };
     reader.readAsDataURL(file);
   };
 
-  const handleSave = async () => {
-    if (!editing) return;
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSaving(true);
-    
-    // 1. Cập nhật state cục bộ qua AuthContext (sẽ tự động lưu localStorage)
-    updateUser({ [editing]: editValue });
+    setSaveError(null);
 
-    // 2. Gửi request cập nhật lên PostgreSQL Backend
     try {
       const portalToken = localStorage.getItem("mobifone_portal_token");
       if (portalToken) {
         await axios.patch(
           "http://localhost:3000/subscribers/profile",
-          { [editing]: editValue },
+          formValues,
           {
             headers: {
               Authorization: `Bearer ${portalToken}`,
@@ -97,13 +98,16 @@ export function UserProfile() {
           }
         );
       }
-    } catch (error) {
+
+      updateUser(formValues);
+      setSaved(true);
+      setIsEditing(false);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (error: any) {
       console.error("Lỗi đồng bộ hồ sơ lên backend:", error);
+      setSaveError(error.response?.data?.message || "Không thể lưu thông tin. Vui lòng thử lại!");
     } finally {
       setIsSaving(false);
-      setSaved(true);
-      setEditing(null);
-      setTimeout(() => setSaved(false), 2000);
     }
   };
 
@@ -114,13 +118,12 @@ export function UserProfile() {
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm shadow-slate-200/30 mb-6 flex flex-wrap items-center gap-5"
-      >
-        <div className="relative">
+      >        <div className="relative">
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#0055A5] to-[#E4002B] flex items-center justify-center text-white text-2xl font-black shadow-md shadow-[#0055A5]/25 border-4 border-white overflow-hidden">
             {user?.avatar ? (
               <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
-              user?.name?.charAt(0)
+              user?.name?.charAt(0) ?? "U"
             )}
           </div>
           <label className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#0055A5] hover:bg-[#00448A] border-2 border-white flex items-center justify-center cursor-pointer transition-all">
@@ -181,44 +184,128 @@ export function UserProfile() {
           animate={{ opacity: 1 }}
           className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm shadow-slate-200/30"
         >
-          <InfoRow icon={User} label="Họ và tên" value={user?.name ?? ""} editable onEdit={() => { setEditing("name"); setEditValue(user?.name ?? ""); }} />
-          <InfoRow icon={Phone} label="Số điện thoại" value={user?.phone ?? ""} />
-          <InfoRow icon={Mail} label="Email" value={user?.email ?? ""} editable onEdit={() => { setEditing("email"); setEditValue(user?.email ?? ""); }} />
-          <InfoRow icon={Calendar} label="Ngày sinh" value={user?.dob ?? ""} editable onEdit={() => { setEditing("dob"); setEditValue(user?.dob ?? ""); }} />
-          <InfoRow icon={MapPin} label="Địa chỉ" value={user?.address ?? ""} editable onEdit={() => { setEditing("address"); setEditValue(user?.address ?? ""); }} />
+          {!isEditing ? (
+            <div>
+              <InfoRow icon={User} label="Họ và tên" value={user?.name ?? ""} />
+              <InfoRow icon={Phone} label="Số điện thoại" value={user?.phone ?? ""} />
+              <InfoRow icon={Mail} label="Email" value={user?.email ?? ""} />
+              <InfoRow icon={Calendar} label="Ngày sinh" value={formatDateForDisplay(user?.dob)} />
+              <InfoRow icon={MapPin} label="Địa chỉ" value={user?.address ?? ""} />
 
-          {editing && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-5 p-4 bg-slate-50 border border-slate-200 rounded-2xl"
-            >
-              <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block mb-2">
-                Chỉnh sửa {editing === "name" ? "Họ và tên" : editing === "email" ? "Email" : editing === "dob" ? "Ngày sinh" : "Địa chỉ"}
-              </label>
-              <div className="flex gap-2.5">
-                <input
-                  value={editValue}
-                  onChange={e => setEditValue(e.target.value)}
-                  className="flex-1 border border-slate-200 rounded-xl px-3.5 py-2 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all"
-                />
+              <div className="mt-6 flex justify-end">
                 <button
-                  disabled={isSaving}
-                  onClick={handleSave}
-                  className={`px-5 py-2 rounded-xl bg-gradient-to-r from-[#0055A5] to-blue-500 text-white font-bold text-sm shadow-md shadow-[#0055A5]/20 border-none transition-all active:scale-95 ${
-                    isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-                  }`}
+                  onClick={() => {
+                    setIsEditing(true);
+                    setFormValues({
+                      name: user?.name ?? "",
+                      email: user?.email ?? "",
+                      dob: user?.dob ?? "",
+                      address: user?.address ?? "",
+                    });
+                    setSaveError(null);
+                  }}
+                  className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#0055A5] to-blue-500 hover:from-blue-500 hover:to-[#0055A5] text-white font-bold text-sm shadow-md shadow-[#0055A5]/25 border-none cursor-pointer transition-all active:scale-95"
                 >
-                  {isSaving ? "Đang lưu..." : "Lưu"}
+                  Chỉnh sửa hồ sơ
                 </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSave} className="flex flex-col gap-4 font-outfit">
+              <h3 className="text-slate-800 font-extrabold text-base mb-2">Chỉnh sửa thông tin cá nhân</h3>
+              
+              <div className="flex flex-col gap-1.5">
+                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Họ và tên</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <User size={16} />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={formValues.name}
+                    onChange={e => setFormValues({ ...formValues, name: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all bg-slate-50/50"
+                    placeholder="Nhập họ và tên"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Email</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Mail size={16} />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    value={formValues.email}
+                    onChange={e => setFormValues({ ...formValues, email: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all bg-slate-50/50"
+                    placeholder="Nhập email"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Ngày sinh</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <Calendar size={16} />
+                  </div>
+                  <input
+                    type="date"
+                    required
+                    value={formValues.dob}
+                    onChange={e => setFormValues({ ...formValues, dob: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all bg-slate-50/50"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Địa chỉ</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <MapPin size={16} />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={formValues.address}
+                    onChange={e => setFormValues({ ...formValues, address: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl pl-10 pr-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all bg-slate-50/50"
+                    placeholder="Nhập địa chỉ"
+                  />
+                </div>
+              </div>
+
+              {saveError && (
+                <div className="flex items-center gap-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-4 py-2.5 text-xs font-bold mt-2">
+                  <AlertCircle size={14} /> {saveError}
+                </div>
+              )}
+
+              <div className="mt-4 flex justify-end gap-3">
                 <button
-                  onClick={() => setEditing(null)}
-                  className="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-slate-600 font-bold text-sm cursor-pointer transition-all"
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-slate-600 font-bold text-sm cursor-pointer transition-all"
                 >
                   Huỷ
                 </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className={`px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#0055A5] to-blue-500 text-white font-bold text-sm shadow-md shadow-[#0055A5]/20 border-none transition-all active:scale-95 ${
+                    isSaving ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                  }`}
+                >
+                  {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
               </div>
-            </motion.div>
+            </form>
           )}
 
           {saved && (

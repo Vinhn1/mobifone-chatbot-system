@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => axios.interceptors.request.eject(interceptor);
   }, []);
 
-  // Đồng bộ thông tin từ backend khi ứng dụng khởi chạy nếu đã đăng nhập portal
+  // Đồng bộ thông tin từ backend khi ứng dụng khởi chạy nếu đã đăng nhập portal hoặc admin
   useEffect(() => {
     const fetchPortalProfile = async () => {
       const portalToken = localStorage.getItem("mobifone_portal_token");
@@ -122,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 points: 1200,
                 joinDate: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN"),
                 address: sub.address || "Chưa cập nhật",
-                dob: sub.dob || "01/01/1990",
+                dob: sub.dob || "1990-01-01",
                 avatar: sub.avatar || undefined,
               };
               localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
@@ -134,7 +134,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     };
+
+    const fetchAdminProfile = async () => {
+      const adminToken = localStorage.getItem("mobifone_admin_token");
+      if (adminToken) {
+        try {
+          const response = await axios.get(`${API_BASE}/users/me`);
+          const adminData = response.data;
+          if (adminData && adminData.id) {
+            setUser(prev => {
+              const mappedUser: AuthUser = {
+                id: String(adminData.id),
+                name: adminData.name || "MobiFone Administrator",
+                phone: adminData.phone || "0987654321",
+                email: adminData.email || "admin@mobifone.vn",
+                role: "admin",
+                tier: "Diamond",
+                package: "Staff",
+                packageCode: "STAFF",
+                packageExpiry: "31/12/2026",
+                dataUsedGB: 0,
+                dataTotalGB: 0,
+                voiceUsedMin: 0,
+                voiceTotalMin: 0,
+                balance: 0,
+                points: 0,
+                joinDate: "01/01/2020",
+                address: adminData.address || "MobiFone HQ, Hà Nội",
+                dob: adminData.dob || "1988-05-12",
+                avatar: adminData.avatar || undefined,
+              };
+              localStorage.setItem("mobifone_admin_user", JSON.stringify(mappedUser));
+              return mappedUser;
+            });
+          }
+        } catch (error) {
+          console.warn("Không thể đồng bộ profile admin từ backend:", error);
+        }
+      }
+    };
+
     fetchPortalProfile();
+    fetchAdminProfile();
   }, []);
 
   const login = async (identifier: string, password: string): Promise<"user" | "admin" | "error"> => {
@@ -160,9 +201,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setToken(apiToken);
           const adminUser: AuthUser = {
             id: String(apiUser.id),
-            name: "MobiFone Administrator",
-            phone: "0987654321",
-            email: "admin@mobifone.vn",
+            name: apiUser.name || "MobiFone Administrator",
+            phone: apiUser.phone || "0987654321",
+            email: apiUser.email || "admin@mobifone.vn",
             role: "admin",
             tier: "Diamond",
             package: "Staff",
@@ -175,8 +216,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             balance: 0,
             points: 0,
             joinDate: "01/01/2020",
-            address: "MobiFone HQ, Hà Nội",
-            dob: "12/05/1988",
+            address: apiUser.address || "MobiFone HQ, Hà Nội",
+            dob: apiUser.dob || "1988-05-12",
+            avatar: apiUser.avatar || undefined,
           };
           localStorage.setItem("mobifone_admin_user", JSON.stringify(adminUser));
           setUser(adminUser);

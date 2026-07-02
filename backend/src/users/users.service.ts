@@ -20,6 +20,11 @@ export class UsersService implements OnModuleInit {
         username: 'admin',
         password: hashedPassword,
         role: 'admin',
+        name: 'MobiFone Administrator',
+        phone: '0987654321',
+        email: 'admin@mobifone.vn',
+        address: 'MobiFone HQ, Hà Nội',
+        dob: '1988-05-12',
       });
       await this.userRepository.save(admin);
       console.log('--------------------------------------------------');
@@ -29,6 +34,11 @@ export class UsersService implements OnModuleInit {
       console.log('--------------------------------------------------');
     } else {
       admin.password = hashedPassword;
+      if (!admin.name) admin.name = 'MobiFone Administrator';
+      if (!admin.phone) admin.phone = '0987654321';
+      if (!admin.email) admin.email = 'admin@mobifone.vn';
+      if (!admin.address) admin.address = 'MobiFone HQ, Hà Nội';
+      if (!admin.dob) admin.dob = '1988-05-12';
       await this.userRepository.save(admin);
       console.log('--------------------------------------------------');
       console.log(`[SEED] Đã cập nhật tài khoản admin mặc định:`);
@@ -41,6 +51,27 @@ export class UsersService implements OnModuleInit {
   // 2. Hàm tìm người dùng theo username (dành cho module Auth kiểm tra)
   async findByUsername(username: string): Promise<User | null> {
     return await this.userRepository.findOne({ where: { username } });
+  }
+
+  // 3. Lấy profile admin theo id
+  async getProfile(id: number): Promise<User> {
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user) {
+      throw new Error('Không tìm thấy tài khoản quản trị.');
+    }
+    return user;
+  }
+
+  // 4. Cập nhật profile admin
+  async updateProfile(id: number, profileData: Partial<User>): Promise<User> {
+    const user = await this.getProfile(id);
+    const allowedFields: (keyof User)[] = ['name', 'email', 'dob', 'address', 'avatar'];
+    for (const key of allowedFields) {
+      if (profileData[key] !== undefined) {
+        (user as any)[key] = profileData[key];
+      }
+    }
+    return await this.userRepository.save(user);
   }
 }
 
