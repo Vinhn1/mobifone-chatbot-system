@@ -451,7 +451,7 @@ export class ChatService {
     // 4. Nếu có hình ảnh đính kèm và có baseUrl hợp lệ, gửi các hình ảnh đó qua Facebook
     if (baseUrl && result?.images && Array.isArray(result.images) && result.images.length > 0) {
       for (const img of result.images) {
-        const imageUrl = `${baseUrl}/chat/images/${img}`;
+        const imageUrl = `${baseUrl}/chat/images/${encodeURIComponent(img)}`;
         try {
           await firstValueFrom(
             this.httpService.post(fbSendUrl, {
@@ -705,7 +705,7 @@ export class ChatService {
     // 4. Nếu có hình ảnh đính kèm và có baseUrl hợp lệ, gửi các hình ảnh đó qua Zalo
     if (baseUrl && result?.images && Array.isArray(result.images) && result.images.length > 0) {
       for (const img of result.images) {
-        const imageUrl = `${baseUrl}/chat/images/${img}`;
+        const imageUrl = `${baseUrl}/chat/images/${encodeURIComponent(img)}`;
         let currentToken = zaloAccessToken;
         try {
           const zaloAgent = await this.getZaloHttpsAgent();
