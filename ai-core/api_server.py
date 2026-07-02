@@ -550,6 +550,7 @@ async def upload_document(file: UploadFile = File(...)):
         elif file_ext == ".pptx":
             is_pptx = True
             pptx_chunks = extract_pptx_slides_and_text(temp_file_path, filename)
+            text_content = "\n".join([chunk["text"] for chunk in pptx_chunks])
         else:
             raise HTTPException(status_code=400, detail="Định dạng file không hỗ trợ. Chỉ nhận TXT, JSON, PDF, DOCX, XLSX, PPTX.")
     except Exception as e:
@@ -688,7 +689,7 @@ Văn bản cần phân tích:
         return {
             "status": "success",
             "message": f"Đã nạp thành công tài liệu '{filename}'",
-            "chunks_count": len(chunks),
+            "chunks_count": len(pptx_chunks) if is_pptx else len(chunks),
             "size": f"{size_bytes / 1024:.1f} KB",
             "packages": extracted_packages
         }
