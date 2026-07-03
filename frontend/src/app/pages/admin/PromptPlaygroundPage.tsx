@@ -16,35 +16,7 @@ type Message = {
   tokens?: number;
 };
 
-function Slider({ label, value, min, max, step, onChange, desc }: {
-  label: string; value: number; min: number; max: number; step: number;
-  onChange: (v: number) => void; desc?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex justify-between items-center">
-        <div>
-          <span className="text-slate-700 text-xs font-bold">{label}</span>
-          {desc && <span className="text-slate-400 text-[10px] ml-2 font-medium">{desc}</span>}
-        </div>
-        <span className="bg-blue-50 border border-blue-100 rounded-md px-2 py-0.5 text-[#0055A5] text-xs font-black">
-          {value}
-        </span>
-      </div>
-      <div className="relative flex items-center h-4">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={e => onChange(Number(e.target.value))}
-          className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
-        />
-      </div>
-    </div>
-  );
-}
+// Cấu hình thanh trượt đã được loại bỏ để tối giản trải nghiệm người dùng kinh doanh
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -74,10 +46,37 @@ export function PromptPlaygroundPage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingConfig, setLoadingConfig] = useState(true);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const [sessionId] = useState(() => `playground_${Math.random().toString(36).substring(2, 11)}`);
+
+  // Hàm lưu cấu hình System Prompt lên backend
+  const saveConfig = async () => {
+    if (!token || isSaving) return;
+    setIsSaving(true);
+    setSaveSuccess(false);
+    try {
+      const configHeaders = {
+        headers: { Authorization: `Bearer ${token}` },
+      };
+      const updatedConfig = {
+        ...otherConfig,
+        system_prompt: systemPrompt,
+        temperature,
+        top_p: topP,
+        max_tokens: maxTokens,
+      };
+      await axios.post("http://localhost:3000/chat/config", updatedConfig, configHeaders);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2500);
+    } catch (error) {
+      console.error("Lỗi khi lưu cấu hình:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Redirect if not admin
   useEffect(() => {
@@ -229,13 +228,13 @@ export function PromptPlaygroundPage() {
 
       {/* Main layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 flex-1 min-h-0">
-        {/* Left config pane */}
+        {/* Left config pane - Dedicated System Prompt Editor */}
         <div className="lg:col-span-4 bg-white rounded-3xl flex flex-col overflow-hidden border border-slate-200/60 shadow-xs min-h-0">
           {/* Section header */}
           <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center shrink-0 bg-white">
             <div className="flex items-center gap-2">
               <Terminal size={14} className="text-[#0055A5]" />
-              <span className="text-slate-800 font-extrabold text-[11px] tracking-wider uppercase">System Prompt</span>
+              <span className="text-slate-800 font-extrabold text-[11px] tracking-wider uppercase">Cấu hình hành vi (System Prompt)</span>
             </div>
             <CopyButton text={systemPrompt} />
           </div>
@@ -245,61 +244,45 @@ export function PromptPlaygroundPage() {
             <textarea
               value={systemPrompt}
               onChange={e => setSystemPrompt(e.target.value)}
-              placeholder="Nhập System Prompt cấu hình hành vi của Mia tại đây..."
+              placeholder="Nhập hướng dẫn, vai trò và kịch bản hoạt động của Mia tại đây..."
               className="flex-1 w-full bg-transparent border-none outline-none text-slate-700 font-semibold text-xs leading-relaxed p-5 resize-none font-mono overflow-y-auto"
             />
-            {/* Character count & Save status */}
-            <div className="px-5 py-2.5 border-t border-slate-100 flex justify-between items-center bg-slate-50/40 text-[10px] text-slate-400 font-bold shrink-0">
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Tự động lưu & đồng bộ
-              </span>
+            {/* Character count */}
+            <div className="px-5 py-2.5 border-t border-slate-100 flex justify-end items-center bg-slate-50/40 text-[10px] text-slate-400 font-bold shrink-0">
               <span>{systemPrompt.length} ký tự</span>
             </div>
           </div>
 
-          {/* Collapsible Model Params & Submit */}
-          <div className="border-t border-slate-100 p-5 shrink-0 flex flex-col gap-4.5 bg-white">
-            <button
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="w-full flex items-center justify-between py-1 bg-transparent border-none cursor-pointer text-slate-600 hover:text-[#0055A5] transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <Sliders size={13} className="text-[#0055A5]" />
-                <span className="font-extrabold text-[11px] tracking-wider uppercase">Cấu hình tham số AI</span>
-              </div>
-              <motion.div animate={{ rotate: showAdvanced ? 180 : 0 }} className="flex items-center">
-                <ChevronDown size={14} className="text-slate-400" />
-              </motion.div>
-            </button>
-
-            <AnimatePresence initial={false}>
-              {showAdvanced && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                  animate={{ height: "auto", opacity: 1, marginTop: 10 }}
-                  exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                  className="overflow-hidden flex flex-col gap-4"
-                >
-                  <Slider label="Temperature" desc="Độ sáng tạo của mô hình" value={temperature} min={0} max={1} step={0.05} onChange={setTemperature} />
-                  <Slider label="Top-P" desc="Phạm vi lấy mẫu từ vựng" value={topP} min={0} max={1} step={0.05} onChange={setTopP} />
-                  <Slider label="Max Tokens" desc="Giới hạn ký tự phản hồi" value={maxTokens} min={128} max={2048} step={64} onChange={setMaxTokens} />
-                </motion.div>
-              )}
-            </AnimatePresence>
-
+          {/* Action bar to Save/Apply Prompt */}
+          <div className="border-t border-slate-100 p-5 shrink-0 bg-white">
             <motion.button
-              onClick={send}
-              disabled={isLoading || !input.trim()}
-              whileTap={!isLoading && input.trim() ? { scale: 0.98 } : {}}
+              onClick={saveConfig}
+              disabled={isSaving || !systemPrompt.trim()}
+              whileTap={!isSaving && systemPrompt.trim() ? { scale: 0.98 } : {}}
               className={`w-full py-3.5 rounded-xl border-none font-black text-xs cursor-pointer flex items-center justify-center gap-2 shadow-xs transition-all uppercase tracking-wider ${
-                isLoading || !input.trim()
+                isSaving || !systemPrompt.trim()
                   ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                  : saveSuccess
+                  ? "bg-emerald-500 text-white shadow-emerald-500/10"
                   : "bg-gradient-to-r from-[#0055A5] to-[#00B4FF] text-white hover:shadow-md hover:shadow-blue-500/10 active:scale-95"
               }`}
             >
-              <Play size={14} className={isLoading ? "animate-pulse" : ""} />
-              {isLoading ? "Đang chạy..." : "Thử nghiệm ngay"}
+              {isSaving ? (
+                <>
+                  <Activity size={14} className="animate-spin" />
+                  Đang lưu cấu hình...
+                </>
+              ) : saveSuccess ? (
+                <>
+                  <Check size={14} />
+                  Áp dụng thành công!
+                </>
+              ) : (
+                <>
+                  <Zap size={14} />
+                  Áp dụng cấu hình
+                </>
+              )}
             </motion.button>
           </div>
         </div>
