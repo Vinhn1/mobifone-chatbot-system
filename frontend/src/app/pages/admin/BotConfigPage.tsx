@@ -228,7 +228,6 @@ export function BotConfigPage() {
         {[
           { id: "persona", label: "Nhân dạng & Lời thoại", icon: Bot },
           { id: "channels", label: "Kênh truyền thông & Webhook", icon: MessageSquare },
-          { id: "tuning", label: "Tham số & Kỹ thuật", icon: Zap },
         ].map(tab => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -525,43 +524,7 @@ export function BotConfigPage() {
             </div>
           )}
 
-          {activeTab === "tuning" && (
-            <div className="max-w-2xl mx-auto w-full">
-              {/* Sales Psychological Strategy Triggers */}
-              <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs">
-                <div className="flex items-center gap-2 mb-1">
-                  <Target size={16} className="text-[#E4002B]" />
-                  <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Kỹ thuật chốt đơn AI (Sales Strategy)</div>
-                </div>
-                <p className="text-slate-400 text-xs font-semibold mb-5">Kích hoạt các kỹ năng tâm lý tiếp cận khách hàng tự động</p>
-                
-                <div className="flex flex-col gap-4">
-                  {[
-                    { key: "urgencyMode", icon: Clock, label: "Tạo cảm giác khẩn cấp (Scarcity)", desc: "Ví dụ: \"Chỉ còn 3 suất khuyến mãi cuối cùng\"" },
-                    { key: "socialProof", icon: Star, label: "Bằng chứng cộng đồng (Social Proof)", desc: "Ví dụ: \"23,000 người đã tin dùng và đăng ký\"" },
-                    { key: "namePersonalization", icon: User, label: "Cá nhân hóa theo tên", desc: "Luôn tìm và xưng hô bằng tên riêng khách hàng" },
-                    { key: "autoEscalate", icon: Zap, label: "Tự động chuyển nhân viên", desc: "Đẩy thẳng sang chat trực tiếp khi gặp ca khó" },
-                  ].map(item => {
-                    const Icon = item.icon;
-                    return (
-                      <div key={item.key} className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                            <Icon size={14} className="text-[#0055A5]" />
-                          </div>
-                          <div>
-                            <div className="text-slate-700 font-bold text-xs">{item.label}</div>
-                            <div className="text-slate-400 text-[10px] font-semibold mt-0.5">{item.desc}</div>
-                          </div>
-                        </div>
-                        <Toggle value={settings[item.key as keyof typeof settings]} onChange={v => setSettings(p => ({ ...p, [item.key]: v }))} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
+
         </motion.div>
       </AnimatePresence>
     </div>
