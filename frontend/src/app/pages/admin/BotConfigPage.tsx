@@ -288,8 +288,8 @@ export function BotConfigPage() {
                   <div className="flex gap-2 w-full mt-2">
                     {[
                       { label: "Core LLM", value: "Qwen 2.5", color: "text-[#38BDF8]" },
-                      { label: "Nhiệt độ", value: temperature.toString(), color: "text-amber-400" },
-                      { label: "Max Tokens", value: maxTokens.toString(), color: "text-emerald-400" },
+                      { label: "Kịch bản RAG", value: "Active", color: "text-emerald-400" },
+                      { label: "Độ trễ", value: "~1.2s", color: "text-amber-400" },
                     ].map(s => (
                       <div key={s.label} className="flex-1 bg-white/5 border border-white/5 rounded-2xl py-2 px-1 text-center backdrop-blur-xs">
                         <div className={`font-black text-xs mb-0.5 ${s.color}`}>{s.value}</div>
@@ -526,61 +526,7 @@ export function BotConfigPage() {
           )}
 
           {activeTab === "tuning" && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-              {/* Model AI Parameters Sliders */}
-              <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs">
-                <div className="flex items-center gap-2 mb-1">
-                  <Zap size={16} className="text-[#0055A5]" />
-                  <div className="text-slate-800 font-extrabold text-sm uppercase tracking-wide">Tham số mô hình AI</div>
-                </div>
-                <p className="text-slate-400 text-xs font-semibold mb-6">Hiệu chỉnh tính sáng tạo và khối lượng từ ngữ phản hồi tối đa của Agent</p>
-                
-                <div className="flex flex-col gap-5">
-                  {/* Temperature */}
-                  <div>
-                    <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
-                      <span>Nhiệt độ (Temperature)</span>
-                      <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{temperature}</span>
-                    </div>
-                    <input
-                      type="range" min="0" max="1" step="0.1"
-                      value={temperature} onChange={e => setTemperature(parseFloat(e.target.value))}
-                      className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
-                    />
-                    <div className="flex justify-between text-[10px] font-bold text-slate-400 mt-2">
-                      <span>Chính xác & Logic (0.1)</span>
-                      <span>Sáng tạo & Đa dạng (1.0)</span>
-                    </div>
-                  </div>
-
-                  {/* Top P */}
-                  <div>
-                    <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
-                      <span>Độ chọn lọc từ ngữ (Top P)</span>
-                      <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{topP}</span>
-                    </div>
-                    <input
-                      type="range" min="0.1" max="1.0" step="0.05"
-                      value={topP} onChange={e => setTopP(parseFloat(e.target.value))}
-                      className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
-                    />
-                  </div>
-
-                  {/* Max Tokens */}
-                  <div>
-                    <div className="flex justify-between text-xs font-bold text-slate-700 mb-2">
-                      <span>Giới hạn từ tối đa (Max Tokens)</span>
-                      <span className="text-[#0055A5] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md font-black">{maxTokens} từ</span>
-                    </div>
-                    <input
-                      type="range" min="64" max="1024" step="64"
-                      value={maxTokens} onChange={e => setMaxTokens(parseInt(e.target.value))}
-                      className="w-full h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-[#0055A5] outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
+            <div className="max-w-2xl mx-auto w-full">
               {/* Sales Psychological Strategy Triggers */}
               <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-xs">
                 <div className="flex items-center gap-2 mb-1">
