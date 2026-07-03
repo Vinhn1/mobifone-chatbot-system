@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, Phone, MessageSquare, X, Check, Clock, TrendingUp, User, Package, Activity } from "lucide-react";
+import { Search, Phone, MessageSquare, X, Check, Clock, TrendingUp, User, Package, Activity, Sparkles, PhoneCall, Star, Presentation, CheckCircle, XCircle } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
@@ -21,19 +21,47 @@ type Lead = {
   messages: number;
 };
 
-const STAGES: { key: Stage; label: string; badgeClass: string }[] = [
-  { key: "new", label: "Mới nhận", badgeClass: "bg-slate-50 border border-slate-200 text-slate-500" },
-  { key: "contacted", label: "Đã liên hệ", badgeClass: "bg-blue-50 border border-blue-100 text-[#0055A5]" },
-  { key: "interested", label: "Quan tâm", badgeClass: "bg-amber-50 border border-amber-100 text-amber-600" },
-  { key: "demo", label: "Demo/Tư vấn", badgeClass: "bg-purple-50 border border-purple-100 text-purple-600" },
-  { key: "converted", label: "Đã ký HĐ", badgeClass: "bg-emerald-50 border border-emerald-100 text-emerald-600" },
-  { key: "lost", label: "Thất bại", badgeClass: "bg-rose-50 border border-rose-100 text-rose-600" },
+const STAGES: { key: Stage; label: string; icon: any; badgeClass: string }[] = [
+  { key: "new", label: "Mới nhận", icon: Sparkles, badgeClass: "bg-slate-50 border-slate-200 text-slate-500" },
+  { key: "contacted", label: "Đã liên hệ", icon: PhoneCall, badgeClass: "bg-blue-50 border-blue-200 text-[#0055A5]" },
+  { key: "interested", label: "Quan tâm", icon: Star, badgeClass: "bg-amber-50 border-amber-200 text-amber-600" },
+  { key: "demo", label: "Demo/Tư vấn", icon: Presentation, badgeClass: "bg-purple-50 border-purple-200 text-purple-600" },
+  { key: "converted", label: "Đã ký HĐ", icon: CheckCircle, badgeClass: "bg-emerald-50 border-emerald-200 text-emerald-600" },
+  { key: "lost", label: "Thất bại", icon: XCircle, badgeClass: "bg-rose-50 border-rose-200 text-rose-600" },
 ];
 
-const TEMP_STYLE: Record<Temp, { icon: string; badgeClass: string }> = {
-  hot: { icon: "🔥", badgeClass: "bg-rose-50 border border-rose-100 text-rose-600" },
-  warm: { icon: "☀", badgeClass: "bg-amber-50 border border-amber-100 text-amber-600" },
-  cold: { icon: "❄", badgeClass: "bg-blue-50 border border-blue-100 text-[#0055A5]" },
+const TEMP_STYLE: Record<Temp, { icon: string; label: string; badgeClass: string }> = {
+  hot: { icon: "🔥", label: "Tiềm năng cao", badgeClass: "bg-rose-50 border border-rose-100 text-rose-600" },
+  warm: { icon: "☀", label: "Đang cân nhắc", badgeClass: "bg-amber-50 border border-amber-100 text-amber-600" },
+  cold: { icon: "❄", label: "Mới tiếp cận", badgeClass: "bg-blue-50 border border-blue-100 text-[#0055A5]" },
+};
+
+const cleanInterestText = (text: string): string => {
+  if (!text) return "Tư vấn chung";
+  let cleaned = text;
+  if (cleaned.includes("Câu hỏi:")) {
+    const match = cleaned.match(/Câu hỏi:\s*["']([^"']+)["']/i);
+    if (match && match[1]) {
+      cleaned = match[1];
+    } else {
+      cleaned = cleaned.replace(/^Trích xuất từ phiên chat:[^.]+.\s*Câu hỏi:\s*/i, "");
+    }
+  }
+  // Remove phone numbers
+  cleaned = cleaned.replace(/(?:0|\+84)\d{9,10}/g, "");
+  // Remove common prefix patterns
+  cleaned = cleaned.replace(/tôi tên\s+[a-zà-ỹ\s]+số điện thoại\s+(?:tôi\s+)?là\s*/gi, "");
+  cleaned = cleaned.replace(/tôi muốn\s+(?:các\s+|tìm\s+)?thông tin\s+/gi, "");
+  cleaned = cleaned.replace(/hãy liên hệ với tôi sớm nhất/gi, "Yêu cầu liên hệ");
+  
+  cleaned = cleaned.trim().replace(/^["']|["']$/g, "").trim();
+  if (cleaned) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  if (cleaned.length > 40) {
+    return cleaned.slice(0, 37) + "...";
+  }
+  return cleaned || "Tư vấn gói cước";
 };
 
 // Map backend DB status to frontend Stage
@@ -95,10 +123,11 @@ function LeadDetail({ lead, onClose, onUpdateStatus }: { lead: Lead; onClose: ()
       </div>
 
       <div className="flex gap-2 font-extrabold text-[10px] uppercase tracking-wider">
-        <span className={`px-3 py-1 rounded-lg ${temp.badgeClass}`}>
-          {temp.icon} {lead.temp}
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${temp.badgeClass}`}>
+          {temp.icon} {temp.label}
         </span>
-        <span className={`px-3 py-1 rounded-lg ${stage.badgeClass}`}>
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${stage.badgeClass}`}>
+          {stage.icon && <stage.icon size={11} className="shrink-0" />}
           {stage.label}
         </span>
       </div>
@@ -129,7 +158,7 @@ function LeadDetail({ lead, onClose, onUpdateStatus }: { lead: Lead; onClose: ()
       <div className="grid grid-cols-2 gap-2.5">
         {[
           { icon: User, label: "Tên khách hàng", value: lead.name },
-          { icon: Package, label: "Quan tâm đến", value: lead.interest },
+          { icon: Package, label: "Nội dung quan tâm", value: cleanInterestText(lead.interest) },
           { icon: Phone, label: "Số điện thoại", value: lead.phone },
           { icon: MessageSquare, label: "Số tin nhắn", value: `${lead.messages} tin` },
           { icon: Clock, label: "Ngày tạo", value: new Date(lead.createdAt).toLocaleDateString("vi-VN") },
@@ -147,11 +176,10 @@ function LeadDetail({ lead, onClose, onUpdateStatus }: { lead: Lead; onClose: ()
         })}
       </div>
 
-      {/* Notes */}
       <div>
         <div className="text-slate-400 text-[10px] font-black tracking-widest uppercase mb-2">Ghi chú chi tiết</div>
         <div className="bg-amber-500/[0.03] border border-amber-100 rounded-2xl p-3.5 text-amber-800 text-[11px] font-semibold leading-relaxed">
-          Khách hàng để lại thông tin quan tâm gói cước "{lead.interest}" từ hội thoại chatbot Mia. Hệ thống CRM tự động lưu trữ và phân tích.
+          {lead.interest.startsWith("Trích xuất") ? lead.interest : `Khách hàng để lại thông tin quan tâm gói cước "${lead.interest}" từ hội thoại chatbot Mia. Hệ thống CRM tự động lưu trữ và phân tích.`}
         </div>
       </div>
 
@@ -600,10 +628,10 @@ export function LeadsPage() {
             onChange={e => setTempFilter(e.target.value as Temp | "all")}
             className="border border-slate-200 rounded-xl px-3 h-10 text-xs font-bold text-slate-600 bg-white cursor-pointer outline-none hover:border-slate-300 transition-colors"
           >
-            <option value="all">Tất cả nhiệt độ</option>
-            <option value="hot">🔥 Hot (Nóng)</option>
-            <option value="warm">☀ Warm (Ấm)</option>
-            <option value="cold">❄ Cold (Lạnh)</option>
+            <option value="all">Tất cả mức độ</option>
+            <option value="hot">🔥 Tiềm năng cao</option>
+            <option value="warm">☀ Đang cân nhắc</option>
+            <option value="cold">❄ Mới tiếp cận</option>
           </select>
         </div>
       </div>
@@ -647,7 +675,7 @@ export function LeadsPage() {
             <table className="w-full border-collapse min-w-[750px]">
               <thead className="sticky top-0 bg-slate-50/90 backdrop-blur-xs border-b border-slate-100 z-10">
                 <tr>
-                  {["Khách hàng", "Gói quan tâm", "Số tin nhắn", "Lead Score", "Nhiệt độ", "Giai đoạn", "Ngày tạo", ""].map(h => (
+                  {["Khách hàng", "Nội dung quan tâm", "Số tin nhắn", "Lead Score", "Độ tiềm năng", "Giai đoạn", "Ngày tạo", ""].map(h => (
                     <th key={h} className="px-5 py-3.5 text-left text-slate-400 text-[9px] font-black tracking-wider uppercase">
                       {h}
                     </th>
@@ -679,8 +707,8 @@ export function LeadsPage() {
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className="bg-blue-50/70 border border-blue-100 text-[#0055A5] rounded-lg px-2.5 py-1 text-[10px] font-bold">
-                            {lead.interest}
+                          <span className="bg-blue-50/50 border border-blue-100 text-[#0055A5] rounded-xl px-2.5 py-1 text-[10px] font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] inline-block shadow-xs">
+                            {cleanInterestText(lead.interest)}
                           </span>
                         </td>
                         <td className="px-5 py-3.5 text-slate-500 font-semibold text-xs">{lead.messages} tin</td>
@@ -698,12 +726,13 @@ export function LeadsPage() {
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wide ${temp.badgeClass}`}>
-                            {temp.icon} {lead.temp}
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shadow-xs ${temp.badgeClass}`}>
+                            {temp.icon} {temp.label}
                           </span>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wide ${stage.badgeClass}`}>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shadow-xs ${stage.badgeClass}`}>
+                            {stage.icon && <stage.icon size={10} className="shrink-0" />}
                             {stage.label}
                           </span>
                         </td>
