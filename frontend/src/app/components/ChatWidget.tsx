@@ -239,6 +239,17 @@ export function ChatWidget() {
   const [zaloOaId, setZaloOaId] = useState(DEFAULT_ZALO_OA_ID);
   const [fbPageId, setFbPageId] = useState(DEFAULT_FACEBOOK_PAGE_ID);
 
+  // Trạng thái hiển thị bong bóng thông báo (tooltip)
+  const [showTooltip, setShowTooltip] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowTooltip(false);
+    }, 8000); // Tự động ẩn sau 8 giây
+    return () => clearTimeout(timer);
+  }, []);
+
   const fetchPublicConfig = async () => {
     try {
       const response = await axios.get(`http://localhost:3000/chat/public-config?t=${Date.now()}`);
@@ -593,6 +604,8 @@ export function ChatWidget() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
               style={{ position: "relative", cursor: "pointer" }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
               onClick={() => {
                 const nextState = !showChannels;
                 setShowChannels(nextState);
@@ -658,19 +671,41 @@ export function ChatWidget() {
               )}
 
               {/* Tooltip */}
-              {!showChannels && (
-                <div style={{ position: "absolute", right: 88, top: "50%", transform: "translateY(-50%)", background: "rgba(9,21,44,0.96)", backdropFilter: "blur(16px)", border: "1px solid rgba(48,176,235,0.3)", borderRadius: 14, padding: "10px 16px", whiteSpace: "nowrap", pointerEvents: "none", boxShadow: "0 10px 30px rgba(0,0,0,0.3)" }}>
-                  <div style={{ color: "white", fontSize: 13.5, fontWeight: 800, display: "flex", alignItems: "center", gap: 5 }}>
-                    <Sparkles size={13} style={{ color: "#30B0EB" }} />
-                    Mia — Chăm sóc khách hàng MobiFone
-                  </div>
-                  <div style={{ color: "#87D5F8", fontSize: 11, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", display: "inline-block", boxShadow: "0 0 6px #22C55E" }} />
-                    Online · Đang có quà tặng 🎁
-                  </div>
-                  <div style={{ position: "absolute", right: -6, top: "50%", transform: "translateY(-50%)", width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderLeft: "6px solid rgba(9,21,44,0.96)" }} />
-                </div>
-              )}
+              <AnimatePresence>
+                {!showChannels && (showTooltip || isHovered) && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, x: 10, y: "-50%" }}
+                    animate={{ opacity: 1, scale: 1, x: 0, y: "-50%" }}
+                    exit={{ opacity: 0, scale: 0.9, x: 10, y: "-50%" }}
+                    transition={{ duration: 0.2 }}
+                    style={{
+                      position: "absolute",
+                      right: 88,
+                      top: "50%",
+                      background: "rgba(9,21,44,0.96)",
+                      backdropFilter: "blur(16px)",
+                      border: "1px solid rgba(48,176,235,0.3)",
+                      borderRadius: 14,
+                      padding: "10px 16px",
+                      whiteSpace: "nowrap",
+                      pointerEvents: "none",
+                      boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+                      originX: 1,
+                      originY: 0.5
+                    }}
+                  >
+                    <div style={{ color: "white", fontSize: 13.5, fontWeight: 800, display: "flex", alignItems: "center", gap: 5 }}>
+                      <Sparkles size={13} style={{ color: "#30B0EB" }} />
+                      Mia — Chăm sóc khách hàng MobiFone
+                    </div>
+                    <div style={{ color: "#87D5F8", fontSize: 11, display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", display: "inline-block", boxShadow: "0 0 6px #22C55E" }} />
+                      Online · Đang có quà tặng 🎁
+                    </div>
+                    <div style={{ position: "absolute", right: -6, top: "50%", transform: "translateY(-50%)", width: 0, height: 0, borderTop: "6px solid transparent", borderBottom: "6px solid transparent", borderLeft: "6px solid rgba(9,21,44,0.96)" }} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>

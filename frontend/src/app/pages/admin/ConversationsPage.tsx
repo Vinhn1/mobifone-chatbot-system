@@ -4,6 +4,7 @@ import { Search, ChevronRight, Phone, TrendingUp, CheckCircle2, AlertCircle, X, 
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
+import { RobotAvatar } from "../../components/RobotAvatar";
 
 type ConvStatus = "resolved" | "escalated" | "active" | "abandoned";
 
@@ -389,8 +390,8 @@ export function ConversationsPage() {
                   return (
                     <div key={i} className={`flex ${isUser ? "justify-end" : "justify-start"} gap-2.5 items-end`}>
                       {!isUser && (
-                        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#0055A5] to-[#00B4FF] flex items-center justify-center text-xs text-white font-black shrink-0 shadow-xs">
-                          M
+                        <div className="w-7 h-7 flex items-center justify-center shrink-0">
+                          <RobotAvatar size={28} state="idle" />
                         </div>
                       )}
                       <div className="max-w-[75%]">

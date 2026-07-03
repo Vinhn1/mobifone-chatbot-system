@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { User, Mail, Phone, MapPin, Calendar, Lock, Bell, Shield, Camera, Check, ChevronRight, Star, AlertCircle, LogOut } from "lucide-react";
+import { User, Mail, Phone, MapPin, Calendar, Lock, Bell, Shield, Camera, Check, ChevronRight, Star, AlertCircle, LogOut, ShieldCheck } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
 import axios from "axios";
@@ -49,6 +49,149 @@ export function UserProfile() {
   const [notifications, setNotifications] = useState({
     sms: true, email: true, promo: true, renewal: true, news: false, security: true
   });
+
+  // States cho các tính năng Bảo mật Thuê bao
+  const [securityFeature, setSecurityFeature] = useState<"list" | "password" | "2fa" | "phone">("list");
+  const [passwordForm, setPasswordForm] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [phoneForm, setPhoneForm] = useState({ newPhone: "", otpCode: "", step: 1 });
+  const [twoFaForm, setTwoFaForm] = useState({ otpCode: "", step: 1 });
+  const [secLoading, setSecLoading] = useState(false);
+  const [secError, setSecError] = useState<string | null>(null);
+  const [secSuccess, setSecSuccess] = useState<string | null>(null);
+
+  const resetSecurityForms = (feature: typeof securityFeature) => {
+    setSecurityFeature(feature);
+    setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    setPhoneForm({ newPhone: "", otpCode: "", step: 1 });
+    setTwoFaForm({ otpCode: "", step: 1 });
+    setSecLoading(false);
+    setSecError(null);
+    setSecSuccess(null);
+  };
+
+  // 1. Xử lý đổi mật khẩu thuê bao
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setSecError("Mật khẩu xác nhận không khớp.");
+      return;
+    }
+    setSecLoading(true);
+    setSecError(null);
+    setSecSuccess(null);
+    try {
+      await axios.post("http://localhost:3000/subscribers/change-password", {
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setSecSuccess("Thay đổi mật khẩu thành công!");
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error: any) {
+      console.error("Lỗi đổi mật khẩu:", error);
+      setSecError(error.response?.data?.message || "Lỗi không xác định khi đổi mật khẩu.");
+    } finally {
+      setSecLoading(false);
+    }
+  };
+
+  // 2. Gửi mã OTP xác thực bật/tắt 2FA thuê bao qua Email
+  const handleRequest2Fa = async () => {
+    setSecLoading(true);
+    setSecError(null);
+    setSecSuccess(null);
+    try {
+      await axios.post("http://localhost:3000/subscribers/2fa/request");
+      setTwoFaForm(p => ({ ...p, step: 2 }));
+      setSecSuccess("Mã OTP đã được gửi đến email đăng ký của bạn.");
+    } catch (error: any) {
+      console.error("Lỗi gửi OTP 2FA:", error);
+      setSecError(error.response?.data?.message || "Lỗi không thể gửi OTP xác thực.");
+    } finally {
+      setSecLoading(false);
+    }
+  };
+
+  // 3. Xác nhận bật/tắt 2FA bằng OTP cho thuê bao
+  const handleVerify2Fa = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (twoFaForm.otpCode.length !== 6) {
+      setSecError("Vui lòng nhập mã OTP 6 chữ số.");
+      return;
+    }
+    setSecLoading(true);
+    setSecError(null);
+    setSecSuccess(null);
+    try {
+      const res = await axios.post("http://localhost:3000/subscribers/2fa/toggle", {
+        otpCode: twoFaForm.otpCode,
+      });
+      updateUser({ twoFaEnabled: res.data.twoFaEnabled });
+      setSecSuccess(res.data.message || "Thao tác 2FA thành công!");
+      setTwoFaForm({ otpCode: "", step: 1 });
+      setTimeout(() => {
+        resetSecurityForms("list");
+      }, 1500);
+    } catch (error: any) {
+      console.error("Lỗi xác nhận 2FA:", error);
+      setSecError(error.response?.data?.message || "Mã xác thực không hợp lệ.");
+    } finally {
+      setSecLoading(false);
+    }
+  };
+
+  // 4. Gửi mã OTP yêu cầu đổi số điện thoại liên kết của thuê bao
+  const handleRequestPhoneChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!phoneForm.newPhone.match(/^0\d{9}$/)) {
+      setSecError("Số điện thoại không hợp lệ. Phải gồm 10 chữ số bắt đầu từ số 0.");
+      return;
+    }
+    setSecLoading(true);
+    setSecError(null);
+    setSecSuccess(null);
+    try {
+      await axios.post("http://localhost:3000/subscribers/phone/request", {
+        newPhone: phoneForm.newPhone,
+      });
+      setPhoneForm(p => ({ ...p, step: 2 }));
+      setSecSuccess("Mã OTP đã được gửi đến email đăng ký của bạn.");
+    } catch (error: any) {
+      console.error("Lỗi gửi OTP đổi SĐT:", error);
+      setSecError(error.response?.data?.message || "Lỗi không thể gửi OTP xác thực.");
+    } finally {
+      setSecLoading(false);
+    }
+  };
+
+  // 5. Xác nhận đổi số điện thoại liên kết của thuê bao
+  const handleVerifyPhoneChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (phoneForm.otpCode.length !== 6) {
+      setSecError("Vui lòng nhập mã OTP 6 chữ số.");
+      return;
+    }
+    setSecLoading(true);
+    setSecError(null);
+    setSecSuccess(null);
+    try {
+      const res = await axios.post("http://localhost:3000/subscribers/phone/verify", {
+        newPhone: phoneForm.newPhone,
+        otpCode: phoneForm.otpCode,
+      });
+      updateUser({ phone: res.data.phoneNumber });
+      setSecSuccess("Cập nhật số điện thoại liên kết thành công!");
+      setPhoneForm({ newPhone: "", otpCode: "", step: 1 });
+      setTimeout(() => {
+        resetSecurityForms("list");
+      }, 1500);
+    } catch (error: any) {
+      console.error("Lỗi xác nhận đổi SĐT:", error);
+      setSecError(error.response?.data?.message || "Mã xác thực không hợp lệ.");
+    } finally {
+      setSecLoading(false);
+    }
+  };
+
   const tier = user?.tier ?? "Silver";
   const tierClass = TIER_STYLE[tier] || TIER_STYLE.Silver;
 
@@ -324,37 +467,362 @@ export function UserProfile() {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="flex flex-col gap-3"
+          className="flex flex-col gap-3 font-outfit"
         >
-          {[
-            { icon: Lock, title: "Đổi mật khẩu", desc: "Cập nhật mật khẩu đăng nhập của bạn", color: "#0055A5", colorBg: "bg-blue-50/70", colorBorder: "border-blue-100" },
-            { icon: Shield, title: "Xác thực hai lớp (2FA)", desc: "Bảo vệ an toàn bằng OTP qua SMS", color: "#10B981", colorBg: "bg-emerald-50", colorBorder: "border-emerald-100", badge: "Đã kích hoạt" },
-            { icon: Phone, title: "Đổi số điện thoại liên kết", desc: "Thay đổi số điện thoại dùng để xác thực", color: "#E4002B", colorBg: "bg-red-50", colorBorder: "border-red-100" },
-          ].map(s => {
-            const Icon = s.icon;
-            return (
-              <div
-                key={s.title}
-                className="bg-white border border-slate-200/60 hover:border-slate-300 rounded-2xl p-4.5 flex items-center gap-4 cursor-pointer transition-all duration-200 shadow-xs hover:shadow-md"
-              >
-                <div className={`w-10 h-10 rounded-xl ${s.colorBg} border ${s.colorBorder} flex items-center justify-center shrink-0`}>
-                  <Icon size={18} style={{ color: s.color }} />
-                </div>
-                <div className="flex-1">
-                  <div className="text-slate-800 font-bold text-sm flex items-center gap-2">
-                    {s.title}
-                    {s.badge && (
-                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
-                        {s.badge}
-                      </span>
-                    )}
+          {securityFeature === "list" && (
+            <div className="flex flex-col gap-3">
+              {[
+                { key: "password" as const, icon: Lock, title: "Đổi mật khẩu", desc: "Cập nhật mật khẩu đăng nhập của bạn", color: "#0055A5", colorBg: "bg-blue-50/70", colorBorder: "border-blue-100" },
+                { key: "2fa" as const, icon: Shield, title: "Xác thực hai lớp (2FA)", desc: "Bảo vệ tài khoản bằng mã OTP qua email đăng ký", color: "#10B981", colorBg: "bg-emerald-50", colorBorder: "border-emerald-100", badge: user?.twoFaEnabled ? "Đã kích hoạt" : "Chưa kích hoạt", badgeColor: user?.twoFaEnabled ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-50 text-slate-500 border-slate-200" },
+                { key: "phone" as const, icon: Phone, title: "Đổi số điện thoại liên kết", desc: "Thay đổi số điện thoại liên kết tài khoản", color: "#E4002B", colorBg: "bg-red-50/70", colorBorder: "border-red-100" },
+              ].map(s => {
+                const Icon = s.icon;
+                return (
+                  <div
+                    key={s.title}
+                    onClick={() => resetSecurityForms(s.key)}
+                    className="bg-white border border-slate-200/60 hover:border-slate-300 rounded-2xl p-4.5 flex items-center gap-4 cursor-pointer transition-all duration-200 shadow-xs hover:shadow-md"
+                  >
+                    <div className={`w-10 h-10 rounded-xl ${s.colorBg} border ${s.colorBorder} flex items-center justify-center shrink-0`}>
+                      <Icon size={18} style={{ color: s.color }} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-slate-800 font-bold text-sm flex items-center gap-2">
+                        {s.title}
+                        {s.badge && (
+                          <span className={`border rounded-md px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${s.badgeColor}`}>
+                            {s.badge}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-slate-400 text-xs font-medium mt-0.5">{s.desc}</div>
+                    </div>
+                    <ChevronRight size={15} className="text-slate-300" />
                   </div>
-                  <div className="text-slate-400 text-xs font-medium mt-0.5">{s.desc}</div>
-                </div>
-                <ChevronRight size={15} className="text-slate-300" />
+                );
+              })}
+            </div>
+          )}
+
+          {securityFeature === "password" && (
+            <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm shadow-slate-200/30">
+              <div className="flex items-center gap-2 mb-6">
+                <button
+                  onClick={() => resetSecurityForms("list")}
+                  className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-600 text-xs font-bold flex items-center gap-1"
+                >
+                  ← Quay lại
+                </button>
+                <h3 className="text-slate-800 font-extrabold text-base margin-0">Đổi mật khẩu</h3>
               </div>
-            );
-          })}
+
+              <form onSubmit={handleChangePassword} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Mật khẩu hiện tại</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.currentPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all bg-slate-50/50"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Mật khẩu mới</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.newPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all bg-slate-50/50"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Xác nhận mật khẩu mới</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.confirmPassword}
+                    onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all bg-slate-50/50"
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                {secError && (
+                  <div className="flex items-center gap-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-4 py-2.5 text-xs font-bold">
+                    <AlertCircle size={14} /> {secError}
+                  </div>
+                )}
+
+                {secSuccess && (
+                  <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 text-xs font-bold">
+                    <Check size={14} /> {secSuccess}
+                  </div>
+                )}
+
+                <div className="mt-2 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => resetSecurityForms("list")}
+                    className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-slate-600 font-bold text-sm cursor-pointer transition-all"
+                  >
+                    Huỷ
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={secLoading}
+                    className={`px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#0055A5] to-blue-500 text-white font-bold text-sm shadow-md border-none transition-all active:scale-95 ${
+                      secLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                    }`}
+                  >
+                    {secLoading ? "Đang xử lý..." : "Đổi mật khẩu"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {securityFeature === "2fa" && (
+            <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm shadow-slate-200/30">
+              <div className="flex items-center gap-2 mb-6">
+                <button
+                  onClick={() => resetSecurityForms("list")}
+                  className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-600 text-xs font-bold flex items-center gap-1"
+                >
+                  ← Quay lại
+                </button>
+                <h3 className="text-slate-800 font-extrabold text-base margin-0">Xác thực hai lớp (2FA)</h3>
+              </div>
+
+              {twoFaForm.step === 1 ? (
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center gap-4.5 bg-slate-50 border border-slate-200/60 rounded-2xl p-4">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${user?.twoFaEnabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+                      <Shield size={20} />
+                    </div>
+                    <div>
+                      <div className="text-slate-800 text-sm font-bold">
+                        Trạng thái: <span className={user?.twoFaEnabled ? "text-emerald-600 font-black" : "text-slate-500 font-black"}>{user?.twoFaEnabled ? "ĐÃ BẬT" : "CHƯA BẬT"}</span>
+                      </div>
+                      <p className="text-slate-400 text-xs font-medium margin-0 mt-0.5">
+                        Xác thực hai lớp giúp tăng cường bảo mật cho tài khoản của bạn bằng cách yêu cầu mã OTP gửi về Email đăng ký khi đăng nhập.
+                      </p>
+                    </div>
+                  </div>
+
+                  {secSuccess && (
+                    <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 text-xs font-bold">
+                      <Check size={14} /> {secSuccess}
+                    </div>
+                  )}
+
+                  <div className="flex justify-end mt-2">
+                    <button
+                      onClick={handleRequest2Fa}
+                      disabled={secLoading}
+                      className={`px-6 py-2.5 rounded-xl text-white font-bold text-sm shadow-md border-none transition-all active:scale-95 cursor-pointer ${
+                        user?.twoFaEnabled
+                          ? "bg-rose-600 hover:bg-rose-700 shadow-rose-600/20"
+                          : "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
+                      } ${secLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      {secLoading ? "Đang gửi mã OTP..." : user?.twoFaEnabled ? "Yêu cầu Tắt 2FA" : "Yêu cầu Bật 2FA"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleVerify2Fa} className="flex flex-col gap-4">
+                  <div className="bg-blue-50 border border-blue-100 text-[#0055A5] rounded-xl p-3.5 text-xs font-semibold">
+                    Một mã OTP 6 chữ số đã được gửi tới email đăng ký của bạn: <span className="font-extrabold">{user?.email}</span>. Vui lòng nhập mã để hoàn tất.
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Mã xác thực OTP</label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={twoFaForm.otpCode}
+                      onChange={e => setTwoFaForm({ ...twoFaForm, otpCode: e.target.value.replace(/\D/g, "") })}
+                      className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white tracking-widest text-center text-lg transition-all bg-slate-50/50 font-mono"
+                      placeholder="000000"
+                    />
+                    <span className="text-[10px] text-slate-400 font-semibold italic mt-0.5">Mẹo test nhanh: Bạn có thể nhập mã bypass <span className="font-bold text-slate-600">123456</span></span>
+                  </div>
+
+                  {secError && (
+                    <div className="flex items-center gap-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-4 py-2.5 text-xs font-bold">
+                      <AlertCircle size={14} /> {secError}
+                    </div>
+                  )}
+
+                  {secSuccess && (
+                    <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 text-xs font-bold">
+                      <Check size={14} /> {secSuccess}
+                    </div>
+                  )}
+
+                  <div className="mt-2 flex justify-between items-center">
+                    <button
+                      type="button"
+                      onClick={handleRequest2Fa}
+                      className="bg-transparent border-none text-blue-600 hover:text-blue-700 font-bold text-xs cursor-pointer"
+                    >
+                      Gửi lại OTP
+                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setTwoFaForm(p => ({ ...p, step: 1 }))}
+                        className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-slate-600 font-bold text-sm cursor-pointer transition-all"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={secLoading || twoFaForm.otpCode.length !== 6}
+                        className={`px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-sm shadow-md border-none transition-all active:scale-95 ${
+                          secLoading || twoFaForm.otpCode.length !== 6 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                        }`}
+                      >
+                        {secLoading ? "Đang xác thực..." : "Xác thực OTP"}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {securityFeature === "phone" && (
+            <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm shadow-slate-200/30">
+              <div className="flex items-center gap-2 mb-6">
+                <button
+                  onClick={() => resetSecurityForms("list")}
+                  className="bg-transparent border-none cursor-pointer text-slate-400 hover:text-slate-600 text-xs font-bold flex items-center gap-1"
+                >
+                  ← Quay lại
+                </button>
+                <h3 className="text-slate-800 font-extrabold text-base margin-0">Đổi số điện thoại liên kết</h3>
+              </div>
+
+              {phoneForm.step === 1 ? (
+                <form onSubmit={handleRequestPhoneChange} className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Số điện thoại hiện tại</label>
+                    <input
+                      type="text"
+                      disabled
+                      value={user?.phone ?? ""}
+                      className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-400 text-sm font-semibold outline-none bg-slate-100 cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Số điện thoại mới</label>
+                    <input
+                      type="text"
+                      required
+                      value={phoneForm.newPhone}
+                      onChange={e => setPhoneForm({ ...phoneForm, newPhone: e.target.value.replace(/\D/g, "") })}
+                      className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white transition-all bg-slate-50/50"
+                      placeholder="Nhập số điện thoại mới"
+                    />
+                  </div>
+
+                  {secError && (
+                    <div className="flex items-center gap-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-4 py-2.5 text-xs font-bold">
+                      <AlertCircle size={14} /> {secError}
+                    </div>
+                  )}
+
+                  <div className="mt-2 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => resetSecurityForms("list")}
+                      className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-slate-600 font-bold text-sm cursor-pointer transition-all"
+                    >
+                      Huỷ
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={secLoading || !phoneForm.newPhone}
+                      className={`px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#0055A5] to-blue-500 text-white font-bold text-sm shadow-md border-none transition-all active:scale-95 ${
+                        secLoading || !phoneForm.newPhone ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                      }`}
+                    >
+                      {secLoading ? "Đang gửi mã OTP..." : "Nhận mã OTP"}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyPhoneChange} className="flex flex-col gap-4">
+                  <div className="bg-blue-50 border border-blue-100 text-[#0055A5] rounded-xl p-3.5 text-xs font-semibold">
+                    Một mã OTP 6 chữ số đã được gửi tới email đăng ký của bạn: <span className="font-extrabold">{user?.email}</span> để xác nhận thay đổi số điện thoại sang <span className="font-extrabold">{phoneForm.newPhone}</span>.
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-slate-500 text-[10px] font-bold uppercase tracking-wider">Mã xác thực OTP</label>
+                    <input
+                      type="text"
+                      required
+                      maxLength={6}
+                      value={phoneForm.otpCode}
+                      onChange={e => setPhoneForm({ ...phoneForm, otpCode: e.target.value.replace(/\D/g, "") })}
+                      className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white tracking-widest text-center text-lg transition-all bg-slate-50/50 font-mono"
+                      placeholder="000000"
+                    />
+                    <span className="text-[10px] text-slate-400 font-semibold italic mt-0.5">Mẹo test nhanh: Bạn có thể nhập mã bypass <span className="font-bold text-slate-600">123456</span></span>
+                  </div>
+
+                  {secError && (
+                    <div className="flex items-center gap-2 text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-4 py-2.5 text-xs font-bold">
+                      <AlertCircle size={14} /> {secError}
+                    </div>
+                  )}
+
+                  {secSuccess && (
+                    <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5 text-xs font-bold">
+                      <Check size={14} /> {secSuccess}
+                    </div>
+                  )}
+
+                  <div className="mt-2 flex justify-between items-center">
+                    <button
+                      type="button"
+                      onClick={handleRequestPhoneChange}
+                      className="bg-transparent border-none text-blue-600 hover:text-blue-700 font-bold text-xs cursor-pointer"
+                    >
+                      Gửi lại OTP
+                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setPhoneForm(p => ({ ...p, step: 1 }))}
+                        className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-300 text-slate-600 font-bold text-sm cursor-pointer transition-all"
+                      >
+                        Quay lại
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={secLoading || phoneForm.otpCode.length !== 6}
+                        className={`px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-bold text-sm shadow-md border-none transition-all active:scale-95 ${
+                          secLoading || phoneForm.otpCode.length !== 6 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                        }`}
+                      >
+                        {secLoading ? "Đang xác thực..." : "Xác thực OTP"}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
         </motion.div>
       )}
 

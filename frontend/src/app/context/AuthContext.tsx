@@ -33,7 +33,7 @@ type AuthContextType = {
   register: (phone: string, password: string, name?: string) => Promise<"success" | "error">;
   logout: () => void;
   updateUser: (patch: Partial<AuthUser>) => void;
-  verify2faLogin: (username: string, otpCode: string) => Promise<"admin" | "error">;
+  verify2faLogin: (username: string, otpCode: string) => Promise<"admin" | "user" | "error">;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -127,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 address: sub.address || "Chưa cập nhật",
                 dob: sub.dob || "1990-01-01",
                 avatar: sub.avatar || undefined,
+                twoFaEnabled: sub.twoFaEnabled || false,
               };
               localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
               return mappedUser;
@@ -247,6 +248,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phoneNumber: identifier,
           password: password,
         });
+        if (response.data?.require2fa) {
+          return "require_2fa";
+        }
         const { token: apiToken, subscriber: sub } = response.data;
         if (apiToken && sub) {
           localStorage.setItem("mobifone_portal_token", apiToken);
@@ -272,6 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             address: sub.address || "Chưa cập nhật",
             dob: sub.dob || "01/01/1990",
             avatar: sub.avatar || undefined,
+            twoFaEnabled: sub.twoFaEnabled || false,
           };
           localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
           setUser(mappedUser);
@@ -286,7 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return "error";
   };
 
-  const verify2faLogin = async (username: string, otpCode: string): Promise<"admin" | "error"> => {
+  const verify2faLogin = async (username: string, otpCode: string): Promise<"admin" | "user" | "error"> => {
     try {
       const response = await axios.post(`${API_BASE}/auth/verify-2fa`, {
         username,
@@ -294,6 +299,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const apiToken = response.data?.access_token;
       const apiUser = response.data?.user;
+      const sub = response.data?.subscriber;
+
       if (apiToken && apiUser) {
         localStorage.setItem("mobifone_admin_token", apiToken);
         setToken(apiToken);
@@ -322,6 +329,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("mobifone_admin_user", JSON.stringify(adminUser));
         setUser(adminUser);
         return "admin";
+      } else if (apiToken && sub) {
+        localStorage.setItem("mobifone_portal_token", apiToken);
+        setToken(apiToken);
+        const mappedUser: AuthUser = {
+          id: sub.id,
+          name: sub.name || `Thành viên ${sub.phoneNumber.slice(-4)}`,
+          phone: sub.phoneNumber,
+          email: sub.email || `${sub.phoneNumber}@mobifone.vn`,
+          role: "user",
+          tier: "Gold",
+          package: sub.currentPackage ? `${sub.currentPackage} Ultra` : "Không có gói",
+          packageCode: sub.currentPackage || "",
+          packageExpiry: sub.packageExpiry ? new Date(sub.packageExpiry).toLocaleDateString("vi-VN") : "N/A",
+          dataUsedGB: sub.dataUsedGB || 0,
+          dataTotalGB: sub.dataTotalGB || 0,
+          voiceUsedMin: 0,
+          voiceTotalMin: sub.currentPackage ? 600 : 0,
+          balance: 150000,
+          points: 1200,
+          joinDate: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN"),
+          address: sub.address || "Chưa cập nhật",
+          dob: sub.dob || "01/01/1990",
+          avatar: sub.avatar || undefined,
+          twoFaEnabled: sub.twoFaEnabled || false,
+        };
+        localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
+        setUser(mappedUser);
+        return "user";
       }
       return "error";
     } catch (error) {

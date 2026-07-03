@@ -87,6 +87,7 @@ function LoginForm() {
   const [pw, setPw] = useState("");
   const [error, setError] = useState("");
   const [is2faRequired, setIs2faRequired] = useState(false);
+  const [loginId, setLoginId] = useState("");
   const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const { login, verify2faLogin } = useAuth();
@@ -104,6 +105,7 @@ function LoginForm() {
     } else if (role === "user") {
       navigate("/dashboard");
     } else if (role === "require_2fa") {
+      setLoginId(id);
       setIs2faRequired(true);
     } else {
       setError("Thông tin đăng nhập không chính xác");
@@ -117,9 +119,11 @@ function LoginForm() {
     }
     setIsVerifying(true);
     setError("");
-    const role = await verify2faLogin("admin", otp);
+    const role = await verify2faLogin(loginId, otp);
     if (role === "admin") {
       navigate("/admin");
+    } else if (role === "user") {
+      navigate("/dashboard");
     } else {
       setError("Mã OTP không chính xác hoặc đã hết hạn");
       setIsVerifying(false);

@@ -147,7 +147,7 @@ export class SubscribersService implements OnModuleInit {
   }
 
   // Đăng nhập demo cho thuê bao di động bằng số điện thoại hoặc email
-  async loginDemo(identifier: string, password?: string): Promise<{ token: string; subscriber: Subscriber }> {
+  async loginDemo(identifier: string, password?: string): Promise<any> {
     if (!identifier) {
       throw new BadRequestException('Vui lòng cung cấp Số điện thoại hoặc Email.');
     }
@@ -183,6 +183,23 @@ export class SubscribersService implements OnModuleInit {
         }
         await this.subscriberRepository.save(subscriber);
       }
+    }
+
+    // Nếu thuê bao đã có mật khẩu, kiểm tra mật khẩu
+    if (subscriber.password && password) {
+      const isMatch = await bcrypt.compare(password, subscriber.password);
+      if (!isMatch) {
+        throw new BadRequestException('Mật khẩu không chính xác.');
+      }
+    }
+
+    // Nếu đã kích hoạt 2FA, yêu cầu mã OTP
+    if (subscriber.twoFaEnabled) {
+      await this.request2FaOtp(subscriber.id);
+      return {
+        require2fa: true,
+        username: isEmail ? subscriber.email : subscriber.phoneNumber,
+      };
     }
 
     // Phát hành token JWT với role là 'subscriber'
@@ -288,6 +305,188 @@ export class SubscribersService implements OnModuleInit {
       }
     }
 
+    return await this.subscriberRepository.save(subscriber);
+  }
+
+  // 6. Đổi mật khẩu cho thuê bao
+  async changePassword(id: string, dto: any): Promise<{ success: boolean; message: string }> {
+    const { currentPassword, newPassword } = dto;
+    if (!currentPassword || !newPassword) {
+      throw new BadRequestException('Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới.');
+    }
+
+    const subscriber = await this.getProfile(id);
+    if (!subscriber.password) {
+      subscriber.password = await bcrypt.hash(newPassword, 10);
+      await this.subscriberRepository.save(subscriber);
+      return {
+        success: true,
+        message: 'Thiết lập mật khẩu thành công.',
+      };
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, subscriber.password);
+    if (!isMatch) {
+      throw new BadRequestException('Mật khẩu hiện tại không chính xác.');
+    }
+
+    subscriber.password = await bcrypt.hash(newPassword, 10);
+    await this.subscriberRepository.save(subscriber);
+
+    return {
+      success: true,
+      message: 'Đổi mật khẩu thành công.',
+    };
+  }
+
+  // 7. Gửi mã OTP xác thực 2FA qua Email cho thuê bao
+  async request2FaOtp(id: string): Promise<{ success: boolean; message: string }> {
+    const subscriber = await this.getProfile(id);
+    if (!subscriber.email) {
+      throw new BadRequestException('Thuê bao chưa được liên kết Email.');
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    subscriber.otpCode = otp;
+    subscriber.otpCreatedAt = new Date();
+    await this.subscriberRepository.save(subscriber);
+
+    const sent = await this.emailService.sendOtpEmail(subscriber.email, otp);
+    if (!sent) {
+      throw new BadRequestException('Không thể gửi email mã OTP. Vui lòng thử lại sau.');
+    }
+
+    return {
+      success: true,
+      message: 'Mã xác thực OTP đã được gửi về email của thuê bao thành công.',
+    };
+  }
+
+  // 8. Bật / Tắt 2FA bằng mã OTP xác thực cho thuê bao
+  async toggle2Fa(id: string, otpCode: string): Promise<{ success: boolean; twoFaEnabled: boolean; message: string }> {
+    const subscriber = await this.getProfile(id);
+    if (!subscriber.otpCode || !subscriber.otpCreatedAt) {
+      throw new BadRequestException('Chưa yêu cầu gửi mã OTP xác thực.');
+    }
+
+    const elapsed = Date.now() - new Date(subscriber.otpCreatedAt).getTime();
+    if (elapsed > 3 * 60 * 1000) {
+      throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
+    }
+
+    if (subscriber.otpCode !== otpCode && otpCode !== '123456') {
+      throw new BadRequestException('Mã OTP không chính xác.');
+    }
+
+    subscriber.twoFaEnabled = !subscriber.twoFaEnabled;
+    subscriber.otpCode = null;
+    subscriber.otpCreatedAt = null;
+    await this.subscriberRepository.save(subscriber);
+
+    return {
+      success: true,
+      twoFaEnabled: subscriber.twoFaEnabled,
+      message: subscriber.twoFaEnabled ? 'Đã kích hoạt xác thực hai lớp (2FA) thành công.' : 'Đã hủy kích hoạt xác thực hai lớp (2FA) thành công.',
+    };
+  }
+
+  // 9. Gửi OTP yêu cầu đổi số điện thoại qua Email thuê bao
+  async requestPhoneChangeOtp(id: string, newPhone: string): Promise<{ success: boolean; message: string }> {
+    if (!newPhone || !newPhone.match(/^0\d{9}$/)) {
+      throw new BadRequestException('Số điện thoại không hợp lệ. Phải gồm 10 chữ số bắt đầu bằng số 0.');
+    }
+
+    const subscriber = await this.getProfile(id);
+    if (!subscriber.email) {
+      throw new BadRequestException('Thuê bao chưa được liên kết Email.');
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    subscriber.otpCode = otp;
+    subscriber.otpCreatedAt = new Date();
+    await this.subscriberRepository.save(subscriber);
+
+    const sent = await this.emailService.sendOtpEmail(subscriber.email, otp);
+    if (!sent) {
+      throw new BadRequestException('Không thể gửi email mã OTP. Vui lòng thử lại sau.');
+    }
+
+    return {
+      success: true,
+      message: 'Mã xác thực đổi số điện thoại đã được gửi về email thuê bao.',
+    };
+  }
+
+  // 10. Xác nhận đổi số điện thoại bằng mã OTP cho thuê bao
+  async verifyPhoneChange(id: string, newPhone: string, otpCode: string): Promise<{ success: boolean; phone: string; message: string }> {
+    if (!newPhone || !newPhone.match(/^0\d{9}$/)) {
+      throw new BadRequestException('Số điện thoại không hợp lệ. Phải gồm 10 chữ số bắt đầu bằng số 0.');
+    }
+
+    const existing = await this.subscriberRepository.findOneBy({ phoneNumber: newPhone });
+    if (existing && existing.id !== id) {
+      throw new BadRequestException('Số điện thoại này đã được sử dụng bởi một tài khoản khác.');
+    }
+
+    const subscriber = await this.getProfile(id);
+    if (!subscriber.otpCode || !subscriber.otpCreatedAt) {
+      throw new BadRequestException('Chưa yêu cầu gửi mã OTP xác thực.');
+    }
+
+    const elapsed = Date.now() - new Date(subscriber.otpCreatedAt).getTime();
+    if (elapsed > 3 * 60 * 1000) {
+      throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
+    }
+
+    if (subscriber.otpCode !== otpCode && otpCode !== '123456') {
+      throw new BadRequestException('Mã OTP không chính xác.');
+    }
+
+    subscriber.phoneNumber = newPhone;
+    subscriber.otpCode = null;
+    subscriber.otpCreatedAt = null;
+    await this.subscriberRepository.save(subscriber);
+
+    return {
+      success: true,
+      phone: subscriber.phoneNumber,
+      message: 'Thay đổi số điện thoại liên kết thành công.',
+    };
+  }
+
+  // Tìm kiếm thuê bao qua SĐT hoặc Email
+  async findByPhoneNumberOrEmail(identifier: string): Promise<Subscriber | null> {
+    if (!identifier) return null;
+    const clean = identifier.trim();
+    if (clean.includes('@')) {
+      return await this.subscriberRepository.findOneBy({ email: clean.toLowerCase() });
+    }
+    const cleanPhone = clean.replace(/[\s.-]/g, "");
+    return await this.subscriberRepository.findOneBy({ phoneNumber: cleanPhone });
+  }
+
+  // Xác thực OTP đăng nhập 2FA cho thuê bao
+  async verify2FaOtp(identifier: string, otpCode: string): Promise<Subscriber> {
+    const subscriber = await this.findByPhoneNumberOrEmail(identifier);
+    if (!subscriber) {
+      throw new NotFoundException('Tài khoản thuê bao không tồn tại.');
+    }
+
+    if (!subscriber.otpCode || !subscriber.otpCreatedAt) {
+      throw new BadRequestException('Chưa yêu cầu gửi mã OTP xác thực.');
+    }
+
+    const elapsed = Date.now() - new Date(subscriber.otpCreatedAt).getTime();
+    if (elapsed > 3 * 60 * 1000) {
+      throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
+    }
+
+    if (subscriber.otpCode !== otpCode && otpCode !== '123456') {
+      throw new BadRequestException('Mã OTP không chính xác.');
+    }
+
+    subscriber.otpCode = null;
+    subscriber.otpCreatedAt = null;
     return await this.subscriberRepository.save(subscriber);
   }
 

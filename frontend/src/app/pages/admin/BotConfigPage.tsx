@@ -198,8 +198,8 @@ export function BotConfigPage() {
       {/* Upper Action Bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200/60 pb-5 gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0055A5] to-[#E4002B] flex items-center justify-center text-white shadow-md shadow-blue-500/10">
-            <Bot size={22} />
+          <div className="w-10 h-10 flex items-center justify-center shrink-0">
+            <RobotAvatar size={40} />
           </div>
           <div>
             <h1 className="text-[#0F172A] font-black text-xl tracking-tight">Cấu hình Mia AI Agent</h1>

@@ -44,6 +44,9 @@ export class Subscriber {
   @Column({ type: 'varchar', nullable: true })
   password: string | null;
 
+  @Column({ type: 'boolean', default: false })
+  twoFaEnabled: boolean;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
+import { RobotAvatar } from "../components/RobotAvatar";
 
 const NAV_GROUPS = [
   {
@@ -340,15 +341,12 @@ export function AdminLayout() {
             <div style={{
               width: 36,
               height: 36,
-              borderRadius: 10,
-              background: "linear-gradient(135deg, #0055A5, #007FFF)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              flexShrink: 0,
-              boxShadow: "0 0 16px rgba(0,127,255,0.4)"
+              flexShrink: 0
             }}>
-              <Bot size={18} color="white" />
+              <RobotAvatar size={36} />
             </div>
             {!collapsed && (
               <motion.div

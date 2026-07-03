@@ -68,6 +68,59 @@ export class SubscribersController {
     return await this.subscribersService.updateProfile(req.user.userId, profileData);
   }
 
+  // 5.1 Đổi mật khẩu thuê bao
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @Request() req: any,
+    @Body() changePasswordDto: any,
+  ) {
+    return await this.subscribersService.changePassword(req.user.userId, changePasswordDto);
+  }
+
+  // 5.2 Gửi mã OTP yêu cầu bật/tắt 2FA
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/request')
+  @HttpCode(HttpStatus.OK)
+  async request2FaOtp(@Request() req: any) {
+    return await this.subscribersService.request2FaOtp(req.user.userId);
+  }
+
+  // 5.3 Xác thực và bật/tắt 2FA
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/toggle')
+  @HttpCode(HttpStatus.OK)
+  async toggle2Fa(
+    @Request() req: any,
+    @Body('otpCode') otpCode: string,
+  ) {
+    return await this.subscribersService.toggle2Fa(req.user.userId, otpCode);
+  }
+
+  // 5.4 Gửi mã OTP yêu cầu đổi số điện thoại liên kết
+  @UseGuards(JwtAuthGuard)
+  @Post('phone/request')
+  @HttpCode(HttpStatus.OK)
+  async requestPhoneChangeOtp(
+    @Request() req: any,
+    @Body('newPhone') newPhone: string,
+  ) {
+    return await this.subscribersService.requestPhoneChangeOtp(req.user.userId, newPhone);
+  }
+
+  // 5.5 Xác nhận thay đổi số điện thoại liên kết
+  @UseGuards(JwtAuthGuard)
+  @Post('phone/verify')
+  @HttpCode(HttpStatus.OK)
+  async verifyPhoneChange(
+    @Request() req: any,
+    @Body('newPhone') newPhone: string,
+    @Body('otpCode') otpCode: string,
+  ) {
+    return await this.subscribersService.verifyPhoneChange(req.user.userId, newPhone, otpCode);
+  }
+
   // 6. Lấy toàn bộ danh sách thuê bao (Dành cho Admin)
   @UseGuards(JwtAuthGuard)
   @Get()
