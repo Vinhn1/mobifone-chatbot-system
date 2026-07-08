@@ -100,7 +100,7 @@ function LoginForm() {
     }
     setError("");
     const role = await login(id, pw);
-    if (role === "admin") {
+    if (role === "admin" || role === "sales") {
       navigate("/admin");
     } else if (role === "user") {
       navigate("/dashboard");
@@ -120,7 +120,7 @@ function LoginForm() {
     setIsVerifying(true);
     setError("");
     const role = await verify2faLogin(loginId, otp);
-    if (role === "admin") {
+    if (role === "admin" || role === "sales") {
       navigate("/admin");
     } else if (role === "user") {
       navigate("/dashboard");

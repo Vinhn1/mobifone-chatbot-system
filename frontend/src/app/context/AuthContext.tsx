@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, type ReactNode, useEffect } from "react";
 import axios from "axios";
 
-export type AuthRole = "guest" | "user" | "admin";
+export type AuthRole = "guest" | "user" | "admin" | "sales";
 
 export type AuthUser = {
   id: string;
@@ -29,11 +29,11 @@ export type AuthUser = {
 type AuthContextType = {
   user: AuthUser | null;
   token: string | null;
-  login: (identifier: string, password: string) => Promise<"user" | "admin" | "require_2fa" | "error">;
+  login: (identifier: string, password: string) => Promise<"user" | "admin" | "sales" | "require_2fa" | "error">;
   register: (phone: string, password: string, name?: string) => Promise<"success" | "error">;
   logout: () => void;
   updateUser: (patch: Partial<AuthUser>) => void;
-  verify2faLogin: (username: string, otpCode: string) => Promise<"admin" | "user" | "error">;
+  verify2faLogin: (username: string, otpCode: string) => Promise<"admin" | "sales" | "user" | "error">;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -149,13 +149,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(prev => {
               const mappedUser: AuthUser = {
                 id: String(adminData.id),
-                name: adminData.name || "MobiFone Administrator",
+                name: adminData.name || (adminData.role === "sales" ? "Nhân viên CSKH MobiFone" : "MobiFone Administrator"),
                 phone: adminData.phone || "0987654321",
-                email: adminData.email || "admin@mobifone.vn",
-                role: "admin",
-                tier: "Diamond",
-                package: "Staff",
-                packageCode: "STAFF",
+                email: adminData.email || (adminData.role === "sales" ? "sales@mobifone.vn" : "admin@mobifone.vn"),
+                role: (adminData.role || "admin") as AuthRole,
+                tier: adminData.role === "sales" ? "Gold" : "Diamond",
+                package: adminData.role === "sales" ? "CSKH" : "Staff",
+                packageCode: adminData.role === "sales" ? "SALES" : "STAFF",
                 packageExpiry: "31/12/2026",
                 dataUsedGB: 0,
                 dataTotalGB: 0,
@@ -183,7 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchAdminProfile();
   }, []);
 
-  const login = async (identifier: string, password: string): Promise<"user" | "admin" | "require_2fa" | "error"> => {
+  const login = async (identifier: string, password: string): Promise<"user" | "admin" | "sales" | "require_2fa" | "error"> => {
     // Chỉ xóa các token phiên làm việc đang có
     localStorage.removeItem("mobifone_admin_token");
     localStorage.removeItem("mobifone_portal_token");
@@ -191,12 +191,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
 
     const idLower = identifier.toLowerCase().trim();
-    const isAdmin = idLower === "admin" || idLower === "admin@mobifone.vn" || idLower.includes("admin");
+    let loginUsername = idLower;
+    if (idLower.endsWith("@mobifone.vn")) {
+      loginUsername = idLower.split("@")[0];
+    }
+    const isStaff = loginUsername === "admin" || loginUsername === "sales";
 
-    if (isAdmin) {
+    if (isStaff) {
       try {
         const response = await axios.post(`${API_BASE}/auth/login`, {
-          username: "admin",
+          username: loginUsername,
           password: password,
         });
         
@@ -209,15 +213,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (apiToken && apiUser) {
           localStorage.setItem("mobifone_admin_token", apiToken);
           setToken(apiToken);
-          const adminUser: AuthUser = {
+          const staffUser: AuthUser = {
             id: String(apiUser.id),
-            name: apiUser.name || "MobiFone Administrator",
+            name: apiUser.name || (apiUser.role === "sales" ? "Nhân viên CSKH MobiFone" : "MobiFone Administrator"),
             phone: apiUser.phone || "0987654321",
-            email: apiUser.email || "admin@mobifone.vn",
-            role: "admin",
-            tier: "Diamond",
-            package: "Staff",
-            packageCode: "STAFF",
+            email: apiUser.email || (apiUser.role === "sales" ? "sales@mobifone.vn" : "admin@mobifone.vn"),
+            role: (apiUser.role || "admin") as AuthRole,
+            tier: apiUser.role === "sales" ? "Gold" : "Diamond",
+            package: apiUser.role === "sales" ? "CSKH" : "Staff",
+            packageCode: apiUser.role === "sales" ? "SALES" : "STAFF",
             packageExpiry: "31/12/2026",
             dataUsedGB: 0,
             dataTotalGB: 0,
@@ -231,12 +235,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             avatar: apiUser.avatar || undefined,
             twoFaEnabled: apiUser.twoFaEnabled || false,
           };
-          localStorage.setItem("mobifone_admin_user", JSON.stringify(adminUser));
-          setUser(adminUser);
-          return "admin";
+          localStorage.setItem("mobifone_admin_user", JSON.stringify(staffUser));
+          setUser(staffUser);
+          return apiUser.role === "sales" ? "sales" : "admin";
         }
       } catch (error) {
-        console.error("Lỗi xác thực Admin:", error);
+        console.error("Lỗi xác thực Admin/Sales:", error);
         return "error";
       }
     }
@@ -291,7 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return "error";
   };
 
-  const verify2faLogin = async (username: string, otpCode: string): Promise<"admin" | "user" | "error"> => {
+  const verify2faLogin = async (username: string, otpCode: string): Promise<"admin" | "sales" | "user" | "error"> => {
     try {
       const response = await axios.post(`${API_BASE}/auth/verify-2fa`, {
         username,
@@ -304,15 +308,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (apiToken && apiUser) {
         localStorage.setItem("mobifone_admin_token", apiToken);
         setToken(apiToken);
-        const adminUser: AuthUser = {
+        const staffUser: AuthUser = {
           id: String(apiUser.id),
-          name: apiUser.name || "MobiFone Administrator",
+          name: apiUser.name || (apiUser.role === "sales" ? "Nhân viên CSKH MobiFone" : "MobiFone Administrator"),
           phone: apiUser.phone || "0987654321",
-          email: apiUser.email || "admin@mobifone.vn",
-          role: "admin",
-          tier: "Diamond",
-          package: "Staff",
-          packageCode: "STAFF",
+          email: apiUser.email || (apiUser.role === "sales" ? "sales@mobifone.vn" : "admin@mobifone.vn"),
+          role: (apiUser.role || "admin") as AuthRole,
+          tier: apiUser.role === "sales" ? "Gold" : "Diamond",
+          package: apiUser.role === "sales" ? "CSKH" : "Staff",
+          packageCode: apiUser.role === "sales" ? "SALES" : "STAFF",
           packageExpiry: "31/12/2026",
           dataUsedGB: 0,
           dataTotalGB: 0,
@@ -326,9 +330,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           avatar: apiUser.avatar || undefined,
           twoFaEnabled: apiUser.twoFaEnabled || false,
         };
-        localStorage.setItem("mobifone_admin_user", JSON.stringify(adminUser));
-        setUser(adminUser);
-        return "admin";
+        localStorage.setItem("mobifone_admin_user", JSON.stringify(staffUser));
+        setUser(staffUser);
+        return apiUser.role === "sales" ? "sales" : "admin";
       } else if (apiToken && sub) {
         localStorage.setItem("mobifone_portal_token", apiToken);
         setToken(apiToken);
@@ -396,7 +400,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const updated = { ...prev, ...patch };
       if (updated.role === "user") {
         localStorage.setItem("mobifone_portal_user", JSON.stringify(updated));
-      } else if (updated.role === "admin") {
+      } else if (updated.role === "admin" || updated.role === "sales") {
         localStorage.setItem("mobifone_admin_user", JSON.stringify(updated));
       }
       return updated;
