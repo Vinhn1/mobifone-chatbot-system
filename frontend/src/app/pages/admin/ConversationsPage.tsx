@@ -20,6 +20,7 @@ type Conversation = {
   leadScore: number;
   extractedData: { phone?: string; name?: string; package?: string; carrier?: string; budget?: string };
   transcript: { role: "bot" | "user"; text: string; time: string }[];
+  lastActiveTime: number;
 };
 
 const STATUS_CFG: Record<ConvStatus, { label: string; badgeClass: string; icon: React.ElementType }> = {
@@ -126,6 +127,7 @@ export function ConversationsPage() {
         // Calculate conversation duration
         const firstTime = new Date(firstLog.createdAt).getTime();
         const lastTime = new Date(lastLog.createdAt).getTime();
+        const lastActiveTime = lastTime;
         const diffMins = Math.round((lastTime - firstTime) / (1000 * 60));
         const durationStr = diffMins === 0 ? "Ít hơn 1 phút" : `${diffMins} phút`;
 
@@ -173,12 +175,13 @@ export function ConversationsPage() {
             role: log.role === "bot" ? "bot" : "user",
             text: log.message,
             time: new Date(log.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-          }))
+          })),
+          lastActiveTime
         };
       });
 
-      // Sort by newest session start
-      parsedConversations.sort((a, b) => b.id.localeCompare(a.id));
+      // Sort by newest activity (last active time)
+      parsedConversations.sort((a, b) => b.lastActiveTime - a.lastActiveTime);
 
       setConversations(parsedConversations);
     } catch (error) {

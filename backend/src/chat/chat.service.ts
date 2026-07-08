@@ -448,36 +448,7 @@ export class ChatService {
       }
     }
 
-    // 4. Nếu có hình ảnh đính kèm và có baseUrl hợp lệ, gửi các hình ảnh đó qua Facebook
-    if (baseUrl && result?.images && Array.isArray(result.images) && result.images.length > 0) {
-      for (const img of result.images) {
-        const imageUrl = `${baseUrl}/chat/images/${encodeURIComponent(img)}`;
-        try {
-          await firstValueFrom(
-            this.httpService.post(fbSendUrl, {
-              recipient: { id: senderId },
-              message: {
-                attachment: {
-                  type: 'image',
-                  payload: {
-                    url: imageUrl,
-                    is_reusable: true
-                  }
-                }
-              }
-            }, {
-              httpsAgent: new https.Agent({ rejectUnauthorized: false })
-            })
-          );
-          console.log(`[FB-WEBHOOK] Đã gửi ảnh thành công lên FB Messenger: ${imageUrl}`);
-        } catch (fbError) {
-          const errorDetail = fbError.response 
-            ? JSON.stringify(fbError.response.data) 
-            : fbError.message;
-          console.error(`[FB-WEBHOOK] Lỗi khi gửi ảnh ${imageUrl} qua FB Messenger:`, errorDetail);
-        }
-      }
-    }
+
   }
 
   // Hỗ trợ tự phân giải tên miền Zalo sang IP thực tế bằng DNS công cộng (Google & Cloudflare) để bỏ qua DNS bị hijack cục bộ
@@ -702,88 +673,7 @@ export class ChatService {
       }
     }
 
-    // 4. Nếu có hình ảnh đính kèm và có baseUrl hợp lệ, gửi các hình ảnh đó qua Zalo
-    if (baseUrl && result?.images && Array.isArray(result.images) && result.images.length > 0) {
-      for (const img of result.images) {
-        const imageUrl = `${baseUrl}/chat/images/${encodeURIComponent(img)}`;
-        let currentToken = zaloAccessToken;
-        try {
-          const zaloAgent = await this.getZaloHttpsAgent();
-          const sendImageRequest = async (tokenToUse: string) => {
-            return await firstValueFrom(
-              this.httpService.post(zaloSendUrl, {
-                recipient: { user_id: senderId },
-                message: {
-                  text: "Hình ảnh trích xuất từ tài liệu:",
-                  attachment: {
-                    type: "template",
-                    payload: {
-                      template_type: "media",
-                      elements: [{
-                        media_type: "image",
-                        url: imageUrl
-                      }]
-                    }
-                  }
-                }
-              }, {
-                headers: {
-                  'Content-Type': 'application/json',
-                  'access_token': tokenToUse
-                },
-                httpsAgent: zaloAgent
-              })
-            );
-          };
 
-          let response = await sendImageRequest(currentToken);
-          if (response.data && response.data.error === -216) {
-            console.warn('[ZALO-WEBHOOK] Token hết hạn khi gửi ảnh Zalo. Đang tự động làm mới...');
-            const newToken = await this.refreshZaloToken(config);
-            currentToken = newToken;
-            zaloAccessToken = newToken;
-            config = await this.getRagConfig();
-            
-            const retryAgent = await this.getZaloHttpsAgent();
-            response = await firstValueFrom(
-              this.httpService.post(zaloSendUrl, {
-                recipient: { user_id: senderId },
-                message: {
-                  text: "Hình ảnh trích xuất từ tài liệu:",
-                  attachment: {
-                    type: "template",
-                    payload: {
-                      template_type: "media",
-                      elements: [{
-                        media_type: "image",
-                        url: imageUrl
-                      }]
-                    }
-                  }
-                }
-              }, {
-                headers: {
-                  'Content-Type': 'application/json',
-                  'access_token': newToken
-                },
-                httpsAgent: retryAgent
-              })
-            );
-          }
-
-          if (response.data && response.data.error && response.data.error !== 0) {
-            console.error('[ZALO-WEBHOOK] Phản hồi lỗi từ Zalo OpenAPI khi gửi ảnh:', JSON.stringify(response.data));
-          } else {
-            console.log(`[ZALO-WEBHOOK] Đã gửi ảnh thành công qua Zalo: ${imageUrl}`);
-          }
-        } catch (zaloError) {
-          const errorDetail = zaloError.response 
-            ? JSON.stringify(zaloError.response.data) 
-            : zaloError.message;
-          console.error(`[ZALO-WEBHOOK] Lỗi gửi ảnh Zalo ${imageUrl}:`, errorDetail);
-        }
-      }
-    }
   }
 
   // Lấy gợi ý câu hỏi động từ AI Service

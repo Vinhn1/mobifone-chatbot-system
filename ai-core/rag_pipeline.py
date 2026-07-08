@@ -40,7 +40,8 @@ VIETNAMESE_STOPWORDS = {
     "khi", "tại", "sao", "thế", "hãy", "tôi", "bạn", "chào", "vui", "hỗ", "trợ", "cần", "muốn", "vào", "ngày", 
     "tháng", "năm", "với", "ra", "như", "đã", "đang", "sẽ", "đọc", "lại", "có", "không", "biết", "hỏi", "xin",
     "cảm", "ơn", "nhà", "mạng", "cung", "cấp", "dịch", "vụ", "thông", "tin", "chi", "tiết", "cho", "về", "nhé",
-    "đây", "đó", "này", "kia", "đều", "tất", "cả", "mình", "sử", "dụng", "dùng", "đăng", "ký", "tìm", "kiếm", "tra", "cứu"
+    "đây", "đó", "này", "kia", "đều", "tất", "cả", "mình", "sử", "dụng", "dùng", "đăng", "ký", "tìm", "kiếm", "tra", "cứu",
+    "gói", "giá", "cước", "bao", "nhiêu", "tốc", "độ", "chu", "kỳ", "số", "lượng", "hạn", "mức", "phí", "tiền", "đồng", "vnđ", "vnd"
 }
 
 def extract_query_keywords(query: str) -> list:
@@ -234,9 +235,6 @@ class MobiFoneRAG:
         # Chỉ nhận diện gói cước nếu là dạng alphanumeric hoặc thuộc whitelist gói cước chữ thuần túy
         words = re.findall(r'\b[a-zA-Z0-9]+\b', normalized_query)
         
-        package_name = None
-        exact_results = {"ids": [], "documents": [], "metadatas": []}
-        
         VALID_ALPHABETIC_PACKAGES = {
             "FAG", "FBN", "FCM", "FDNA", "FDNI", "FDTH", "FHCM", "FHN", "FHP", "FKH", "FNA", "FPTH", "FQN", "FTN", "FVL",
             "BIGM", "BIGME", "BOOKING", "GAU", "GC", "GCA", "GHK", "GIN", "GITIHO", "GJ", "GK", "GKU", "GMA", "GS", "GSMA",
@@ -247,31 +245,62 @@ class MobiFoneRAG:
         
         exclusions = {"SMS", "GB", "MB", "DATA", "HOT", "USD", "VND", "RAG", "API", "ESIM", "4G", "5G", "3G", "LTE"}
         
-        for word in words:
+        candidates = []
+        for i in range(len(words)):
+            word = words[i]
             word_upper = word.upper()
             if word_upper in exclusions:
                 continue
                 
-            # Kiểm tra nếu là dạng alphanumeric (chứa cả chữ và số, ví dụ TK135, D5)
             is_alphanumeric = any(c.isdigit() for c in word) and any(c.isalpha() for c in word)
-            
-            # Hoặc là chữ thuần túy nhưng nằm trong whitelist
             is_valid_alpha = word.isalpha() and word_upper in VALID_ALPHABETIC_PACKAGES
             
             if is_alphanumeric or is_valid_alpha:
-                package_name = word_upper
-                print(f"🔍 Phát hiện từ khóa gói cước '{package_name}', tiến hành quét khớp chuỗi chính xác...")
-                try:
-                    # Lấy tất cả tài liệu chứa từ khóa này trong văn bản
-                    get_results = self.collection.get(
-                        where_document={"$contains": package_name}
-                    )
-                    if get_results and get_results.get("ids"):
-                        exact_results = get_results
-                        print(f"✓ Đã tìm thấy {len(exact_results['ids'])} tài liệu chứa từ khóa '{package_name}'.")
-                        break
-                except Exception as e:
-                    print(f"⚠️ Lỗi khi quét khớp chuỗi chính xác: {e}")
+                candidates.append(word)
+                candidates.append(word_upper)
+                
+                # Check lookahead for numeric suffix (e.g. "6WiFi 1")
+                if i + 1 < len(words):
+                    next_word = words[i+1]
+                    if next_word.isdigit():
+                        candidates.append(f"{word} {next_word}")
+                        candidates.append(f"{word_upper} {next_word}")
+                        
+                # Check lookahead for short word + numeric suffix (e.g. "6WiFi CBCS 1")
+                if i + 2 < len(words):
+                    next_word = words[i+1]
+                    next_next_word = words[i+2]
+                    if len(next_word) <= 6 and next_next_word.isdigit() and next_word.upper() not in exclusions:
+                        candidates.append(f"{word} {next_word} {next_next_word}")
+                        candidates.append(f"{word_upper} {next_word.upper()} {next_next_word}")
+                        
+        candidates = list(dict.fromkeys(candidates))
+        
+        package_name = None
+        exact_results = {"ids": [], "documents": [], "metadatas": []}
+        
+        seen_exact_ids = set()
+        for candidate in candidates:
+            print(f"🔍 Quét khớp chuỗi chính xác cho từ khóa gói cước: '{candidate}'...")
+            try:
+                get_results = self.collection.get(
+                    where_document={"$contains": candidate}
+                )
+                if get_results and get_results.get("ids"):
+                    ids = get_results["ids"]
+                    docs = get_results["documents"]
+                    metas = get_results["metadatas"]
+                    for idx in range(len(ids)):
+                        doc_id = ids[idx]
+                        if doc_id not in seen_exact_ids:
+                            exact_results["ids"].append(doc_id)
+                            exact_results["documents"].append(docs[idx])
+                            exact_results["metadatas"].append(metas[idx])
+                            seen_exact_ids.add(doc_id)
+                            if not package_name or len(candidate) > len(package_name):
+                                package_name = candidate.upper()
+            except Exception as e:
+                print(f"⚠️ Lỗi khi quét khớp chuỗi chính xác cho '{candidate}': {e}")
         
         # 4. Truy vấn ngữ nghĩa từ ChromaDB sử dụng mở rộng câu truy vấn (Query Expansion)
         queries_to_run = [normalized_query]
@@ -376,10 +405,20 @@ class MobiFoneRAG:
                 
                 # Nếu meta package_name khớp hoàn toàn (ví dụ: TK135)
                 meta_pkg_name = str(meta.get("package_name", "")).upper()
-                if meta_pkg_name == package_name:
-                    score = 0.0  # Ưu tiên cao nhất cho gói cước chính xác
-                elif package_name in meta_pkg_name:
-                    score = 0.02 # Ưu tiên thứ hai cho các chu kỳ dài hơn
+                if package_name:
+                    if meta_pkg_name == package_name:
+                        score = 0.0  # Ưu tiên cao nhất cho gói cước chính xác
+                    elif package_name in meta_pkg_name:
+                        score = 0.02 # Ưu tiên thứ hai cho các chu kỳ dài hơn
+                        
+                # Ưu tiên từ khóa khớp dài hơn và chi tiết hơn trong nội dung tài liệu
+                doc_lower = doc.lower()
+                longest_match_len = 0
+                for cand in candidates:
+                    if cand.lower() in doc_lower:
+                        longest_match_len = max(longest_match_len, len(cand))
+                if longest_match_len > 0:
+                    score = score - min(0.04, longest_match_len * 0.005)
                     
                 all_candidates.append({
                     "id": doc_id,
@@ -1017,7 +1056,7 @@ Cuối câu trả lời của bạn, hãy tạo thêm 3 câu hỏi gợi ý ti�
                     "Cách đăng ký mạng 5G MobiFone?"
                 ]
         
-        # 5. Trích xuất danh sách nguồn tham khảo không trùng lặp và ảnh đi kèm
+        # 5. Trích xuất danh sách nguồn tham khảo không trùng lặp (không lấy hình ảnh để tắt tính năng phản hồi ảnh)
         unique_sources = []
         extracted_images = []
         for src in sources:
@@ -1025,16 +1064,9 @@ Cuối câu trả lời của bạn, hãy tạo thêm 3 câu hỏi gợi ý ti�
             title = src.get("source_title")
             if url and url not in [s['url'] for s in unique_sources]:
                 unique_sources.append({"title": title, "url": url})
-            
-            # Trích xuất ảnh từ metadata (nếu có)
-            images_str = src.get("images", "")
-            if images_str:
-                for img in images_str.split(","):
-                    img = img.strip()
-                    if img and img not in extracted_images:
-                        extracted_images.append(img)
                 
         return answer, unique_sources, suggested_questions, extracted_images
+
 
 # Demo chạy thử nghiệm
 if __name__ == "__main__":

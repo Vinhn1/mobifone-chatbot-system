@@ -806,45 +806,7 @@ export function ChatWidget() {
                             }>
                               {renderText(msg.text)}
 
-                              {/* Hiển thị danh sách ảnh trích xuất */}
-                              {msg.type === "bot" && msg.images && msg.images.length > 0 && (
-                                <div style={{ 
-                                  marginTop: 10, 
-                                  display: "flex", 
-                                  flexWrap: "wrap", 
-                                  gap: 8,
-                                }}>
-                                  {msg.images.map((img, idx) => (
-                                    <div 
-                                      key={idx}
-                                      onClick={() => setSelectedImage(`http://localhost:3000/chat/images/${img}`)}
-                                      style={{
-                                        position: "relative",
-                                        width: msg.images!.length === 1 ? "100%" : "calc(50% - 4px)",
-                                        aspectRatio: "4/3",
-                                        borderRadius: 8,
-                                        overflow: "hidden",
-                                        border: "1px solid rgba(255,255,255,0.15)",
-                                        cursor: "zoom-in",
-                                        background: "rgba(0,0,0,0.2)"
-                                      }}
-                                    >
-                                      <img 
-                                        src={`http://localhost:3000/chat/images/${img}`}
-                                        alt={`Slide/Image ${idx + 1}`}
-                                        style={{
-                                          width: "100%",
-                                          height: "100%",
-                                          objectFit: "cover",
-                                          transition: "transform 0.3s ease"
-                                        }}
-                                        onMouseEnter={e => e.currentTarget.style.transform = "scale(1.08)"}
-                                        onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
-                                      />
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+
 
                               {/* Custom Interactive Lead Capture inside Chat Bubble */}
                               {msg.type === "bot" && msg.leadCapture && (
@@ -1151,77 +1113,7 @@ export function ChatWidget() {
         </AnimatePresence>
       </div>
 
-      {/* Lightbox Modal */}
-      <AnimatePresence>
-        {selectedImage && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedImage(null)}
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: "rgba(0,0,0,0.9)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              zIndex: 1100,
-              cursor: "zoom-out",
-              padding: 24,
-            }}
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 15 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              style={{
-                position: "relative",
-                maxWidth: "90%",
-                maxHeight: "90%",
-                boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)"
-              }}
-            >
-              <img 
-                src={selectedImage} 
-                alt="Zoomed" 
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "90vh",
-                  borderRadius: 12,
-                  border: "1.5px solid rgba(255,255,255,0.1)",
-                  objectFit: "contain"
-                }}
-              />
-              <button
-                onClick={(e) => { e.stopPropagation(); setSelectedImage(null); }}
-                style={{
-                  position: "absolute",
-                  top: -40,
-                  right: 0,
-                  background: "rgba(255,255,255,0.1)",
-                  border: "none",
-                  borderRadius: "50%",
-                  width: 32,
-                  height: 32,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  cursor: "pointer",
-                  fontSize: 18,
-                  fontWeight: "bold"
-                }}
-              >
-                ✕
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
     </>
   );
 }

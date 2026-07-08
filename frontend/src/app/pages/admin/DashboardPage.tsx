@@ -25,9 +25,37 @@ function Spark({ data, color }: { data: number[]; color: string }) {
 }
 
 const SCORES: Record<string, { bg: string; color: string; border: string; label: string }> = {
-  hot: { bg: "bg-red-50/70 text-red-600 border-red-100", color: "#EF4444", border: "rgba(239, 68, 68, 0.2)", label: "🔥 Nóng hổi" },
-  warm: { bg: "bg-amber-50/70 text-amber-600 border-amber-100", color: "#F59E0B", border: "rgba(245, 158, 11, 0.2)", label: "☀️ Ấm áp" },
-  cold: { bg: "bg-blue-50/70 text-blue-600 border-blue-100", color: "#3B82F6", border: "rgba(59, 130, 246, 0.2)", label: "❄️ Lạnh lẽo" },
+  hot: { bg: "bg-rose-50 border border-rose-100 text-rose-600", color: "#EF4444", border: "rgba(239, 68, 68, 0.2)", label: "🔥 Tiềm năng cao" },
+  warm: { bg: "bg-amber-50 border border-amber-100 text-amber-600", color: "#F59E0B", border: "rgba(245, 158, 11, 0.2)", label: "☀️ Đang cân nhắc" },
+  cold: { bg: "bg-blue-50 border border-blue-100 text-[#0055A5]", color: "#3B82F6", border: "rgba(59, 130, 246, 0.2)", label: "❄️ Mới tiếp cận" },
+};
+
+const cleanInterestText = (text: string): string => {
+  if (!text) return "Tư vấn chung";
+  let cleaned = text;
+  if (cleaned.includes("Câu hỏi:")) {
+    const match = cleaned.match(/Câu hỏi:\s*["']([^"']+)["']/i);
+    if (match && match[1]) {
+      cleaned = match[1];
+    } else {
+      cleaned = cleaned.replace(/^Trích xuất từ phiên chat:[^.]+.\s*Câu hỏi:\s*/i, "");
+    }
+  }
+  // Remove phone numbers
+  cleaned = cleaned.replace(/(?:0|\+84)\d{9,10}/g, "");
+  // Remove common prefix patterns
+  cleaned = cleaned.replace(/tôi tên\s+[a-zà-ỹ\s]+số điện thoại\s+(?:tôi\s+)?là\s*/gi, "");
+  cleaned = cleaned.replace(/tôi muốn\s+(?:các\s+|tìm\s+)?thông tin\s+/gi, "");
+  cleaned = cleaned.replace(/hãy liên hệ với tôi sớm nhất/gi, "Yêu cầu liên hệ");
+  
+  cleaned = cleaned.trim().replace(/^["']|["']$/g, "").trim();
+  if (cleaned) {
+    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  if (cleaned.length > 40) {
+    return cleaned.slice(0, 37) + "...";
+  }
+  return cleaned || "Tư vấn gói cước";
 };
 
 interface Lead {
@@ -361,7 +389,7 @@ export function DashboardPage() {
               <table className="w-full border-collapse text-left">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    {["Khách hàng", "Gói quan tâm", "Độ nóng", "Phân loại", "Thời gian", ""].map(h => (
+                    {["Khách hàng", "Nội dung quan tâm", "Lead Score", "Độ tiềm năng", "Thời gian", ""].map(h => (
                       <th key={h} className="px-5 py-3.5 text-slate-400 font-extrabold text-[10px] tracking-wider">
                         {h}
                       </th>
@@ -388,8 +416,8 @@ export function DashboardPage() {
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className="bg-[#0055A5]/5 text-[#0055A5] border border-[#0055A5]/10 rounded-lg px-2.5 py-1 text-[10px] font-bold">
-                            {l.pkg}
+                          <span className="bg-blue-50/50 border border-blue-100 text-[#0055A5] rounded-xl px-2.5 py-1 text-[10px] font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] inline-block shadow-xs">
+                            {cleanInterestText(l.pkg)}
                           </span>
                         </td>
                         <td className="px-5 py-3.5">
@@ -407,7 +435,7 @@ export function DashboardPage() {
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className={`inline-block border rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${s.bg}`}>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shadow-xs ${s.bg}`}>
                             {s.label}
                           </span>
                         </td>
