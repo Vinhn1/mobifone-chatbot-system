@@ -4,15 +4,15 @@ import { useAuth } from "../context/AuthContext";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  role: "guest" | "user" | "admin";
+  role?: "guest" | "user" | "admin";
+  allowedRoles?: string[];
 }
 
 /**
  * Bảo vệ route dựa trên role người dùng.
- * - role="admin" → chỉ cho phép admin truy cập, còn lại redirect /login
- * - role="user"  → chỉ cho phép user đã đăng nhập, còn lại redirect /login
+ * Hỗ trợ cả thuộc tính role đơn lẻ (tương thích ngược) và mảng allowedRoles mới.
  */
-export function ProtectedRoute({ children, role }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, role, allowedRoles }: ProtectedRouteProps) {
   const { user } = useAuth();
 
   // Chưa đăng nhập → về trang login
@@ -20,13 +20,26 @@ export function ProtectedRoute({ children, role }: ProtectedRouteProps) {
     return <Navigate to="/login" replace />;
   }
 
-  // Đăng nhập nhưng không đủ quyền
-  if (role === "admin" && user.role !== "admin") {
-    return <Navigate to="/" replace />;
+  // Kiểm tra phân quyền theo allowedRoles mới (Ưu tiên)
+  if (allowedRoles) {
+    const isAllowed = allowedRoles.includes(user.role);
+    if (!isAllowed) {
+      // Nếu là sales agent cố truy cập các trang admin khác, redirect về admin dashboard chính
+      if (user.role === "sales") {
+        return <Navigate to="/admin" replace />;
+      }
+      return <Navigate to="/" replace />;
+    }
   }
 
-  if (role === "user" && user.role === "guest") {
-    return <Navigate to="/login" replace />;
+  // Kiểm tra role kiểu cũ (cho tương thích ngược)
+  if (role) {
+    if (role === "admin" && user.role !== "admin" && user.role !== "sales") {
+      return <Navigate to="/" replace />;
+    }
+    if (role === "user" && user.role === "guest") {
+      return <Navigate to="/login" replace />;
+    }
   }
 
   return <>{children}</>;

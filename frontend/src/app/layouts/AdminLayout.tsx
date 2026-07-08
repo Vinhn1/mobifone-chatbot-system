@@ -433,78 +433,87 @@ export function AdminLayout() {
           flexDirection: "column",
           gap: 16
         }} className="custom-scrollbar">
-          {NAV_GROUPS.map(group => (
-            <div key={group.label} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              {!collapsed && (
-                <div style={{
-                  color: "rgba(255, 255, 255, 0.22)",
-                  fontSize: 10,
-                  fontWeight: 800,
-                  letterSpacing: 1.5,
-                  padding: "6px 8px",
-                  textTransform: "uppercase"
-                }}>{group.label}</div>
-              )}
-              {group.items.map(({ icon: Icon, label, path }) => {
-                // Xác định badge động cho các trang quản trị
-                const dynamicBadge = path === "/admin/leads"
-                  ? (leadsCount > 0 ? leadsCount.toString() : undefined)
-                  : path === "/admin/conversations"
-                    ? (activeChatsCount > 0 ? activeChatsCount.toString() : undefined)
-                    : undefined;
+          {NAV_GROUPS.map(group => {
+            const filteredItems = group.items.filter(item => {
+              if (user?.role !== "admin") {
+                return !["/admin/bot-config", "/admin/knowledge", "/admin/playground"].includes(item.path);
+              }
+              return true;
+            });
+            if (filteredItems.length === 0) return null;
+            return (
+              <div key={group.label} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {!collapsed && (
+                  <div style={{
+                    color: "rgba(255, 255, 255, 0.22)",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    letterSpacing: 1.5,
+                    padding: "6px 8px",
+                    textTransform: "uppercase"
+                  }}>{group.label}</div>
+                )}
+                {filteredItems.map(({ icon: Icon, label, path }) => {
+                  // Xác định badge động cho các trang quản trị
+                  const dynamicBadge = path === "/admin/leads"
+                    ? (leadsCount > 0 ? leadsCount.toString() : undefined)
+                    : path === "/admin/conversations"
+                      ? (activeChatsCount > 0 ? activeChatsCount.toString() : undefined)
+                      : undefined;
 
-                return (
-                  <NavLink
-                    key={path}
-                    to={path}
-                    end={path === "/admin"}
-                    style={({ isActive }) => ({
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: collapsed ? "12px" : "10px 14px",
-                      borderRadius: 12,
-                      textDecoration: "none",
-                      justifyContent: collapsed ? "center" : "flex-start",
-                      background: isActive ? "linear-gradient(135deg, #0055A5, #0077D5)" : "transparent",
-                      border: isActive ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid transparent",
-                      color: isActive ? "white" : "rgba(255, 255, 255, 0.5)",
-                      boxShadow: isActive ? "0 8px 20px rgba(0, 85, 165, 0.25)" : "none",
-                      transition: "all 0.2s ease",
-                      position: "relative",
-                    })}
-                    className="sidebar-link"
-                  >
-                    <Icon size={18} style={{ flexShrink: 0 }} />
-                    {!collapsed && <span style={{ fontWeight: 600, fontSize: 13.5, flex: 1 }}>{label}</span>}
-                    {!collapsed && dynamicBadge && (
-                      <span style={{
-                        background: "#EF4444",
-                        color: "white",
-                        borderRadius: 20,
-                        padding: "1px 7px",
-                        fontSize: 10,
-                        fontWeight: 800,
-                        flexShrink: 0
-                      }}>{dynamicBadge}</span>
-                    )}
-                    {collapsed && dynamicBadge && (
-                      <div style={{
-                        position: "absolute",
-                        top: 8,
-                        right: 8,
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: "#EF4444",
-                        boxShadow: "0 0 6px #EF4444"
-                      }} />
-                    )}
-                  </NavLink>
-                );
-              })}
-            </div>
-          ))}
+                  return (
+                    <NavLink
+                      key={path}
+                      to={path}
+                      end={path === "/admin"}
+                      style={({ isActive }) => ({
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: collapsed ? "12px" : "10px 14px",
+                        borderRadius: 12,
+                        textDecoration: "none",
+                        justifyContent: collapsed ? "center" : "flex-start",
+                        background: isActive ? "linear-gradient(135deg, #0055A5, #0077D5)" : "transparent",
+                        border: isActive ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid transparent",
+                        color: isActive ? "white" : "rgba(255, 255, 255, 0.5)",
+                        boxShadow: isActive ? "0 8px 20px rgba(0, 85, 165, 0.25)" : "none",
+                        transition: "all 0.2s ease",
+                        position: "relative",
+                      })}
+                      className="sidebar-link"
+                    >
+                      <Icon size={18} style={{ flexShrink: 0 }} />
+                      {!collapsed && <span style={{ fontWeight: 600, fontSize: 13.5, flex: 1 }}>{label}</span>}
+                      {!collapsed && dynamicBadge && (
+                        <span style={{
+                          background: "#EF4444",
+                          color: "white",
+                          borderRadius: 20,
+                          padding: "1px 7px",
+                          fontSize: 10,
+                          fontWeight: 800,
+                          flexShrink: 0
+                        }}>{dynamicBadge}</span>
+                      )}
+                      {collapsed && dynamicBadge && (
+                        <div style={{
+                          position: "absolute",
+                          top: 8,
+                          right: 8,
+                          width: 8,
+                          height: 8,
+                          borderRadius: "50%",
+                          background: "#EF4444",
+                          boxShadow: "0 0 6px #EF4444"
+                        }} />
+                      )}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            );
+          })}
         </nav>
 
         {/* User Profile / Footer Container */}
@@ -555,7 +564,9 @@ export function AdminLayout() {
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap"
                   }}>{user?.name?.split(" ").pop()}</div>
-                  <div style={{ color: "rgba(255, 255, 255, 0.3)", fontSize: 10, marginTop: 1 }}>Administrator</div>
+                  <div style={{ color: "rgba(255, 255, 255, 0.3)", fontSize: 10, marginTop: 1 }}>
+                    {user?.role === 'admin' ? 'Administrator' : 'Nhân viên CSKH'}
+                  </div>
                 </div>
                 <button
                   onClick={handleLogout}

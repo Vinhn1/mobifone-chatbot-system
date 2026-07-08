@@ -52,7 +52,7 @@ export const router = createBrowserRouter([
   {
     path: "/admin",
     element: (
-      <ProtectedRoute role="admin">
+      <ProtectedRoute allowedRoles={["admin", "sales"]}>
         <AdminLayout />
       </ProtectedRoute>
     ),
@@ -60,9 +60,30 @@ export const router = createBrowserRouter([
       { index: true, Component: DashboardPage },
       { path: "leads", Component: LeadsPage },
       { path: "conversations", Component: ConversationsPage },
-      { path: "knowledge", Component: KnowledgeBasePage },
-      { path: "playground", Component: PromptPlaygroundPage },
-      { path: "bot-config", Component: BotConfigPage },
+      {
+        path: "knowledge",
+        element: (
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <KnowledgeBasePage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: "playground",
+        element: (
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <PromptPlaygroundPage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: "bot-config",
+        element: (
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <BotConfigPage />
+          </ProtectedRoute>
+        )
+      },
       { path: "profile", Component: AdminProfilePage },
     ],
   },

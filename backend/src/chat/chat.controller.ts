@@ -2,6 +2,8 @@ import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards, UseI
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/guards/roles.decorator';
 
 // Định nghĩa route bắt đầu bằng /chat
 @Controller('chat')
@@ -32,13 +34,15 @@ export class ChatController {
   }
 
   @Get('history') // Định nghĩa route GET /chat/history (Admin Dashboard)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'sales')
   async getHistory() {
     return await this.chatService.getAllHistory();
   }
 
   @Get('config') // Lấy cấu hình RAG (Prompt + Params)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   async getConfig() {
     try {
       return await this.chatService.getRagConfig();
@@ -51,7 +55,8 @@ export class ChatController {
   }
 
   @Post('config') // Cập nhật cấu hình RAG
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   async updateConfig(@Body() cfg: any) {
     try {
       return await this.chatService.updateRagConfig(cfg);
@@ -64,7 +69,8 @@ export class ChatController {
   }
 
   @Get('documents') // Lấy danh sách tài liệu tri thức
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   async getDocuments() {
     try {
       return await this.chatService.getDocuments();
@@ -77,7 +83,8 @@ export class ChatController {
   }
 
   @Delete('documents/:name') // Xóa tài liệu khỏi tri thức
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   async deleteDocument(@Param('name') name: string) {
     try {
       return await this.chatService.deleteDocument(name);
@@ -90,7 +97,8 @@ export class ChatController {
   }
 
   @Post('upload') // Tải lên tài liệu mới (PDF, TXT, WORD, EXCEL)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(@UploadedFile() file: any) {
     if (!file) {

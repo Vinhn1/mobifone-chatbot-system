@@ -1,6 +1,8 @@
 import { Controller, Post, Get, Patch, Param, Body, HttpException, HttpStatus, UseGuards } from '@nestjs/common';
 import { LeadsService } from './leads.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/guards/roles.decorator';
 
 @Controller('leads') // Định nghĩa route bắt đầu là /leads
 export class LeadsController {
@@ -17,14 +19,16 @@ export class LeadsController {
 
   // GET /leads - Lấy danh sách (Admin Dashboard)
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'sales')
   async findAll() {
     return await this.leadsService.getAllLeads();
   }
 
   // PATCH /leads/:id/status - Cập nhật trạng thái chăm sóc
   @Patch(':id/status')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'sales')
   async updateStatus(
     @Param('id') id: string,
     @Body() body: { status: string }

@@ -1,13 +1,16 @@
 import { Controller, Get, Patch, Post, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/guards/roles.decorator';
 
 @Controller('users')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('admin', 'sales')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   // 1. Lấy thông tin admin đã đăng nhập
-  @UseGuards(JwtAuthGuard)
   @Get('me')
   async getProfile(@Request() req: any) {
     // req.user được gán tự động sau khi qua JwtAuthGuard (chứa userId, username, role)
@@ -18,7 +21,6 @@ export class UsersController {
   }
 
   // 2. Cập nhật thông tin cá nhân của admin
-  @UseGuards(JwtAuthGuard)
   @Patch('profile')
   @HttpCode(HttpStatus.OK)
   async updateProfile(
@@ -31,7 +33,6 @@ export class UsersController {
   }
 
   // 3. Đổi mật khẩu admin
-  @UseGuards(JwtAuthGuard)
   @Post('change-password')
   @HttpCode(HttpStatus.OK)
   async changePassword(
@@ -42,7 +43,6 @@ export class UsersController {
   }
 
   // 4. Gửi OTP xác thực bật/tắt 2FA
-  @UseGuards(JwtAuthGuard)
   @Post('2fa/request')
   @HttpCode(HttpStatus.OK)
   async request2FaOtp(@Request() req: any) {
@@ -50,7 +50,6 @@ export class UsersController {
   }
 
   // 5. Xác nhận bật/tắt 2FA
-  @UseGuards(JwtAuthGuard)
   @Post('2fa/toggle')
   @HttpCode(HttpStatus.OK)
   async toggle2Fa(
@@ -61,7 +60,6 @@ export class UsersController {
   }
 
   // 6. Gửi OTP đổi số điện thoại
-  @UseGuards(JwtAuthGuard)
   @Post('phone/request')
   @HttpCode(HttpStatus.OK)
   async requestPhoneChangeOtp(
@@ -72,7 +70,6 @@ export class UsersController {
   }
 
   // 7. Xác nhận đổi số điện thoại bằng OTP
-  @UseGuards(JwtAuthGuard)
   @Post('phone/verify')
   @HttpCode(HttpStatus.OK)
   async verifyPhoneChange(

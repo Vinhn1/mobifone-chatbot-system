@@ -13,14 +13,15 @@ export class UsersService implements OnModuleInit {
     private readonly emailService: EmailService,
   ) {}
 
-  // 1. Tự động kiểm tra và tạo tài khoản Admin mặc định khi start app lần đầu
+  // 1. Tự động kiểm tra và tạo tài khoản Admin và Sales mặc định khi start app lần đầu
   async onModuleInit() {
+    // Seed Admin
     let admin = await this.userRepository.findOneBy({ username: 'admin' });
-    const hashedPassword = await bcrypt.hash('admin@123', 10);
+    const adminHashedPassword = await bcrypt.hash('admin@123', 10);
     if (!admin) {
       admin = this.userRepository.create({
         username: 'admin',
-        password: hashedPassword,
+        password: adminHashedPassword,
         role: 'admin',
         name: 'MobiFone Administrator',
         phone: '0987654321',
@@ -35,7 +36,7 @@ export class UsersService implements OnModuleInit {
       console.log(`Password: admin@123`);
       console.log('--------------------------------------------------');
     } else {
-      admin.password = hashedPassword;
+      admin.password = adminHashedPassword;
       if (!admin.name) admin.name = 'MobiFone Administrator';
       if (!admin.phone) admin.phone = '0987654321';
       if (!admin.email) admin.email = 'admin@mobifone.vn';
@@ -46,6 +47,41 @@ export class UsersService implements OnModuleInit {
       console.log(`[SEED] Đã cập nhật tài khoản admin mặc định:`);
       console.log(`Username: admin`);
       console.log(`Password: admin@123`);
+      console.log('--------------------------------------------------');
+    }
+
+    // Seed Sales Agent
+    let sales = await this.userRepository.findOneBy({ username: 'sales' });
+    const salesHashedPassword = await bcrypt.hash('sales@123', 10);
+    if (!sales) {
+      sales = this.userRepository.create({
+        username: 'sales',
+        password: salesHashedPassword,
+        role: 'sales',
+        name: 'Nhân viên CSKH MobiFone',
+        phone: '0912345678',
+        email: 'sales@mobifone.vn',
+        address: 'MobiFone Branch, HCM',
+        dob: '1995-08-25',
+      });
+      await this.userRepository.save(sales);
+      console.log('--------------------------------------------------');
+      console.log(`[SEED] Đã tạo tài khoản sales mặc định:`);
+      console.log(`Username: sales`);
+      console.log(`Password: sales@123`);
+      console.log('--------------------------------------------------');
+    } else {
+      sales.password = salesHashedPassword;
+      if (!sales.name) sales.name = 'Nhân viên CSKH MobiFone';
+      if (!sales.phone) sales.phone = '0912345678';
+      if (!sales.email) sales.email = 'sales@mobifone.vn';
+      if (!sales.address) sales.address = 'MobiFone Branch, HCM';
+      if (!sales.dob) sales.dob = '1995-08-25';
+      await this.userRepository.save(sales);
+      console.log('--------------------------------------------------');
+      console.log(`[SEED] Đã cập nhật tài khoản sales mặc định:`);
+      console.log(`Username: sales`);
+      console.log(`Password: sales@123`);
       console.log('--------------------------------------------------');
     }
   }
