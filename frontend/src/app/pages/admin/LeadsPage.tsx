@@ -469,9 +469,9 @@ export function LeadsPage() {
   const [tempFilter, setTempFilter] = useState<Temp | "all">("all");
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
-  // Redirect if not admin
+  // Redirect if not admin or sales
   useEffect(() => {
-    if (!user || user.role !== "admin") {
+    if (!user || (user.role !== "admin" && user.role !== "sales")) {
       navigate("/login");
     }
   }, [user, navigate]);

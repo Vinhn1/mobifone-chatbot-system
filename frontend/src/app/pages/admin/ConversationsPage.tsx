@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Search, ChevronRight, Phone, TrendingUp, CheckCircle2, AlertCircle, X, Activity, MessageSquare } from "lucide-react";
 import axios from "axios";
@@ -69,10 +69,13 @@ export function ConversationsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ConvStatus | "all">("all");
   const [loading, setLoading] = useState(true);
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // Redirect if not admin
+  // Redirect if not admin or sales
   useEffect(() => {
-    if (!user || user.role !== "admin") {
+    if (!user || (user.role !== "admin" && user.role !== "sales")) {
       navigate("/login");
     }
   }, [user, navigate]);
@@ -141,12 +144,28 @@ export function ConversationsPage() {
         let status: ConvStatus = "resolved";
         const now = Date.now();
         const tenMinsMs = 10 * 60 * 1000;
-        if (now - lastTime < tenMinsMs) {
+        
+        // Check if there is an escalate marker or if the bot failed to answer
+        const hasEscalateMarker = logs.some((l: any) => 
+          l.role === "bot" && (
+            l.message.includes("Mia rất tiếc") || 
+            l.message.includes("chuyển tiếp yêu cầu đến chuyên viên") ||
+            l.message.includes("[ESCALATE]")
+          )
+        ) || logs.some((l: any) => 
+          l.role === "user" && (
+            l.message.includes("chuyển nhân viên") || 
+            l.message.includes("nhân viên hỗ trợ") ||
+            l.message.includes("gặp nhân viên")
+          )
+        );
+
+        if (hasEscalateMarker) {
+          status = "escalated";
+        } else if (now - lastTime < tenMinsMs) {
           status = "active";
         } else if (!phone && logs.length <= 3) {
           status = "abandoned";
-        } else if (logs.some((l: any) => l.message.includes("chuyển nhân viên") || l.message.includes("nhân viên hỗ trợ"))) {
-          status = "escalated";
         }
 
         // Determine intent based on user keywords
@@ -198,6 +217,147 @@ export function ConversationsPage() {
   useEffect(() => {
     loadHistory();
   }, [token]);
+
+  // Tự động cuộn xuống cuối danh sách tin nhắn khi có cập nhật
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [selected?.transcript]);
+
+  // Lắng nghe các sự kiện thông báo thời gian thực từ AdminLayout
+  useEffect(() => {
+    const handleNotification = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const data = customEvent.detail;
+      if (data && data.type === 'new-message') {
+        const payload = data.payload; // { sessionId, sender, message }
+        const sessId = payload.sessionId;
+        
+        setConversations(prev => {
+          const updated = prev.map(c => {
+            if (c.id === sessId) {
+              const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+              // Ngăn ngừa tin nhắn trùng lặp
+              const alreadyExists = c.transcript.some(m => m.text === payload.message && m.role === (payload.sender === 'user' ? 'user' : 'bot'));
+              if (alreadyExists) return c;
+              
+              const newTranscript = [
+                ...c.transcript,
+                {
+                  role: payload.sender === 'user' ? 'user' : 'bot',
+                  text: payload.message,
+                  time: nowStr
+                }
+              ];
+              
+              // Cập nhật trạng thái nếu phát hiện fallback
+              let status = c.status;
+              if (payload.sender === 'bot' && (
+                payload.message.includes("Mia rất tiếc") || 
+                payload.message.includes("chuyển tiếp yêu cầu đến chuyên viên") || 
+                payload.message.includes("[ESCALATE]")
+              )) {
+                status = "escalated";
+              }
+              
+              return {
+                ...c,
+                messages: newTranscript.length,
+                status,
+                transcript: newTranscript,
+                lastActiveTime: Date.now()
+              };
+            }
+            return c;
+          });
+          return [...updated].sort((a, b) => b.lastActiveTime - a.lastActiveTime);
+        });
+
+        // Cập nhật cuộc hội thoại hiện tại đang được chọn
+        setSelected(prevSelected => {
+          if (prevSelected && prevSelected.id === sessId) {
+            const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+            const alreadyExists = prevSelected.transcript.some(m => m.text === payload.message && m.role === (payload.sender === 'user' ? 'user' : 'bot'));
+            if (alreadyExists) return prevSelected;
+            
+            const newTranscript = [
+              ...prevSelected.transcript,
+              {
+                role: payload.sender === 'user' ? 'user' : 'bot',
+                text: payload.message,
+                time: nowStr
+              }
+            ];
+            
+            let status = prevSelected.status;
+            if (payload.sender === 'bot' && (
+              payload.message.includes("Mia rất tiếc") || 
+              payload.message.includes("chuyển tiếp yêu cầu đến chuyên viên") || 
+              payload.message.includes("[ESCALATE]")
+            )) {
+              status = "escalated";
+            }
+
+            return {
+              ...prevSelected,
+              messages: newTranscript.length,
+              status,
+              transcript: newTranscript,
+              lastActiveTime: Date.now()
+            };
+          }
+          return prevSelected;
+        });
+      } else if (data && data.type === 'manual-intervention-required') {
+        const payload = data.payload;
+        const sessId = payload.sessionId;
+        
+        setConversations(prev => {
+          return prev.map(c => {
+            if (c.id === sessId) {
+              return { ...c, status: "escalated" };
+            }
+            return c;
+          });
+        });
+        
+        setSelected(prevSelected => {
+          if (prevSelected && prevSelected.id === sessId) {
+            return { ...prevSelected, status: "escalated" };
+          }
+          return prevSelected;
+        });
+      }
+    };
+
+    window.addEventListener('app-notification', handleNotification);
+    return () => window.removeEventListener('app-notification', handleNotification);
+  }, [selected]);
+
+  const handleSendReply = async () => {
+    if (!selected || !replyText.trim() || !token) return;
+    setSendingReply(true);
+    try {
+      const config = {
+        headers: { Authorization: `Bearer ${token}` },
+      };
+      await axios.post(
+        "http://localhost:3000/chat/reply",
+        {
+          sessionId: selected.id,
+          message: replyText.trim(),
+        },
+        config
+      );
+      setReplyText("");
+    } catch (err) {
+      console.error("Lỗi khi gửi phản hồi của nhân viên:", err);
+      alert("Không thể gửi phản hồi, vui lòng thử lại!");
+    } finally {
+      setSendingReply(false);
+    }
+  };
 
   const filtered = conversations.filter(c =>
     (statusFilter === "all" || c.status === statusFilter) &&
@@ -276,6 +436,8 @@ export function ConversationsPage() {
                   className={`bg-white rounded-2xl p-4.5 border transition-all duration-200 cursor-pointer ${
                     isSelected
                       ? "border-[#0055A5] bg-[#0055A5]/[0.02] shadow-md shadow-blue-500/[0.04]"
+                      : conv.status === "escalated"
+                      ? "border-rose-300 bg-rose-50/20 shadow-sm hover:border-rose-400"
                       : "border-slate-100 hover:border-slate-200 hover:shadow-xs"
                   }`}
                   whileHover={{ y: -1 }}
@@ -387,7 +549,7 @@ export function ConversationsPage() {
               )}
 
               {/* Messages Container */}
-              <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4.5 bg-slate-50/50">
+              <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-5 flex flex-col gap-4.5 bg-slate-50/50">
                 {selected.transcript.map((msg, i) => {
                   const isUser = msg.role === "user";
                   return (
@@ -414,6 +576,30 @@ export function ConversationsPage() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Staff Input Action Bar */}
+              <div className="px-6 py-4 border-t border-slate-100 bg-white flex items-center gap-3 shrink-0">
+                <input
+                  type="text"
+                  placeholder="Nhập nội dung phản hồi khách hàng..."
+                  value={replyText}
+                  onChange={e => setReplyText(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && !sendingReply) {
+                      handleSendReply();
+                    }
+                  }}
+                  className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-[#0055A5] transition-colors"
+                  disabled={sendingReply}
+                />
+                <button
+                  onClick={handleSendReply}
+                  disabled={sendingReply || !replyText.trim()}
+                  className="px-4.5 py-2.5 bg-[#0055A5] text-white rounded-xl text-xs font-bold transition-all hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                >
+                  {sendingReply ? "Đang gửi..." : "Gửi tin"}
+                </button>
               </div>
             </motion.div>
           )}

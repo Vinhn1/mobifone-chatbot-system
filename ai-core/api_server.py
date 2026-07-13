@@ -177,6 +177,7 @@ class ChatResponse(BaseModel):
     sources: list
     suggested_questions: Optional[List[str]] = []
     images: Optional[List[str]] = []
+    is_fallback: Optional[bool] = False
 
 class ConfigModel(BaseModel):
     system_prompt: str
@@ -212,7 +213,12 @@ def chat(request: ChatRequest):
             history_list = [{"role": msg.role, "message": msg.message} for msg in request.history]
             
         answer, sources, suggested_questions, images = bot.answer_question(request.message, history=history_list, user_info=request.userInfo)
-        return ChatResponse(answer=answer, sources=sources, suggested_questions=suggested_questions, images=images)
+        is_fallback = False
+        if "[ESCALATE]" in answer:
+            is_fallback = True
+            answer = answer.replace("[ESCALATE]", "").strip()
+            
+        return ChatResponse(answer=answer, sources=sources, suggested_questions=suggested_questions, images=images, is_fallback=is_fallback)
     except AIServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
     except Exception as e:

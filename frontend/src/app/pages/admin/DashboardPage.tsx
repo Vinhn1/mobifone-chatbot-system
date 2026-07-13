@@ -82,9 +82,9 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("Hôm nay");
 
-  // Redirect if not admin
+  // Redirect if not admin or sales
   useEffect(() => {
-    if (!user || user.role !== "admin") {
+    if (!user || (user.role !== "admin" && user.role !== "sales")) {
       navigate("/login");
     }
   }, [user, navigate]);

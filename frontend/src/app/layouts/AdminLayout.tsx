@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutDashboard, Users, MessageSquare, Database, Code2,
   ChevronLeft, ChevronRight, Bell, Search,
-  LogOut, Zap, Bot, ChevronDown, User
+  LogOut, Zap, Bot, ChevronDown, User, AlertTriangle
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
@@ -44,6 +44,17 @@ export function AdminLayout() {
   const [leadsCount, setLeadsCount] = useState<number>(0);
   const [activeChatsCount, setActiveChatsCount] = useState<number>(0);
   const [chatSessionsActivity, setChatSessionsActivity] = useState<Record<string, number>>({});
+
+  // Yêu cầu quyền Browser Push Notification khi vào dashboard
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+          console.log('[PUSH NOTIFICATION] Trạng thái cấp quyền:', permission);
+        });
+      }
+    }
+  }, []);
 
   // 1. Tải số lượng leads chưa liên hệ và lịch sử hội thoại ban đầu để khởi tạo đếm
   useEffect(() => {
@@ -190,6 +201,20 @@ export function AdminLayout() {
             visible: data.payload.status !== 'synced',
             type: 'doc'
           });
+        } else if (data.type === 'manual-intervention-required') {
+          setToast({
+            message: `Yêu cầu hỗ trợ trực tiếp từ phiên ${data.payload.sessionId.substring(0, 8)}...`,
+            visible: true,
+            type: 'warning'
+          });
+
+          // Kích hoạt Browser Push Notification
+          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification('MobiFone CSKH - Cần hỗ trợ!', {
+              body: `Phiên chat ${data.payload.sessionId.substring(0, 8)}... cần nhân viên hỗ trợ trực tiếp.`,
+              icon: '/favicon.ico'
+            });
+          }
         }
 
         // Phát ra CustomEvent để các trang con tự cập nhật
@@ -245,7 +270,7 @@ export function AdminLayout() {
               zIndex: 9999,
               background: "rgba(255, 255, 255, 0.95)",
               backdropFilter: "blur(20px)",
-              borderLeft: `5px solid ${toast.type === 'lead' ? '#10B981' : '#7C3AED'}`,
+              borderLeft: `5px solid ${toast.type === 'lead' ? '#10B981' : toast.type === 'warning' ? '#F59E0B' : '#7C3AED'}`,
               borderRadius: "12px",
               padding: "16px 20px",
               boxShadow: "0 20px 40px rgba(0, 0, 0, 0.12)",
@@ -261,18 +286,18 @@ export function AdminLayout() {
               width: 36,
               height: 36,
               borderRadius: "50%",
-              background: toast.type === 'lead' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(124, 58, 237, 0.1)',
-              color: toast.type === 'lead' ? '#10B981' : '#7C3AED',
+              background: toast.type === 'lead' ? 'rgba(16, 185, 129, 0.1)' : toast.type === 'warning' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(124, 58, 237, 0.1)',
+              color: toast.type === 'lead' ? '#10B981' : toast.type === 'warning' ? '#F59E0B' : '#7C3AED',
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0
             }}>
-              {toast.type === 'lead' ? <Users size={18} /> : <Database size={18} />}
+              {toast.type === 'lead' ? <Users size={18} /> : toast.type === 'warning' ? <AlertTriangle size={18} /> : <Database size={18} />}
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 800, fontSize: 13, color: "#1E293B" }}>
-                {toast.type === 'lead' ? 'Khách Hàng Mới!' : 'Tiến Trình Đọc Tài Liệu'}
+                {toast.type === 'lead' ? 'Khách Hàng Mới!' : toast.type === 'warning' ? 'Yêu Cầu Hỗ Trợ!' : 'Tiến Trình Đọc Tài Liệu'}
               </div>
               <div style={{ fontSize: 12, color: "#64748B", marginTop: 2, lineHeight: 1.3 }}>
                 {toast.message}
@@ -833,6 +858,11 @@ export function AdminLayout() {
                           iconColor = "#7C3AED";
                           title = "Tin nhắn Chatbot";
                           message = `${notif.payload.sender === 'user' ? 'Khách' : 'Bot'}: ${notif.payload.message.substring(0, 50)}`;
+                        } else if (notif.type === 'manual-intervention-required') {
+                          iconBg = "#FEF2F2";
+                          iconColor = "#EF4444";
+                          title = "Cần hỗ trợ gấp";
+                          message = `Phiên ${notif.payload.sessionId.substring(0, 8)}... cần phản hồi thủ công.`;
                         }
 
                         return (

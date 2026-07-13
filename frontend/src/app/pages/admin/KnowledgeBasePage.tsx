@@ -132,8 +132,10 @@ export function KnowledgeBasePage() {
 
   // Redirect if not admin
   useEffect(() => {
-    if (!user || user.role !== "admin") {
+    if (!user) {
       navigate("/login");
+    } else if (user.role !== "admin") {
+      navigate("/admin");
     }
   }, [user, navigate]);
 

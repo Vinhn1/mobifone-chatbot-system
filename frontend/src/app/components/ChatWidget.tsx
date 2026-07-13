@@ -225,7 +225,8 @@ export function ChatWidget() {
   const [leadData, setLeadData] = useState<LeadData>({});
   const [unread, setUnread] = useState(1);
   const [sessionId] = useState(() => `widget_${Math.random().toString(36).substring(2, 11)}`);
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const lastBotMsgIdRef = useRef<number | string | null>(null);
 
   // Trạng thái hiển thị danh sách các kênh liên hệ
   const [showChannels, setShowChannels] = useState(false);
@@ -279,6 +280,65 @@ export function ChatWidget() {
     fetchPublicConfig();
   }, []);
 
+  // Thụ động lấy lịch sử chat để cập nhật phản hồi của Nhân viên Sales / CSKH
+  useEffect(() => {
+    if (!open) return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const response = await axios.get(`http://localhost:3000/chat/history/${sessionId}`);
+        if (Array.isArray(response.data) && response.data.length > 0) {
+          const dbLogs = response.data;
+          setMessages(prev => {
+            const hasGreeting = prev.length > 0 && prev[0].id === 1;
+            const offset = hasGreeting ? 1 : 0;
+            const merged = [...prev];
+            let hasNew = false;
+
+            dbLogs.forEach((log: any, idx: number) => {
+              const logType = log.role === 'user' ? 'user' : 'bot';
+              const dbMsg = {
+                id: log.id || idx,
+                type: logType,
+                text: log.message
+              };
+
+              const targetIdx = idx + offset;
+              if (targetIdx < merged.length) {
+                if (merged[targetIdx].type !== dbMsg.type || merged[targetIdx].text !== dbMsg.text) {
+                  merged[targetIdx] = {
+                    ...merged[targetIdx],
+                    type: dbMsg.type,
+                    text: dbMsg.text
+                  };
+                  hasNew = true;
+                }
+              } else {
+                const lastMsg = merged[merged.length - 1];
+                if (!lastMsg || lastMsg.type !== dbMsg.type || lastMsg.text !== dbMsg.text) {
+                  merged.push(dbMsg);
+                  hasNew = true;
+                }
+              }
+            });
+
+            // Nếu có tin nhắn mới và tin nhắn cuối cùng là của bot (nhân viên hỗ trợ phản hồi)
+            if (hasNew && dbLogs[dbLogs.length - 1]?.role === 'bot') {
+              setRobotState("happy");
+              setTimeout(() => setRobotState("idle"), 2500);
+            }
+
+            return merged;
+          });
+        }
+      } catch (err) {
+        console.warn("Không thể đồng bộ lịch sử chat với backend:", err);
+      }
+    }, 3000); // Mỗi 3 giây
+
+    return () => clearInterval(intervalId);
+  }, [open, sessionId]);
+
   // Initial greeting after opening
   useEffect(() => {
     if (!open || messages.length > 0) return;
@@ -301,9 +361,33 @@ export function ChatWidget() {
     }, 1200);
   }, [open]);
 
+  // Chỉ tự động cuộn khi nhận tin nhắn mới từ chatbot hoặc khi người dùng gửi tin nhắn
   useEffect(() => {
-    if (open) endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, typing, open]);
+    if (!open || messages.length === 0) {
+      if (!open) lastBotMsgIdRef.current = null;
+      return;
+    }
+    const lastMsg = messages[messages.length - 1];
+    const isUserMsg = lastMsg.type === "user";
+    const botMessages = messages.filter(m => m.type === "bot");
+    const lastBotMsg = botMessages[botMessages.length - 1];
+    const isNewBotMsg = lastBotMsg && lastBotMsg.id !== lastBotMsgIdRef.current;
+
+    if (isUserMsg || isNewBotMsg) {
+      if (lastBotMsg) {
+        lastBotMsgIdRef.current = lastBotMsg.id;
+      }
+      if (scrollRef.current) {
+        // Sử dụng setTimeout để đảm bảo DOM đã cập nhật chiều cao mới của tin nhắn
+        setTimeout(() => {
+          scrollRef.current?.scrollTo({
+            top: scrollRef.current.scrollHeight,
+            behavior: "smooth"
+          });
+        }, 50);
+      }
+    }
+  }, [messages, open]);
 
   const send = async (text: string) => {
     const textToSend = text.trim();
@@ -344,13 +428,19 @@ export function ChatWidget() {
 
       setTyping(false);
       setRobotState("talking");
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1,
-        type: "bot",
-        text: botAnswer,
-        sources: botSources,
-        images: botImages,
-      }]);
+      setMessages(prev => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg && lastMsg.type === "bot" && lastMsg.text === botAnswer) {
+          return prev;
+        }
+        return [...prev, {
+          id: Date.now() + 1,
+          type: "bot",
+          text: botAnswer,
+          sources: botSources,
+          images: botImages,
+        }];
+      });
 
       if (Array.isArray(botSuggestions) && botSuggestions.length > 0) {
         setSuggestions(botSuggestions);
@@ -364,14 +454,21 @@ export function ChatWidget() {
         const resp = getSalesResponse(textToSend, leadData, user);
         setTyping(false);
         setRobotState(resp.robotState || "idle");
-        setMessages(prev => [...prev, {
-          id: Date.now() + 1,
-          type: "bot",
-          text: `⚠️ MobiFone đang tạm dùng phản hồi dự phòng vì dịch vụ AI chưa sẵn sàng.\n\n${resp.text}`,
-          sources: resp.sources,
-          quickReplies: resp.quickReplies,
-          leadCapture: resp.leadCapture,
-        }]);
+        setMessages(prev => {
+          const lastMsg = prev[prev.length - 1];
+          const fallbackText = `⚠️ MobiFone đang tạm dùng phản hồi dự phòng vì dịch vụ AI chưa sẵn sàng.\n\n${resp.text}`;
+          if (lastMsg && lastMsg.type === "bot" && lastMsg.text === fallbackText) {
+            return prev;
+          }
+          return [...prev, {
+            id: Date.now() + 1,
+            type: "bot",
+            text: fallbackText,
+            sources: resp.sources,
+            quickReplies: resp.quickReplies,
+            leadCapture: resp.leadCapture,
+          }];
+        });
         setTimeout(() => setRobotState("idle"), 3000);
       }, 1000);
     }
@@ -784,6 +881,7 @@ export function ChatWidget() {
 
                   {/* Messages container */}
                   <div
+                    ref={scrollRef}
                     className="chat-msg-scroll flex-1 overflow-y-auto"
                     style={{
                       padding: "20px 16px 8px",
@@ -953,7 +1051,6 @@ export function ChatWidget() {
                       </div>
                     ))}
                     {typing && <TypingBubble />}
-                    <div ref={endRef} />
                   </div>
 
                   {/* Suggestions list */}

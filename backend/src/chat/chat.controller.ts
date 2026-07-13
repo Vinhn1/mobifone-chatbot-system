@@ -40,6 +40,41 @@ export class ChatController {
     return await this.chatService.getAllHistory();
   }
 
+  @Get('history/:sessionId') // Lấy lịch sử chat của một session cụ thể (public cho widget)
+  async getSessionHistory(@Param('sessionId') sessionId: string) {
+    if (!sessionId) {
+      throw new HttpException('Session ID không được trống', HttpStatus.BAD_REQUEST);
+    }
+    try {
+      return await this.chatService.getSessionHistory(sessionId);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Lỗi lấy lịch sử chat',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
+  @Post('reply') // Sales/Admin gửi tin nhắn phản hồi thủ công
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'sales')
+  async staffReply(
+    @Body('sessionId') sessionId: string,
+    @Body('message') message: string,
+  ) {
+    if (!sessionId || !message) {
+      throw new HttpException('Thiếu sessionId hoặc message', HttpStatus.BAD_REQUEST);
+    }
+    try {
+      return await this.chatService.sendStaffReply(sessionId, message);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Lỗi gửi phản hồi',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Get('config') // Lấy cấu hình RAG (Prompt + Params)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')

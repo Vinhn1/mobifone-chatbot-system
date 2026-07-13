@@ -57,10 +57,10 @@ export class AuthService {
 
   // 4. Xác nhận đăng nhập bằng OTP 2FA
   async verify2FaLogin(username: string, otpCode: string) {
-    const isAdmin = username.toLowerCase().includes('admin');
-    if (isAdmin) {
-      const user = await this.usersService.verify2FaOtp(username, otpCode);
-      return this.login(user);
+    const user = await this.usersService.findByUsername(username);
+    if (user) {
+      const verifiedUser = await this.usersService.verify2FaOtp(username, otpCode);
+      return this.login(verifiedUser);
     } else {
       const subscriber = await this.subscribersService.verify2FaOtp(username, otpCode);
       const payload = { sub: subscriber.id, phoneNumber: subscriber.phoneNumber, role: 'subscriber' };

@@ -163,6 +163,20 @@ export class ChatService {
         } catch (err) {
           console.error('Lỗi khi phát sự kiện bot reply:', err.message);
         }
+
+        // Nếu là fallback (cần chuyển giao hỗ trợ), phát tín hiệu manual-intervention-required
+        if (result.is_fallback) {
+          try {
+            this.notificationsService.emitNotification('manual-intervention-required', {
+              sessionId: sessionId || 'anonymous',
+              message: message,
+              answer: result.answer,
+            });
+            console.log(`[HANDOFF] Đã kích hoạt chuyển giao hỗ trợ cho session: ${sessionId}`);
+          } catch (err) {
+            console.error('Lỗi khi phát sự kiện manual-intervention-required:', err.message);
+          }
+        }
       }
 
       return result;
@@ -174,6 +188,30 @@ export class ChatService {
   // Lấy toàn bộ lịch sử chat cho Admin Dashboard
   async getAllHistory() {
     return await this.chatHistoryService.getAllHistory();
+  }
+
+  // Lấy lịch sử hội thoại cho một phiên cụ thể
+  async getSessionHistory(sessionId: string) {
+    return await this.chatHistoryService.getHistory(sessionId, 50);
+  }
+
+  // Nhân viên phản hồi thủ công
+  async sendStaffReply(sessionId: string, message: string) {
+    // 1. Lưu tin nhắn của nhân viên vào DB (đóng vai trò 'bot' gửi đi)
+    const saved = await this.chatHistoryService.saveMessage(sessionId, 'bot', message);
+
+    // 2. Phát tin nhắn mới qua hệ thống Notification SSE
+    try {
+      this.notificationsService.emitNotification('new-message', {
+        sessionId,
+        sender: 'bot',
+        message,
+      });
+    } catch (err) {
+      console.error('Lỗi khi phát sự kiện tin nhắn của nhân viên qua SSE:', err.message);
+    }
+
+    return saved;
   }
 
   // Proxy: Lấy cấu hình RAG Prompt & Parameters từ AI Service
