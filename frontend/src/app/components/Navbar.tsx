@@ -40,9 +40,9 @@ export function Navbar() {
     setUserMenuOpen(false);
   };
 
-  const userMenuItems = user?.role === "admin"
+  const userMenuItems = (user?.role === "admin" || user?.role === "sales")
     ? [
-        { icon: Shield, label: "Admin Dashboard", path: "/admin" },
+        { icon: Shield, label: "CRM Dashboard", path: "/admin" },
         { icon: LayoutDashboard, label: "Tổng quan hệ thống", path: "/admin" },
       ]
     : [
@@ -86,15 +86,15 @@ export function Navbar() {
               <button
                 onClick={() => setUserMenuOpen(p => !p)}
                 className={`flex items-center gap-2 bg-slate-50/80 hover:bg-slate-100/80 border ${
-                  user.role === "admin" ? "border-amber-200" : "border-slate-200"
+                  (user.role === "admin" || user.role === "sales") ? "border-amber-200" : "border-slate-200"
                 } rounded-xl p-1.5 pr-3 cursor-pointer transition-all duration-200`}
               >
                 <div className={`w-7 h-7 rounded-full ${
-                  user.role === "admin" ? "bg-gradient-to-br from-amber-500 to-red-500" : "bg-gradient-to-br from-blue-600 to-amber-500"
+                  (user.role === "admin" || user.role === "sales") ? "bg-gradient-to-br from-amber-500 to-red-500" : "bg-gradient-to-br from-blue-600 to-amber-500"
                 } flex items-center justify-center text-white text-xs font-extrabold shadow-xs overflow-hidden`}>
                   {user.avatar ? (
                     <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
-                  ) : user.role === "admin" ? (
+                  ) : (user.role === "admin" || user.role === "sales") ? (
                     <Shield size={13} />
                   ) : (
                     user.name.charAt(0)
@@ -102,8 +102,14 @@ export function Navbar() {
                 </div>
                 <div className="text-left">
                   <div className="text-slate-800 font-bold text-xs leading-none mb-0.5">{user.name.split(" ").slice(-2).join(" ")}</div>
-                  <div className={`text-[9px] font-bold tracking-wide ${user.role === "admin" ? "text-amber-600" : TIER_COLORS[user.tier] || "text-slate-500"}`}>
-                    {user.role === "admin" ? "⚡ ADMIN" : `${user.tier.toUpperCase()} MEMBER`}
+                  <div className={`text-[9px] font-bold tracking-wide ${
+                    user.role === "admin" 
+                      ? "text-amber-600" 
+                      : user.role === "sales" 
+                        ? "text-blue-600" 
+                        : TIER_COLORS[user.tier] || "text-slate-500"
+                  }`}>
+                    {user.role === "admin" ? "⚡ ADMIN" : user.role === "sales" ? "⚡ CSKH" : `${user.tier.toUpperCase()} MEMBER`}
                   </div>
                 </div>
                 <ChevronDown size={13} className={`text-slate-400 transition-transform duration-200 ${userMenuOpen ? "rotate-180" : "rotate-0"}`} />
@@ -114,9 +120,15 @@ export function Navbar() {
                   <div className="p-3 border-b border-slate-100 mb-1">
                     <div className="text-slate-800 font-bold text-sm">{user.name}</div>
                     <div className="text-slate-400 text-xs truncate">{user.email || user.phone}</div>
-                    {user.role === "admin" ? (
+                    {(user.role === "admin" || user.role === "sales") ? (
                       <div className="flex items-center gap-1.5 mt-1.5">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">★ Quản trị viên</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                          user.role === "admin" 
+                            ? "bg-amber-50 text-amber-700 border-amber-200/60" 
+                            : "bg-blue-50 text-blue-700 border-blue-200/60"
+                        }`}>
+                          {user.role === "admin" ? "★ Quản trị viên" : "★ Nhân viên CSKH"}
+                        </span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-500">
@@ -196,10 +208,10 @@ export function Navbar() {
             {user ? (
               <>
                 <button
-                  onClick={() => { navigate(user.role === "admin" ? "/admin" : "/dashboard"); setMenuOpen(false); }}
+                  onClick={() => { navigate((user.role === "admin" || user.role === "sales") ? "/admin" : "/dashboard"); setMenuOpen(false); }}
                   className="flex-1 py-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 cursor-pointer text-sm font-bold text-center"
                 >
-                  {user.role === "admin" ? "Admin Dashboard" : "Dashboard"}
+                  {(user.role === "admin" || user.role === "sales") ? "CRM Dashboard" : "Dashboard"}
                 </button>
                 <button
                   onClick={() => { handleLogout(); setMenuOpen(false); }}
