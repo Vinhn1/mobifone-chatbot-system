@@ -273,5 +273,83 @@ export class UsersService implements OnModuleInit {
     user.otpCreatedAt = null;
     return await this.userRepository.save(user);
   }
+
+  // 11. Lấy danh sách tất cả người dùng (Admin/Sales)
+  async findAll(): Promise<User[]> {
+    return await this.userRepository.find({
+      order: { id: 'ASC' }
+    });
+  }
+
+  // 12. Tạo tài khoản nhân sự mới (chỉ Admin)
+  async createUser(dto: any): Promise<User> {
+    const { username, password, role, name, phone, email, dob, address } = dto;
+    if (!username || !password) {
+      throw new BadRequestException('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.');
+    }
+
+    const existingUser = await this.userRepository.findOneBy({ username });
+    if (existingUser) {
+      throw new BadRequestException('Tên đăng nhập đã tồn tại trong hệ thống.');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = this.userRepository.create({
+      username,
+      password: hashedPassword,
+      role: role || 'sales',
+      name: name || 'Nhân viên CSKH',
+      phone: phone || null,
+      email: email || null,
+      dob: dob || null,
+      address: address || null,
+    });
+
+    return await this.userRepository.save(newUser);
+  }
+
+  // 13. Cập nhật tài khoản nhân sự bởi Admin (bao gồm đổi mật khẩu và đổi role)
+  async updateUserByAdmin(id: number, dto: any): Promise<User> {
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy tài khoản nhân viên.');
+    }
+
+    if (user.username === 'admin') {
+      if (dto.role && dto.role !== 'admin') {
+        throw new BadRequestException('Không thể thay đổi vai trò của tài khoản Admin hệ thống mặc định.');
+      }
+    }
+
+    if (dto.password) {
+      user.password = await bcrypt.hash(dto.password, 10);
+    }
+    if (dto.name !== undefined) user.name = dto.name;
+    if (dto.phone !== undefined) user.phone = dto.phone;
+    if (dto.email !== undefined) user.email = dto.email;
+    if (dto.dob !== undefined) user.dob = dto.dob;
+    if (dto.address !== undefined) user.address = dto.address;
+    if (dto.role !== undefined) user.role = dto.role;
+
+    return await this.userRepository.save(user);
+  }
+
+  // 14. Xóa tài khoản nhân sự (chỉ Admin)
+  async deleteUser(id: number): Promise<{ success: boolean; message: string }> {
+    const user = await this.userRepository.findOneBy({ id });
+    if (!user) {
+      throw new NotFoundException('Không tìm thấy tài khoản nhân viên.');
+    }
+
+    if (user.username === 'admin') {
+      throw new BadRequestException('Không thể xóa tài khoản Admin hệ thống mặc định.');
+    }
+
+    await this.userRepository.remove(user);
+    return {
+      success: true,
+      message: 'Xóa tài khoản nhân sự thành công.',
+    };
+  }
 }
 

@@ -18,6 +18,7 @@ import { KnowledgeBasePage } from "./pages/admin/KnowledgeBasePage";
 import { PromptPlaygroundPage } from "./pages/admin/PromptPlaygroundPage";
 import { BotConfigPage } from "./pages/admin/BotConfigPage";
 import { AdminProfilePage } from "./pages/admin/AdminProfilePage";
+import { StaffManagementPage } from "./pages/admin/StaffManagementPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -81,6 +82,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute allowedRoles={["admin"]}>
             <BotConfigPage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: "staff",
+        element: (
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <StaffManagementPage />
           </ProtectedRoute>
         )
       },

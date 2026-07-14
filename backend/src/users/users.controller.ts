@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Post, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Patch, Post, Delete, Param, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -78,6 +78,45 @@ export class UsersController {
   ) {
     const { phone, otpCode } = body;
     return await this.usersService.verifyPhoneChange(req.user.userId, phone, otpCode);
+  }
+
+  // 8. Lấy danh sách tất cả các tài khoản quản trị/nhân viên (chỉ dành cho Admin)
+  @Get()
+  @Roles('admin')
+  async getAllUsers() {
+    const list = await this.usersService.findAll();
+    return list.map(user => {
+      const { password, ...result } = user;
+      return result;
+    });
+  }
+
+  // 9. Tạo tài khoản quản lý/sales mới (chỉ dành cho Admin)
+  @Post()
+  @Roles('admin')
+  async createUser(@Body() createUserDto: any) {
+    const user = await this.usersService.createUser(createUserDto);
+    const { password, ...result } = user;
+    return result;
+  }
+
+  // 10. Chỉnh sửa thông tin nhân viên hoặc đổi mật khẩu (chỉ dành cho Admin)
+  @Patch(':id')
+  @Roles('admin')
+  async updateUserByAdmin(
+    @Param('id') id: string,
+    @Body() updateUserDto: any,
+  ) {
+    const user = await this.usersService.updateUserByAdmin(+id, updateUserDto);
+    const { password, ...result } = user;
+    return result;
+  }
+
+  // 11. Xóa tài khoản nhân viên (chỉ dành cho Admin)
+  @Delete(':id')
+  @Roles('admin')
+  async deleteUser(@Param('id') id: string) {
+    return await this.usersService.deleteUser(+id);
   }
 }
 

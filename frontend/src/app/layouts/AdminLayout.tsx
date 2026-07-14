@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutDashboard, Users, MessageSquare, Database, Code2,
   ChevronLeft, ChevronRight, Bell, Search,
-  LogOut, Zap, Bot, ChevronDown, User, AlertTriangle
+  LogOut, Zap, Bot, ChevronDown, User, AlertTriangle, UserCog
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
@@ -17,6 +17,7 @@ const NAV_GROUPS = [
       { icon: LayoutDashboard, label: "Dashboard", path: "/admin" },
       { icon: Users, label: "Leads & Khách hàng", path: "/admin/leads" },
       { icon: MessageSquare, label: "Hội thoại Bot", path: "/admin/conversations" },
+      { icon: UserCog, label: "Quản lý nhân sự", path: "/admin/staff" },
     ]
   },
   {
@@ -461,7 +462,7 @@ export function AdminLayout() {
           {NAV_GROUPS.map(group => {
             const filteredItems = group.items.filter(item => {
               if (user?.role !== "admin") {
-                return !["/admin/bot-config", "/admin/knowledge", "/admin/playground"].includes(item.path);
+                return !["/admin/bot-config", "/admin/knowledge", "/admin/playground", "/admin/staff"].includes(item.path);
               }
               return true;
             });
