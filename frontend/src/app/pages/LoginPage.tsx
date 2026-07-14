@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, Link } from "react-router";
 import { Lock, Phone, Eye, EyeOff, ArrowRight, CheckCircle2, ChevronLeft, Shield, Mail } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { MobiFoneLogo } from "../components/MobiFoneLogo";
@@ -176,7 +176,7 @@ function LoginForm() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3">
-        <BrandInput icon={Phone} placeholder="Số điện thoại hoặc Email" value={id} onChange={setId} />
+        <BrandInput icon={Mail} placeholder="Địa chỉ Email" value={id} onChange={setId} />
         <BrandInput icon={Lock} placeholder="Mật khẩu" type="password" value={pw} onChange={setPw} />
       </div>
 
@@ -187,9 +187,9 @@ function LoginForm() {
       )}
 
       <div className="flex justify-end">
-        <a href="#" className="text-blue-600 hover:text-blue-700 text-xs no-underline font-bold transition-colors">
+        <Link to="/forgot-password" className="text-blue-600 hover:text-blue-700 text-xs no-underline font-bold transition-colors">
           Quên mật khẩu?
-        </a>
+        </Link>
       </div>
 
       <button
@@ -197,16 +197,6 @@ function LoginForm() {
         className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm cursor-pointer shadow-md shadow-red-500/20 hover:shadow-lg hover:shadow-red-500/30 hover:scale-102 active:scale-98 transition-all duration-200 border-none flex items-center justify-center gap-2"
       >
         Đăng nhập <ArrowRight size={17} />
-      </button>
-
-      <div className="flex items-center gap-3 my-1">
-        <div className="flex-1 h-[1px] bg-slate-200" />
-        <span className="text-slate-400 text-xs font-semibold">hoặc</span>
-        <div className="flex-1 h-[1px] bg-slate-200" />
-      </div>
-
-      <button className="w-full py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-all duration-200 flex items-center justify-center gap-2">
-        <span>📱</span> Đăng nhập bằng OTP SMS
       </button>
     </div>
   );

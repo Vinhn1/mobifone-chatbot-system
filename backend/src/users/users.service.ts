@@ -351,5 +351,16 @@ export class UsersService implements OnModuleInit {
       message: 'Xóa tài khoản nhân sự thành công.',
     };
   }
+
+  // 15. Tìm tài khoản nhân sự theo email
+  async findByEmail(email: string): Promise<User | null> {
+    if (!email) return null;
+    return await this.userRepository.findOne({ where: { email: email.toLowerCase().trim() } });
+  }
+
+  // 16. Lưu thông tin người dùng
+  async saveUser(user: User): Promise<User> {
+    return await this.userRepository.save(user);
+  }
 }
 

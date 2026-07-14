@@ -4,6 +4,7 @@ import { AdminLayout } from "./layouts/AdminLayout";
 import { UserLayout } from "./layouts/UserLayout";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { ESIMPage } from "./pages/portal/ESIMPage";
 import { PackagesPage } from "./pages/portal/PackagesPage";
 import { PromotionsPage } from "./pages/portal/PromotionsPage";
@@ -36,6 +37,10 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     Component: LoginPage,
+  },
+  {
+    path: "/forgot-password",
+    Component: ForgotPasswordPage,
   },
   {
     path: "/dashboard",

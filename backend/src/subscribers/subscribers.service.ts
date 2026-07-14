@@ -520,4 +520,9 @@ export class SubscribersService implements OnModuleInit {
 
     return await this.subscriberRepository.save(subscriber);
   }
+
+  // 11. Lưu thông tin thuê bao
+  async saveSubscriber(subscriber: Subscriber): Promise<Subscriber> {
+    return await this.subscriberRepository.save(subscriber);
+  }
 }
