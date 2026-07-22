@@ -549,7 +549,8 @@ class MobiFoneRAG:
         
         print("DEBUG: Top 10 sorted candidates:")
         for idx, item in enumerate(all_candidates[:10]):
-            print(f"  {idx+1}. ID: {item['id']}, Score: {item['score']:.4f}, Category: {item['metadata'].get('category')}, Doc (first 50 chars): {item['document'][:50].strip().replace('\n', ' ')}")
+            doc_preview = item['document'][:50].strip().replace('\n', ' ')
+            print(f"  {idx+1}. ID: {item['id']}, Score: {item['score']:.4f}, Category: {item['metadata'].get('category')}, Doc (first 50 chars): {doc_preview}")
         
         # 7. Loại bỏ trùng lặp nội dung (Deduplication) để tránh lãng phí context
         unique_docs = []
