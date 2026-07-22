@@ -4,6 +4,7 @@ import { X, Send, ExternalLink, ChevronDown, Minimize2, Maximize2, Star, Sparkle
 import { RobotAvatar } from "./RobotAvatar";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
+import { API_BASE } from "../../config";
 
 type Source = {
   title: string;
@@ -253,7 +254,7 @@ export function ChatWidget() {
 
   const fetchPublicConfig = async () => {
     try {
-      const response = await axios.get(`http://localhost:3000/chat/public-config?t=${Date.now()}`);
+      const response = await axios.get(`${API_BASE}/chat/public-config?t=${Date.now()}`);
       if (response.data) {
         if (response.data.zalo_oa_id) setZaloOaId(response.data.zalo_oa_id);
         if (response.data.fb_page_id) setFbPageId(response.data.fb_page_id);
@@ -265,7 +266,7 @@ export function ChatWidget() {
 
   const fetchSuggestions = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/chat/suggestions");
+      const response = await axios.get(`${API_BASE}/chat/suggestions`);
       if (Array.isArray(response.data) && response.data.length > 0) {
         setSuggestions(response.data);
       }
@@ -286,7 +287,7 @@ export function ChatWidget() {
 
     const intervalId = setInterval(async () => {
       try {
-        const response = await axios.get(`http://localhost:3000/chat/history/${sessionId}`);
+        const response = await axios.get(`${API_BASE}/chat/history/${sessionId}`);
         if (Array.isArray(response.data) && response.data.length > 0) {
           const dbLogs = response.data;
           setMessages(prev => {
@@ -415,7 +416,7 @@ export function ChatWidget() {
 
     try {
       // Try to get live response from backend
-      const response = await axios.post("http://localhost:3000/chat", {
+      const response = await axios.post(`${API_BASE}/chat`, {
         message: textToSend,
         sessionId,
         userInfo,

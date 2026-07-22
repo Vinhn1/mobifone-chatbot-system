@@ -9,6 +9,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { RobotAvatar } from "../components/RobotAvatar";
+import { API_BASE } from "../../config";
 
 const NAV_GROUPS = [
   {
@@ -67,7 +68,7 @@ export function AdminLayout() {
     };
 
     // Tải danh sách leads thực tế và lọc các lead có trạng thái "Chưa liên hệ"
-    axios.get("http://localhost:3000/leads", config)
+    axios.get(`${API_BASE}/leads`, config)
       .then(res => {
         const list = res.data || [];
         const uncontacted = list.filter((l: any) => l.status === "Chưa liên hệ" || l.status === "new");
@@ -76,7 +77,7 @@ export function AdminLayout() {
       .catch(err => console.error("Lỗi khi tải leads count ban đầu:", err));
 
     // Tải lịch sử chat để khởi tạo bản đồ hoạt động các phiên chat
-    axios.get("http://localhost:3000/chat/history", config)
+    axios.get(`${API_BASE}/chat/history`, config)
       .then(res => {
         const rawLogs = res.data || [];
         const activityMap: Record<string, number> = {};
@@ -112,7 +113,7 @@ export function AdminLayout() {
       const config = {
         headers: { Authorization: `Bearer ${adminToken}` },
       };
-      axios.get("http://localhost:3000/leads", config)
+      axios.get(`${API_BASE}/leads`, config)
         .then(res => {
           const list = res.data || [];
           const uncontacted = list.filter((l: any) => l.status === "Chưa liên hệ" || l.status === "new");
@@ -149,7 +150,7 @@ export function AdminLayout() {
     const adminToken = localStorage.getItem("mobifone_admin_token");
     if (!adminToken) return;
 
-    const eventSource = new EventSource(`http://localhost:3000/notifications/sse?token=${adminToken}`);
+    const eventSource = new EventSource(`${API_BASE}/notifications/sse?token=${adminToken}`);
 
     eventSource.onmessage = (event) => {
       try {

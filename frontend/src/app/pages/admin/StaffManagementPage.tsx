@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
+import { API_BASE } from "../../../config";
 
 type Staff = {
   id: number;
@@ -71,7 +72,7 @@ export function StaffManagementPage() {
     setLoading(true);
     try {
       const adminToken = localStorage.getItem("mobifone_admin_token");
-      const res = await axios.get("http://localhost:3000/users", {
+      const res = await axios.get(`${API_BASE}/users`, {
         headers: { Authorization: `Bearer ${adminToken}` }
       });
       setStaffs(res.data || []);
@@ -104,12 +105,12 @@ export function StaffManagementPage() {
       };
 
       if (modalType === "create") {
-        await axios.post("http://localhost:3000/users", payload, {
+        await axios.post(`${API_BASE}/users`, payload, {
           headers: { Authorization: `Bearer ${adminToken}` }
         });
         showToast("Tạo tài khoản nhân viên thành công!");
       } else if (modalType === "edit" && editingStaffId) {
-        await axios.patch(`http://localhost:3000/users/${editingStaffId}`, payload, {
+        await axios.patch(`${API_BASE}/users/${editingStaffId}`, payload, {
           headers: { Authorization: `Bearer ${adminToken}` }
         });
         showToast("Cập nhật thông tin nhân viên thành công!");
@@ -171,7 +172,7 @@ export function StaffManagementPage() {
     }
     try {
       const adminToken = localStorage.getItem("mobifone_admin_token");
-      await axios.patch(`http://localhost:3000/users/${passwordStaffId}`, {
+      await axios.patch(`${API_BASE}/users/${passwordStaffId}`, {
         password: newPassword
       }, {
         headers: { Authorization: `Bearer ${adminToken}` }
@@ -195,7 +196,7 @@ export function StaffManagementPage() {
     }
     try {
       const adminToken = localStorage.getItem("mobifone_admin_token");
-      await axios.delete(`http://localhost:3000/users/${id}`, {
+      await axios.delete(`${API_BASE}/users/${id}`, {
         headers: { Authorization: `Bearer ${adminToken}` }
       });
       showToast(`Đã xóa tài khoản "${staffName || staffUsername}" thành công!`);

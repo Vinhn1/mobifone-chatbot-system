@@ -20,9 +20,10 @@ export class SubscribersService implements OnModuleInit {
 
   async onModuleInit() {
     const phone = '0393375961';
+    const subscriberPassword = process.env.SUBSCRIBER_SEED_PASSWORD || 'Vinhnguyen@1';
     let subscriber = await this.subscriberRepository.findOneBy({ phoneNumber: phone });
-    const hashedPassword = await bcrypt.hash('Vinhnguyen@1', 10);
     if (!subscriber) {
+      const hashedPassword = await bcrypt.hash(subscriberPassword, 10);
       subscriber = this.subscriberRepository.create({
         phoneNumber: phone,
         password: hashedPassword,
@@ -39,15 +40,11 @@ export class SubscribersService implements OnModuleInit {
       console.log('--------------------------------------------------');
       console.log(`[SEED] Đã tạo tài khoản thuê bao mặc định:`);
       console.log(`Phone: ${phone}`);
-      console.log(`Password: Vinhnguyen@1`);
+      console.log(`Password: ${subscriberPassword}`);
       console.log('--------------------------------------------------');
     } else {
-      subscriber.password = hashedPassword;
-      await this.subscriberRepository.save(subscriber);
       console.log('--------------------------------------------------');
-      console.log(`[SEED] Đã cập nhật mật khẩu cho thuê bao mặc định:`);
-      console.log(`Phone: ${phone}`);
-      console.log(`Password: Vinhnguyen@1`);
+      console.log(`[SEED] Tài khoản thuê bao mặc định đã tồn tại.`);
       console.log('--------------------------------------------------');
     }
   }
@@ -126,8 +123,7 @@ export class SubscribersService implements OnModuleInit {
       throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
     }
 
-    // Cho phép nhập đúng OTP hoặc mã bypass 123456 phục vụ test nhanh
-    if (subscriber.otpCode !== otpCode && otpCode !== '123456') {
+    if (subscriber.otpCode !== otpCode) {
       throw new BadRequestException('Mã OTP không chính xác.');
     }
 
@@ -374,7 +370,7 @@ export class SubscribersService implements OnModuleInit {
       throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
     }
 
-    if (subscriber.otpCode !== otpCode && otpCode !== '123456') {
+    if (subscriber.otpCode !== otpCode) {
       throw new BadRequestException('Mã OTP không chính xác.');
     }
 
@@ -438,7 +434,7 @@ export class SubscribersService implements OnModuleInit {
       throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
     }
 
-    if (subscriber.otpCode !== otpCode && otpCode !== '123456') {
+    if (subscriber.otpCode !== otpCode) {
       throw new BadRequestException('Mã OTP không chính xác.');
     }
 
@@ -481,7 +477,7 @@ export class SubscribersService implements OnModuleInit {
       throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
     }
 
-    if (subscriber.otpCode !== otpCode && otpCode !== '123456') {
+    if (subscriber.otpCode !== otpCode) {
       throw new BadRequestException('Mã OTP không chính xác.');
     }
 

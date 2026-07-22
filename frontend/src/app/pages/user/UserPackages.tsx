@@ -5,7 +5,7 @@ import { Wifi, Phone, Check, Zap, RefreshCw, Plus, ChevronRight, Package, X, Cop
 import { useAuth } from "../../context/AuthContext";
 import axios from "axios";
 
-const API_BASE = "http://localhost:3000";
+import { API_BASE } from "../../../config";
 
 const ADDONS = [
   { icon: "📶", name: "Thêm 5GB data", price: 25000, desc: "Hiệu lực 30 ngày", color: "#0055A5" },

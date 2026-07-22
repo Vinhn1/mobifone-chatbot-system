@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: mobifone_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USERNAME:-mobifone_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-MobiFone2026!}
+      POSTGRES_DB: ${DB_DATABASE:-mobifone_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  ai-core:
+    build:
+      context: ./ai-core
+      dockerfile: Dockerfile
+    container_name: mobifone_ai_core
+    restart: always
+    ports:
+      - "8001:8001"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AI_PROVIDER=${AI_PROVIDER}
+      - GEMINI_MODEL=${GEMINI_MODEL}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - EVAL_JUDGE_PROVIDER=${EVAL_JUDGE_PROVIDER}
+      - EVAL_JUDGE_MODEL=${EVAL_JUDGE_MODEL}
+    volumes:
+      - ./ai-core/chroma_db:/app/chroma_db
+      - ./ai-core/static:/app/static
+    depends_on:
+      - db
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mobifone_backend
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_SYNCHRONIZE=${DB_SYNCHRONIZE:-false}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+      - AI_SERVICE_BASE_URL=http://ai-core:8001
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - ADMIN_SEED_PASSWORD=${ADMIN_SEED_PASSWORD:-admin@123}
+      - SALES_SEED_PASSWORD=${SALES_SEED_PASSWORD:-sales@123}
+      - SUBSCRIBER_SEED_PASSWORD=${SUBSCRIBER_SEED_PASSWORD:-Vinhnguyen@1}
+    depends_on:
+      - db
+      - ai-core
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: mobifone_frontend
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_URL=/api
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

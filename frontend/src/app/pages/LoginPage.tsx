@@ -8,7 +8,7 @@ import axios from "axios";
 type Tab = "login" | "register";
 type Step = 1 | 2 | 3 | 4;
 
-const API_BASE = "http://localhost:3000";
+import { API_BASE } from "../../config";
 
 function BrandInput({ icon: Icon, placeholder, type = "text", value, onChange }: {
   icon: React.ElementType; placeholder: string; type?: string; value: string; onChange: (v: string) => void;

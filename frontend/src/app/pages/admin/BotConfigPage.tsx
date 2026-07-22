@@ -5,6 +5,7 @@ import { RobotAvatar } from "../../components/RobotAvatar";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
+import { API_BASE } from "../../../config";
 
 const DEFAULT_PERSONA = `Bạn là Mia — Chuyên viên tư vấn kinh doanh viễn thông của MobiFone với tâm lý bán hàng chuyên sâu.
 
@@ -110,7 +111,7 @@ export function BotConfigPage() {
       const config = {
         headers: { Authorization: `Bearer ${token}` },
       };
-      const response = await axios.get("http://localhost:3000/chat/config", config);
+      const response = await axios.get(`${API_BASE}/chat/config`, config);
       const data = response.data;
       if (data) {
         setPersona(data.system_prompt || DEFAULT_PERSONA);
@@ -165,7 +166,7 @@ export function BotConfigPage() {
         zalo_oa_id: zaloOaId,
       };
 
-      await axios.post("http://localhost:3000/chat/config", payload, config);
+      await axios.post(`${API_BASE}/chat/config`, payload, config);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (error) {
@@ -421,13 +422,21 @@ export function BotConfigPage() {
                         />
                       </div>
                       <div className="bg-blue-50/70 border border-dashed border-blue-200 rounded-xl p-3.5 text-[11px] text-blue-700 flex flex-col gap-1.5 mt-2">
-                        <div className="font-semibold break-all">🔗 URL: <strong className="font-bold">http://localhost:3000/chat/webhook/facebook</strong></div>
-                        <button
-                          onClick={() => { navigator.clipboard.writeText("http://localhost:3000/chat/webhook/facebook"); alert("Đã copy URL Facebook Webhook!"); }}
-                          className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg py-1.5 text-[10px] font-black text-blue-800 cursor-pointer w-full text-center"
-                        >
-                          Copy URL
-                        </button>
+                        {(() => {
+                          const base = API_BASE.startsWith("http") ? API_BASE : `${window.location.origin}${API_BASE.startsWith("/") ? "" : "/"}${API_BASE}`;
+                          const url = `${base}/chat/webhook/facebook`;
+                          return (
+                            <>
+                              <div className="font-semibold break-all">🔗 URL: <strong className="font-bold">{url}</strong></div>
+                              <button
+                                onClick={() => { navigator.clipboard.writeText(url); alert("Đã copy URL Facebook Webhook!"); }}
+                                className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg py-1.5 text-[10px] font-black text-blue-800 cursor-pointer w-full text-center"
+                              >
+                                Copy URL
+                              </button>
+                            </>
+                          );
+                        })()}
                       </div>
                     </motion.div>
                   )}
@@ -511,13 +520,21 @@ export function BotConfigPage() {
                         </div>
                       </div>
                       <div className="bg-blue-50/70 border border-dashed border-blue-200 rounded-xl p-3.5 text-[11px] text-blue-700 flex flex-col gap-1.5 mt-2">
-                        <div className="font-semibold break-all">🔗 URL: <strong className="font-bold">http://localhost:3000/chat/webhook/zalo</strong></div>
-                        <button
-                          onClick={() => { navigator.clipboard.writeText("http://localhost:3000/chat/webhook/zalo"); alert("Đã copy URL Zalo Webhook!"); }}
-                          className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg py-1.5 text-[10px] font-black text-blue-800 cursor-pointer w-full text-center"
-                        >
-                          Copy URL
-                        </button>
+                        {(() => {
+                          const base = API_BASE.startsWith("http") ? API_BASE : `${window.location.origin}${API_BASE.startsWith("/") ? "" : "/"}${API_BASE}`;
+                          const url = `${base}/chat/webhook/zalo`;
+                          return (
+                            <>
+                              <div className="font-semibold break-all">🔗 URL: <strong className="font-bold">{url}</strong></div>
+                              <button
+                                onClick={() => { navigator.clipboard.writeText(url); alert("Đã copy URL Zalo Webhook!"); }}
+                                className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg py-1.5 text-[10px] font-black text-blue-800 cursor-pointer w-full text-center"
+                              >
+                                Copy URL
+                              </button>
+                            </>
+                          );
+                        })()}
                       </div>
                     </motion.div>
                   )}

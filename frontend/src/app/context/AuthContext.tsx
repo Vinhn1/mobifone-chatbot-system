@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, type ReactNode, useEffect } from "react";
 import axios from "axios";
+import { API_BASE } from "../../config";
 
 export type AuthRole = "guest" | "user" | "admin" | "sales";
 
@@ -46,7 +47,7 @@ const AuthContext = createContext<AuthContextType>({
   verify2faLogin: async () => "error",
 });
 
-const API_BASE = "http://localhost:3000";
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => {

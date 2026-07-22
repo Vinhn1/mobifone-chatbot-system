@@ -8,6 +8,7 @@ import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
 import { RobotAvatar } from "../../components/RobotAvatar";
+import { API_BASE } from "../../../config";
 
 type Message = {
   role: "user" | "assistant";
@@ -17,7 +18,6 @@ type Message = {
 };
 
 // Cấu hình thanh trượt đã được loại bỏ để tối giản trải nghiệm người dùng kinh doanh
-
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
   return (
@@ -68,7 +68,7 @@ export function PromptPlaygroundPage() {
         top_p: topP,
         max_tokens: maxTokens,
       };
-      await axios.post("http://localhost:3000/chat/config", updatedConfig, configHeaders);
+      await axios.post(`${API_BASE}/chat/config`, updatedConfig, configHeaders);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2500);
     } catch (error) {
@@ -94,7 +94,7 @@ export function PromptPlaygroundPage() {
       const config = {
         headers: { Authorization: `Bearer ${token}` },
       };
-      const response = await axios.get("http://localhost:3000/chat/config", config);
+      const response = await axios.get(`${API_BASE}/chat/config`, config);
       const data = response.data;
       if (data) {
         setSystemPrompt(data.system_prompt || "");
@@ -150,10 +150,10 @@ export function PromptPlaygroundPage() {
           top_p: topP,
           max_tokens: maxTokens,
         };
-        await axios.post("http://localhost:3000/chat/config", updatedConfig, configHeaders);
+        await axios.post(`${API_BASE}/chat/config`, updatedConfig, configHeaders);
       }
 
-      const response = await axios.post("http://localhost:3000/chat", {
+      const response = await axios.post(`${API_BASE}/chat`, {
         message: textToSend,
         sessionId,
       });

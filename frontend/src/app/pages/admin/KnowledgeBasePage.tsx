@@ -8,6 +8,7 @@ import {
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
+import { API_BASE } from "../../../config";
 
 type DocStatus = "Synced" | "vectorizing" | "chunking" | "error";
 
@@ -146,7 +147,7 @@ export function KnowledgeBasePage() {
       const config = {
         headers: { Authorization: `Bearer ${token}` },
       };
-      const response = await axios.get("http://localhost:3000/chat/documents", config);
+      const response = await axios.get(`${API_BASE}/chat/documents`, config);
       setDocs(response.data || []);
     } catch (error) {
       console.error("Lỗi khi tải tài liệu tri thức:", error);
@@ -244,8 +245,8 @@ export function KnowledgeBasePage() {
           "Content-Type": "multipart/form-data"
         },
       };
-      await axios.post("http://localhost:3000/chat/upload", formData, config);
-      const response = await axios.get("http://localhost:3000/chat/documents", { headers: { Authorization: `Bearer ${token}` } });
+      await axios.post(`${API_BASE}/chat/upload`, formData, config);
+      const response = await axios.get(`${API_BASE}/chat/documents`, { headers: { Authorization: `Bearer ${token}` } });
       setDocs(response.data || []);
     } catch (error) {
       console.error("Lỗi khi tải tài liệu lên:", error);
@@ -267,7 +268,7 @@ export function KnowledgeBasePage() {
       const config = {
         headers: { Authorization: `Bearer ${token}` },
       };
-      await axios.delete(`http://localhost:3000/chat/documents/${encodeURIComponent(docName)}`, config);
+      await axios.delete(`${API_BASE}/chat/documents/${encodeURIComponent(docName)}`, config);
       setDocs(prev => prev.filter(d => d.name !== docName));
     } catch (error) {
       console.error("Lỗi khi xóa tài liệu:", error);

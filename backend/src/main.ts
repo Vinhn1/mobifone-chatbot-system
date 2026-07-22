@@ -5,8 +5,14 @@ import { json, urlencoded } from 'express';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Kích hoạt CORS để cho phép Frontend (cổng 5173) gọi API
-  app.enableCors();
+  // Kích hoạt CORS với các domain được cấu hình trong biến môi trường
+  const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',')
+    : ['http://localhost:5173', 'http://localhost:3000'];
+  app.enableCors({
+    origin: corsOrigins,
+    credentials: true,
+  });
 
   // Tăng giới hạn dung lượng body để hỗ trợ upload avatar ảnh dạng base64
   app.use(json({ limit: '10mb' }));

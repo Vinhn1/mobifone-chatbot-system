@@ -5,6 +5,7 @@ import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
 import { RobotAvatar } from "../../components/RobotAvatar";
+import { API_BASE } from "../../../config";
 
 type ConvStatus = "resolved" | "escalated" | "active" | "abandoned";
 
@@ -87,7 +88,7 @@ export function ConversationsPage() {
       const config = {
         headers: { Authorization: `Bearer ${token}` },
       };
-      const response = await axios.get("http://localhost:3000/chat/history", config);
+      const response = await axios.get(`${API_BASE}/chat/history`, config);
       const rawLogs = response.data || [];
 
       // Group individual logs by sessionId
@@ -343,7 +344,7 @@ export function ConversationsPage() {
         headers: { Authorization: `Bearer ${token}` },
       };
       await axios.post(
-        "http://localhost:3000/chat/reply",
+        `${API_BASE}/chat/reply`,
         {
           sessionId: selected.id,
           message: replyText.trim(),

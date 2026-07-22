@@ -5,7 +5,7 @@ import { Wifi, Phone, Zap, Star, Check, Filter, Search, X, Copy, CheckCircle2, A
 import { useAuth } from "../../context/AuthContext";
 import axios from "axios";
 
-const API_BASE = "http://localhost:3000";
+import { API_BASE } from "../../../config";
 
 type Category = "all" | "data" | "voice" | "unlimited";
 

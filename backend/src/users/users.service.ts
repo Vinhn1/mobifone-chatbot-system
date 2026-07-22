@@ -15,10 +15,13 @@ export class UsersService implements OnModuleInit {
 
   // 1. Tự động kiểm tra và tạo tài khoản Admin và Sales mặc định khi start app lần đầu
   async onModuleInit() {
+    const adminPassword = process.env.ADMIN_SEED_PASSWORD || 'admin@123';
+    const salesPassword = process.env.SALES_SEED_PASSWORD || 'sales@123';
+
     // Seed Admin
     let admin = await this.userRepository.findOneBy({ username: 'admin' });
-    const adminHashedPassword = await bcrypt.hash('admin@123', 10);
     if (!admin) {
+      const adminHashedPassword = await bcrypt.hash(adminPassword, 10);
       admin = this.userRepository.create({
         username: 'admin',
         password: adminHashedPassword,
@@ -33,10 +36,9 @@ export class UsersService implements OnModuleInit {
       console.log('--------------------------------------------------');
       console.log(`[SEED] Đã tạo tài khoản admin mặc định:`);
       console.log(`Username: admin`);
-      console.log(`Password: admin@123`);
+      console.log(`Password: ${adminPassword}`);
       console.log('--------------------------------------------------');
     } else {
-      admin.password = adminHashedPassword;
       if (!admin.name) admin.name = 'MobiFone Administrator';
       if (!admin.phone) admin.phone = '0987654321';
       if (!admin.email) admin.email = 'admin@mobifone.vn';
@@ -44,16 +46,14 @@ export class UsersService implements OnModuleInit {
       if (!admin.dob) admin.dob = '1988-05-12';
       await this.userRepository.save(admin);
       console.log('--------------------------------------------------');
-      console.log(`[SEED] Đã cập nhật tài khoản admin mặc định:`);
-      console.log(`Username: admin`);
-      console.log(`Password: admin@123`);
+      console.log(`[SEED] Tài khoản admin mặc định đã tồn tại.`);
       console.log('--------------------------------------------------');
     }
 
     // Seed Sales Agent
     let sales = await this.userRepository.findOneBy({ username: 'sales' });
-    const salesHashedPassword = await bcrypt.hash('sales@123', 10);
     if (!sales) {
+      const salesHashedPassword = await bcrypt.hash(salesPassword, 10);
       sales = this.userRepository.create({
         username: 'sales',
         password: salesHashedPassword,
@@ -68,10 +68,9 @@ export class UsersService implements OnModuleInit {
       console.log('--------------------------------------------------');
       console.log(`[SEED] Đã tạo tài khoản sales mặc định:`);
       console.log(`Username: sales`);
-      console.log(`Password: sales@123`);
+      console.log(`Password: ${salesPassword}`);
       console.log('--------------------------------------------------');
     } else {
-      sales.password = salesHashedPassword;
       if (!sales.name) sales.name = 'Nhân viên CSKH MobiFone';
       if (!sales.phone) sales.phone = '0912345678';
       if (!sales.email) sales.email = 'sales@mobifone.vn';
@@ -79,9 +78,7 @@ export class UsersService implements OnModuleInit {
       if (!sales.dob) sales.dob = '1995-08-25';
       await this.userRepository.save(sales);
       console.log('--------------------------------------------------');
-      console.log(`[SEED] Đã cập nhật tài khoản sales mặc định:`);
-      console.log(`Username: sales`);
-      console.log(`Password: sales@123`);
+      console.log(`[SEED] Tài khoản sales mặc định đã tồn tại.`);
       console.log('--------------------------------------------------');
     }
   }
@@ -172,8 +169,7 @@ export class UsersService implements OnModuleInit {
       throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
     }
 
-    // Cho phép mã bypass 123456 để test nhanh
-    if (user.otpCode !== otpCode && otpCode !== '123456') {
+    if (user.otpCode !== otpCode) {
       throw new BadRequestException('Mã OTP không chính xác.');
     }
 
@@ -233,7 +229,7 @@ export class UsersService implements OnModuleInit {
       throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
     }
 
-    if (user.otpCode !== otpCode && otpCode !== '123456') {
+    if (user.otpCode !== otpCode) {
       throw new BadRequestException('Mã OTP không chính xác.');
     }
 
@@ -265,7 +261,7 @@ export class UsersService implements OnModuleInit {
       throw new BadRequestException('Mã OTP đã hết hạn. Vui lòng gửi lại mã mới.');
     }
 
-    if (user.otpCode !== otpCode && otpCode !== '123456') {
+    if (user.otpCode !== otpCode) {
       throw new BadRequestException('Mã OTP không chính xác.');
     }
 

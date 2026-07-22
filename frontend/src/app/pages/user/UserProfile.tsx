@@ -4,6 +4,7 @@ import { User, Mail, Phone, MapPin, Calendar, Lock, Bell, Shield, Camera, Check,
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
 import axios from "axios";
+import { API_BASE } from "../../../config";
 
 const TIER_STYLE = {
   Silver: "bg-slate-50 text-slate-600 border-slate-200/60 shadow-xs",
@@ -80,7 +81,7 @@ export function UserProfile() {
     setSecError(null);
     setSecSuccess(null);
     try {
-      await axios.post("http://localhost:3000/subscribers/change-password", {
+      await axios.post(`${API_BASE}/subscribers/change-password`, {
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
       });
@@ -100,7 +101,7 @@ export function UserProfile() {
     setSecError(null);
     setSecSuccess(null);
     try {
-      await axios.post("http://localhost:3000/subscribers/2fa/request");
+      await axios.post(`${API_BASE}/subscribers/2fa/request`);
       setTwoFaForm(p => ({ ...p, step: 2 }));
       setSecSuccess("Mã OTP đã được gửi đến email đăng ký của bạn.");
     } catch (error: any) {
@@ -122,7 +123,7 @@ export function UserProfile() {
     setSecError(null);
     setSecSuccess(null);
     try {
-      const res = await axios.post("http://localhost:3000/subscribers/2fa/toggle", {
+      const res = await axios.post(`${API_BASE}/subscribers/2fa/toggle`, {
         otpCode: twoFaForm.otpCode,
       });
       updateUser({ twoFaEnabled: res.data.twoFaEnabled });
@@ -150,7 +151,7 @@ export function UserProfile() {
     setSecError(null);
     setSecSuccess(null);
     try {
-      await axios.post("http://localhost:3000/subscribers/phone/request", {
+      await axios.post(`${API_BASE}/subscribers/phone/request`, {
         newPhone: phoneForm.newPhone,
       });
       setPhoneForm(p => ({ ...p, step: 2 }));
@@ -174,7 +175,7 @@ export function UserProfile() {
     setSecError(null);
     setSecSuccess(null);
     try {
-      const res = await axios.post("http://localhost:3000/subscribers/phone/verify", {
+      const res = await axios.post(`${API_BASE}/subscribers/phone/verify`, {
         newPhone: phoneForm.newPhone,
         otpCode: phoneForm.otpCode,
       });
@@ -205,7 +206,7 @@ export function UserProfile() {
         const portalToken = localStorage.getItem("mobifone_portal_token");
         if (portalToken) {
           await axios.patch(
-            "http://localhost:3000/subscribers/profile",
+            `${API_BASE}/subscribers/profile`,
             { avatar: base64 },
             {
               headers: {
@@ -232,7 +233,7 @@ export function UserProfile() {
       const portalToken = localStorage.getItem("mobifone_portal_token");
       if (portalToken) {
         await axios.patch(
-          "http://localhost:3000/subscribers/profile",
+          `${API_BASE}/subscribers/profile`,
           formValues,
           {
             headers: {
@@ -652,7 +653,7 @@ export function UserProfile() {
                       className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white tracking-widest text-center text-lg transition-all bg-slate-50/50 font-mono"
                       placeholder="000000"
                     />
-                    <span className="text-[10px] text-slate-400 font-semibold italic mt-0.5">Mẹo test nhanh: Bạn có thể nhập mã bypass <span className="font-bold text-slate-600">123456</span></span>
+
                   </div>
 
                   {secError && (
@@ -777,7 +778,7 @@ export function UserProfile() {
                       className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 text-sm font-semibold outline-none focus:border-blue-500 focus:bg-white tracking-widest text-center text-lg transition-all bg-slate-50/50 font-mono"
                       placeholder="000000"
                     />
-                    <span className="text-[10px] text-slate-400 font-semibold italic mt-0.5">Mẹo test nhanh: Bạn có thể nhập mã bypass <span className="font-bold text-slate-600">123456</span></span>
+
                   </div>
 
                   {secError && (

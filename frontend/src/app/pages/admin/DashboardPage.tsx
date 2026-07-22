@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, Users, MessageSquare, Target, DollarSign, Pho
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
+import { API_BASE } from "../../../config";
 
 function Spark({ data, color }: { data: number[]; color: string }) {
   const min = Math.min(...data), max = Math.max(...data);
@@ -97,10 +98,10 @@ export function DashboardPage() {
         headers: { Authorization: `Bearer ${token}` },
       };
 
-      const leadsRes = await axios.get("http://localhost:3000/leads", config);
+      const leadsRes = await axios.get(`${API_BASE}/leads`, config);
       setLeads(leadsRes.data || []);
 
-      const chatLogsRes = await axios.get("http://localhost:3000/chat/history", config);
+      const chatLogsRes = await axios.get(`${API_BASE}/chat/history`, config);
       setChatLogs(chatLogsRes.data || []);
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu Dashboard:", error);

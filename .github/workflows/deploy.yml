@@ -1,0 +1,53 @@
+name: Deploy MobiFone Chatbot
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up SSH & Deploy
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/mobifone-chatbot-system || {
+              git clone https://github.com/${{ github.repository }}.git /opt/mobifone-chatbot-system
+              cd /opt/mobifone-chatbot-system
+            }
+            git pull origin main
+            
+            # Tạo file .env từ secrets trên server
+            echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" > .env
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
+            echo "DB_SYNCHRONIZE=${{ secrets.DB_SYNCHRONIZE }}" >> .env
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env
+            echo "JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}" >> .env
+            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+            echo "AI_PROVIDER=${{ secrets.AI_PROVIDER }}" >> .env
+            echo "GEMINI_MODEL=${{ secrets.GEMINI_MODEL }}" >> .env
+            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+            echo "EVAL_JUDGE_PROVIDER=${{ secrets.EVAL_JUDGE_PROVIDER }}" >> .env
+            echo "EVAL_JUDGE_MODEL=${{ secrets.EVAL_JUDGE_MODEL }}" >> .env
+            echo "SMTP_HOST=${{ secrets.SMTP_HOST }}" >> .env
+            echo "SMTP_PORT=${{ secrets.SMTP_PORT }}" >> .env
+            echo "SMTP_USER=${{ secrets.SMTP_USER }}" >> .env
+            echo "SMTP_PASS=${{ secrets.SMTP_PASS }}" >> .env
+            echo "SMTP_FROM=${{ secrets.SMTP_FROM }}" >> .env
+            echo "CORS_ALLOWED_ORIGINS=${{ secrets.CORS_ALLOWED_ORIGINS }}" >> .env
+            echo "ADMIN_SEED_PASSWORD=${{ secrets.ADMIN_SEED_PASSWORD }}" >> .env
+            echo "SALES_SEED_PASSWORD=${{ secrets.SALES_SEED_PASSWORD }}" >> .env
+            echo "SUBSCRIBER_SEED_PASSWORD=${{ secrets.SUBSCRIBER_SEED_PASSWORD }}" >> .env
+            
+            # Khởi động lại hệ thống bằng docker compose
+            docker compose down
+            docker compose up -d --build

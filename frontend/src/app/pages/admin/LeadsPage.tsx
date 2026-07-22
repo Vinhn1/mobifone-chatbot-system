@@ -4,6 +4,7 @@ import { Search, Phone, MessageSquare, X, Check, Clock, TrendingUp, User, Packag
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
+import { API_BASE } from "../../../config";
 
 type Stage = "new" | "contacted" | "interested" | "demo" | "converted" | "lost";
 type Temp = "hot" | "warm" | "cold";
@@ -483,7 +484,7 @@ export function LeadsPage() {
       const config = {
         headers: { Authorization: `Bearer ${token}` },
       };
-      const response = await axios.get("http://localhost:3000/leads", config);
+      const response = await axios.get(`${API_BASE}/leads`, config);
       const apiLeads = response.data || [];
 
       // Format backend leads to match the UI model
@@ -531,7 +532,7 @@ export function LeadsPage() {
         headers: { Authorization: `Bearer ${token}` },
       };
       const newStatus = mapStageToStatus(newStage);
-      await axios.patch(`http://localhost:3000/leads/${id}/status`, { status: newStatus }, config);
+      await axios.patch(`${API_BASE}/leads/${id}/status`, { status: newStatus }, config);
       
       // Phát sự kiện custom event để Sidebar AdminLayout tự động đồng bộ lại số lượng Leads chưa liên hệ
       window.dispatchEvent(new CustomEvent('lead-status-updated', { detail: { id, stage: newStage } }));
