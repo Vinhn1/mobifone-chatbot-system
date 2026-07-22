@@ -33,7 +33,8 @@ import { EmailModule } from './email/email.module';
         // Tự động quét và nạp tất cả các file có đuôi .entity.ts hoặc .entity.js
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         // Tự động đồng bộ hóa cấu trúc bảng trong Code với Database (tắt ở production/staging)
-        synchronize: false, 
+        synchronize: configService.get<string>('DB_SYNCHRONIZE') === 'true',
+
       }),
     }),
 
