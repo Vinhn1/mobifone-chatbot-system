@@ -53,8 +53,11 @@ jobs:
               "SUBSCRIBER_SEED_PASSWORD=${SUBSCRIBER_SEED_PASSWORD}" \
               > .env
 
-            # Khởi động lại hệ thống bằng docker compose
-            docker compose down
+            # Dọn dẹp container cũ (kể cả container bị kẹt)
+            docker compose down --remove-orphans 2>/dev/null || true
+            docker rm -f mobifone_frontend mobifone_backend mobifone_ai_core mobifone_db 2>/dev/null || true
+
+            # Khởi động lại hệ thống
             docker compose up -d --build
         env:
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
