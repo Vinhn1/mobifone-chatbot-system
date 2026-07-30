@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router";
-import { Lock, Phone, Eye, EyeOff, ArrowRight, CheckCircle2, ChevronLeft, Shield, Mail } from "lucide-react";
+import { Lock, Phone, Eye, EyeOff, ArrowRight, CheckCircle2, ChevronLeft, Shield, Mail, User } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { MobiFoneLogo } from "../components/MobiFoneLogo";
 import axios from "axios";
@@ -229,6 +229,7 @@ function OTPBoxes({ value, onChange }: { value: string; onChange: (v: string) =>
 
 function RegisterFlow() {
   const [step, setStep] = useState<Step>(1);
+  const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -256,17 +257,21 @@ function RegisterFlow() {
   const strengthTextColors = ["", "text-red-500", "text-amber-500", "text-blue-500", "text-emerald-500"];
   const strengthLabels = ["", "Yếu", "Trung bình", "Mạnh", "Rất mạnh"];
 
+  const isStep1Valid = name.trim().length >= 2 && phone.replace(/\D/g, "").length >= 9 && email.includes("@");
+
   return (
     <div className="flex flex-col gap-4">
       <StepDots step={step} />
       
-      {/* Bước 1: Nhập thông tin Email */}
+      {/* Bước 1: Nhập thông tin đăng ký */}
       {step === 1 && (
         <div className="flex flex-col gap-4">
           <p className="text-slate-500 text-xs sm:text-sm font-semibold mb-1">
-            Nhập địa chỉ Email để nhận mã OTP xác thực
+            Nhập thông tin để tạo tài khoản MobiFone
           </p>
-          <BrandInput icon={Mail} placeholder="Địa chỉ Email (để nhận OTP)" value={email} onChange={setEmail} />
+          <BrandInput icon={User} placeholder="Họ và tên *" value={name} onChange={setName} />
+          <BrandInput icon={Phone} placeholder="Số điện thoại MobiFone *" value={phone} onChange={setPhone} />
+          <BrandInput icon={Mail} placeholder="Địa chỉ Email (nhận OTP) *" value={email} onChange={setEmail} />
           
           {regError && (
             <div className="text-red-600 text-xs bg-red-50 border border-red-100 rounded-lg p-2.5 font-semibold">
@@ -275,13 +280,16 @@ function RegisterFlow() {
           )}
           
           <button
-            disabled={!email.includes("@") || isLoading}
+            disabled={!isStep1Valid || isLoading}
             onClick={async () => {
               setIsLoading(true);
               setRegError("");
               try {
+                const cleanPhone = phone.replace(/[\s.-]/g, "");
                 const response = await axios.post(`${API_BASE}/subscribers/otp/send`, { 
-                  email: email
+                  email: email,
+                  phoneNumber: cleanPhone,
+                  name: name.trim(),
                 });
                 if (response.data?.success) {
                   setTimer(60);
@@ -297,7 +305,7 @@ function RegisterFlow() {
               }
             }}
             className={`w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm shadow-md transition-all duration-200 border-none flex items-center justify-center gap-2 ${
-              email.includes("@") && !isLoading
+              isStep1Valid && !isLoading
                 ? "cursor-pointer opacity-100 hover:shadow-lg shadow-red-500/20 active:scale-98"
                 : "cursor-not-allowed opacity-50"
             }`}
@@ -335,12 +343,12 @@ function RegisterFlow() {
                 const data = response.data;
                 if (data?.token && data?.subscriber) {
                   const sub = data.subscriber;
-                  setPhone(sub.phoneNumber); // Lưu lại số điện thoại tự sinh từ Backend
+                  // Dùng số điện thoại người dùng đã nhập (không dùng số tự sinh từ server)
                   const mappedUser = {
                     id: sub.id,
-                    name: sub.name || `Thành viên ${sub.phoneNumber.slice(-4)}`,
+                    name: sub.name || name || `Thành viên ${sub.phoneNumber.slice(-4)}`,
                     phone: sub.phoneNumber,
-                    email: sub.email || email || `${sub.phoneNumber}@mobifone.vn`,
+                    email: sub.email || email,
                     role: "user",
                     tier: "Gold",
                     package: sub.currentPackage ? `${sub.currentPackage} Ultra` : "Không có gói",
@@ -394,7 +402,9 @@ function RegisterFlow() {
                   setRegError("");
                   try {
                     const response = await axios.post(`${API_BASE}/subscribers/otp/send`, {
-                      email: email
+                      email: email,
+                      phoneNumber: phone.replace(/[\s.-]/g, ""),
+                      name: name.trim(),
                     });
                     if (response.data?.success) {
                       setTimer(60);
@@ -456,7 +466,7 @@ function RegisterFlow() {
             disabled={password.length < 6 || password !== confirmPw}
             onClick={async () => {
               setRegError("");
-              const result = await register(phone, password);
+              const result = await register(phone, password, name.trim());
               if (result === "success") setStep(4);
               else setRegError("Đăng ký thất bại. Số điện thoại có thể đã tồn tại.");
             }}

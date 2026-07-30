@@ -891,7 +891,7 @@ class MobiFoneRAG:
             "  'Mia đã kiểm tra và gói [tên gói] KHÔNG có trong hệ thống MobiFone.' Không dùng từ 'chưa cập nhật'.\n"
             "RULE 4 — CÚ PHÁP ĐĂNG KÝ [CÚ PHÁP ĐĂNG KÝ GÓI ...]: Khi ngữ cảnh có nhãn này, đây là cú pháp chính thức.\n"
             "  Trả lời ĐẦY ĐỦ TẤT CẢ các cách đăng ký được liệt kê (SMS, USSD, App, tổng đài).\n"
-            "RULE 5 — FALLBACK: Nếu không có thông tin trong ngữ cảnh hoặc ngữ cảnh không đề cập chi tiết, hãy trả lời bằng tiếng Việt lịch sự, thông báo rõ ràng rằng Mia sẽ chuyển tiếp yêu cầu đến chuyên viên chăm sóc khách hàng trực tuyến ngay lập tức để giải quyết vấn đề cho bạn, và tự động thêm ký hiệu [ESCALATE] ở cuối câu trả lời. Ví dụ: 'Mia rất tiếc vì chưa tìm thấy thông tin chi tiết về yêu cầu của bạn trong kho dữ liệu hiện tại. Mia đã ghi nhận câu hỏi và chuyển tiếp yêu cầu đến chuyên viên chăm sóc khách hàng trực tuyến hỗ trợ bạn ngay lập tức. Chuyên viên sẽ liên hệ lại với bạn trong giây lát để giải đáp chi tiết nhất. Xin chân thành cảm ơn sự thông cảm của bạn! [ESCALATE]'\n"
+            "RULE 5 — TƯ VẤN & DẪN DẮT KHÁCH HÀNG: Khi không có thông tin chi tiết hoặc câu hỏi của khách chung chung (như 'wifi', 'tư vấn', 'gói cước'): TUYỆT ĐỐI KHÔNG BỊA ĐẶT thông tin/giá cước. Hãy lịch sự xác nhận nhu cầu và đặt câu hỏi gợi ý dẫn dắt phân loại nhu cầu (ví dụ hỏi khách cần gói Internet cáp quang cố định MobiFiber hay gói Data 4G/5G di động).\n"
             "══════════════════════════════════════════════════════════"
         )
         temperature = 0.0  # Set to 0.0 to prevent hallucination / enforce strict factual grounding
@@ -969,28 +969,7 @@ Cuối câu trả lời của bạn, hãy tạo thêm 3 câu hỏi gợi ý ti�
             max_tokens=max_tokens
         )
         
-        # Programmatic Fallback Check & [ESCALATE] tag injection
-        fallback_keywords = [
-            "tiếc vì chưa tìm thấy", "chuyển tiếp yêu cầu", "chuyên viên chăm sóc khách hàng", 
-            "chưa có thông tin", "không tìm thấy thông tin", "tổng đài 18001090", "18001090"
-        ]
-        is_fallback_detected = (
-            (not contexts) or 
-            any(kw in answer.lower() for kw in fallback_keywords) or 
-            "[escalate]" in answer.lower()
-        )
-        
-        if is_fallback_detected:
-            if "[ESCALATE]" not in answer:
-                if "chuyển tiếp yêu cầu" not in answer:
-                    answer = (
-                        "Mia rất tiếc vì chưa tìm thấy thông tin chi tiết về yêu cầu của bạn trong kho dữ liệu hiện tại. "
-                        "Mia đã ghi nhận câu hỏi và chuyển tiếp yêu cầu đến chuyên viên chăm sóc khách hàng trực tuyến hỗ trợ bạn ngay lập tức. "
-                        "Chuyên viên sẽ liên hệ lại với bạn trong giây lát để giải đáp chi tiết nhất. "
-                        "Xin chân thành cảm ơn sự thông cảm của bạn! [ESCALATE]"
-                    )
-                else:
-                    answer = answer.strip() + " [ESCALATE]"
+
         
         # Post-processing Privacy Safeguard: Programmatically prevent the bot from repeating phone numbers in the question
         try:

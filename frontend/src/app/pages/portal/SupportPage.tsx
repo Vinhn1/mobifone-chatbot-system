@@ -23,7 +23,7 @@ const FAQS: { cat: string; icon: React.ElementType; items: { q: string; a: strin
   {
     cat: "Kỹ thuật", icon: Wifi,
     items: [
-      { q: "Tại sao tôi không bắt được sóng 5G?", a: "Để sử dụng 5G bạn cần: (1) Điện thoại hỗ trợ 5G (iPhone 12+, Samsung S21+...), (2) Gói cước 5G (TK99 trở lên), (3) Ở trong vùng phủ sóng 5G (hiện có ở 63 tỉnh thành). Kiểm tra vùng phủ sóng tại mobifone.vn/coverage-map." },
+      { q: "Tại sao tôi không bắt được sóng 5G?", a: "Để sử dụng 5G bạn cần: (1) Điện thoại hỗ trợ 5G (iPhone 12+, Samsung S21+...), (2) Gói cước 5G (TK99 trở lên), (3) Ở trong vùng phủ sóng 5G (hiện có ở 34 tỉnh thành). Kiểm tra vùng phủ sóng tại mobifone.vn/coverage-map." },
       { q: "Làm thế nào để kiểm tra data còn lại?", a: "Bạn có thể kiểm tra data còn lại bằng nhiều cách:\n• Soạn KT gửi 999 (miễn phí)\n• Ứng dụng MobiFone My Account → Mục 'Quản lý tài khoản'\n• Gọi *101# → Xem thông tin tài khoản\n• Gọi 18001090" },
     ]
   },

@@ -170,7 +170,7 @@ export function HeroSection() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-6 bg-[#0055A5]/5 border border-[#0055A5]/15 text-[#0055A5] text-xs font-bold shadow-xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-[0_0_8px_#10B981] animate-pulse" />
-              Mạng 5G đang hoạt động tại 63 tỉnh thành
+              Mạng 5G đang hoạt động tại 34 tỉnh thành
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-slate-900 leading-[1.15] mb-5">
@@ -208,7 +208,7 @@ export function HeroSection() {
             {/* Stats */}
             <div className="flex gap-8 mt-12 justify-center lg:justify-start">
               {[
-                { value: "63+", label: "Tỉnh thành" },
+                { value: "34+", label: "Tỉnh thành" },
                 { value: "99.9%", label: "Uptime" },
                 { value: "30M+", label: "Thuê bao" },
               ].map((stat) => (

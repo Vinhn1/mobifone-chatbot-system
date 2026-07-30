@@ -11,8 +11,10 @@ export class SubscribersController {
   @HttpCode(HttpStatus.OK)
   async sendOtp(
     @Body('email') email: string,
+    @Body('phoneNumber') phoneNumber?: string,
+    @Body('name') name?: string,
   ) {
-    return await this.subscribersService.sendOtp(email);
+    return await this.subscribersService.sendOtp(email, phoneNumber, name);
   }
 
   // 2. Xác thực OTP và đăng nhập nhận JWT Token

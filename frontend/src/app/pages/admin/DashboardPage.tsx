@@ -1,34 +1,254 @@
-import { useState, useEffect } from "react";
-import { motion } from "motion/react";
-import { TrendingUp, TrendingDown, Users, MessageSquare, Target, DollarSign, Phone, Activity, Calendar, ArrowRight, Zap, Award } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  TrendingUp, TrendingDown, Users, MessageSquare, Target, DollarSign,
+  Phone, Activity, Calendar, ArrowRight, Zap, Award, RefreshCw,
+  Search, Download, Bell, ChevronRight, Wifi,
+} from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
 import { API_BASE } from "../../../config";
 
+/* ─────────────────────────────────────────────────────────
+   HOOKS
+───────────────────────────────────────────────────────── */
+function useCountUp(target: number, duration = 1200, deps: unknown[] = []) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    setValue(0);
+    if (target === 0) return;
+    const start = performance.now();
+    const raf = (ts: number) => {
+      const progress = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(raf);
+    };
+    requestAnimationFrame(raf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target, duration, ...deps]);
+  return value;
+}
+
+/* ─────────────────────────────────────────────────────────
+   SPARKLINE
+───────────────────────────────────────────────────────── */
 function Spark({ data, color }: { data: number[]; color: string }) {
   const min = Math.min(...data), max = Math.max(...data);
   const range = max - min || 1;
-  const W = 100, H = 36;
+  const W = 90, H = 32;
   const pts = data.map((v, i) => `${(i / (data.length - 1)) * W},${H - ((v - min) / range) * H}`).join(" ");
   return (
     <svg width={W} height={H} className="overflow-visible">
       <defs>
-        <linearGradient id={`g${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.4" />
+        <linearGradient id={`sg${color.replace("#", "")}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.45" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <polyline points={`0,${H} ${pts} ${W},${H}`} fill={`url(#g${color.replace("#", "")})`} stroke="none" />
+      <polyline points={`0,${H} ${pts} ${W},${H}`} fill={`url(#sg${color.replace("#", "")})`} stroke="none" />
       <polyline points={pts} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      {/* Last point dot */}
+      {(() => {
+        const last = data[data.length - 1];
+        const x = W;
+        const y = H - ((last - min) / range) * H;
+        return <circle cx={x} cy={y} r="3.5" fill={color} />;
+      })()}
     </svg>
   );
 }
 
-const SCORES: Record<string, { bg: string; color: string; border: string; label: string }> = {
-  hot: { bg: "bg-rose-50 border border-rose-100 text-rose-600", color: "#EF4444", border: "rgba(239, 68, 68, 0.2)", label: "🔥 Tiềm năng cao" },
-  warm: { bg: "bg-amber-50 border border-amber-100 text-amber-600", color: "#F59E0B", border: "rgba(245, 158, 11, 0.2)", label: "☀️ Đang cân nhắc" },
-  cold: { bg: "bg-blue-50 border border-blue-100 text-[#0055A5]", color: "#3B82F6", border: "rgba(59, 130, 246, 0.2)", label: "❄️ Mới tiếp cận" },
+/* ─────────────────────────────────────────────────────────
+   DONUT CHART
+───────────────────────────────────────────────────────── */
+interface DonutSlice { label: string; pct: number; color: string; count: number; }
+function DonutChart({ slices, total }: { slices: DonutSlice[]; total: number }) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  const R = 60, C = 2 * Math.PI * R;
+  let cumulativePct = 0;
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div className="relative">
+        <svg width={160} height={160} viewBox="0 0 160 160" style={{ transform: "rotate(-90deg)" }}>
+          {slices.length === 0 ? (
+            <circle cx={80} cy={80} r={R} fill="none" stroke="#E2E8F0" strokeWidth={24} />
+          ) : (
+            slices.map((s, i) => {
+              const offset = C - (s.pct / 100) * C;
+              const dash = cumulativePct;
+              cumulativePct += s.pct;
+              return (
+                <circle
+                  key={i}
+                  cx={80} cy={80} r={R}
+                  fill="none"
+                  stroke={s.color}
+                  strokeWidth={hovered === i ? 28 : 22}
+                  strokeDasharray={`${(s.pct / 100) * C} ${C}`}
+                  strokeDashoffset={-((dash / 100) * C)}
+                  strokeLinecap="round"
+                  style={{ transition: "stroke-width 0.2s ease", cursor: "pointer", filter: hovered === i ? `drop-shadow(0 0 6px ${s.color})` : "none" }}
+                  onMouseEnter={() => setHovered(i)}
+                  onMouseLeave={() => setHovered(null)}
+                />
+              );
+            })
+          )}
+        </svg>
+        {/* Center text */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-2xl font-black text-slate-800">{total}</div>
+          <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Leads</div>
+        </div>
+      </div>
+      {/* Legend */}
+      <div className="flex flex-wrap gap-2 justify-center">
+        {slices.map((s, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+            style={{
+              background: hovered === i ? `${s.color}15` : "transparent",
+              border: `1px solid ${hovered === i ? s.color : "#E2E8F0"}`,
+              color: hovered === i ? s.color : "#64748B",
+            }}
+            onMouseEnter={() => setHovered(i)}
+            onMouseLeave={() => setHovered(null)}
+          >
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+            {s.label} · {s.count}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   FUNNEL STAGE (SVG Trapezoid)
+───────────────────────────────────────────────────────── */
+function FunnelBar({ stage, count, maxCount, color, value, index }:
+  { stage: string; count: number; maxCount: number; color: string; value: string; index: number }) {
+  const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+  const animPct = useCountUp(Math.round(pct), 900, [count]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.06 }}
+      className="flex flex-col gap-2"
+    >
+      <div className="flex justify-between items-center mb-0.5">
+        <span className="text-slate-500 text-[11px] font-bold truncate pr-2">{stage}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          {value !== "—" && (
+            <span className="text-[10px] font-bold" style={{ color }}>{value}đ</span>
+          )}
+          <span className="text-slate-800 text-sm font-black">{count}</span>
+        </div>
+      </div>
+      <div className="relative h-7 w-full bg-slate-100 rounded-xl overflow-hidden">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.9, delay: index * 0.06, ease: "easeOut" }}
+          className="h-full rounded-xl flex items-center justify-end pr-2"
+          style={{ background: `linear-gradient(90deg, ${color}99, ${color})` }}
+        >
+          {pct > 12 && (
+            <span className="text-white text-[10px] font-extrabold">{animPct}%</span>
+          )}
+        </motion.div>
+        {pct <= 12 && pct > 0 && (
+          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-[10px] font-extrabold">{animPct}%</span>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   LIVE TICKER
+───────────────────────────────────────────────────────── */
+function LiveTicker({ items }: { items: string[] }) {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % items.length), 2800);
+    return () => clearInterval(t);
+  }, [items.length]);
+
+  return (
+    <div className="flex items-center gap-2 overflow-hidden">
+      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34D399] animate-pulse shrink-0" />
+      <AnimatePresence mode="wait">
+        <motion.span
+          key={idx}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.3 }}
+          className="text-white/80 text-[11px] font-semibold whitespace-nowrap"
+        >
+          {items[idx]}
+        </motion.span>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   ACTIVITY FEED
+───────────────────────────────────────────────────────── */
+interface ActivityEvent { icon: string; text: string; time: string; type: "lead" | "session" | "hot" | "system"; }
+function ActivityFeed({ events }: { events: ActivityEvent[] }) {
+  const colorMap = { lead: "#0055A5", session: "#8B5CF6", hot: "#EF4444", system: "#10B981" };
+  const bgMap = { lead: "#EFF6FF", session: "#F5F3FF", hot: "#FEF2F2", system: "#F0FDF4" };
+
+  return (
+    <div className="flex flex-col gap-2 max-h-[340px] overflow-y-auto pr-1" style={{ scrollbarWidth: "thin" }}>
+      {events.length === 0 ? (
+        <div className="py-8 text-center text-slate-400 text-sm font-bold">Chưa có hoạt động nào.</div>
+      ) : (
+        events.map((e, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: i * 0.04 }}
+            className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors"
+          >
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0"
+              style={{ backgroundColor: bgMap[e.type] }}
+            >
+              {e.icon}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-slate-700 text-xs font-semibold leading-snug">{e.text}</div>
+              <div className="text-slate-400 text-[10px] font-bold mt-0.5">{e.time}</div>
+            </div>
+            <div
+              className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
+              style={{ backgroundColor: colorMap[e.type] }}
+            />
+          </motion.div>
+        ))
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────────────────────── */
+const SCORES: Record<string, { bg: string; color: string; label: string }> = {
+  hot: { bg: "bg-rose-50 border border-rose-200 text-rose-600", color: "#EF4444", label: "🔥 HOT" },
+  warm: { bg: "bg-amber-50 border border-amber-200 text-amber-600", color: "#F59E0B", label: "☀️ WARM" },
+  cold: { bg: "bg-blue-50 border border-blue-200 text-[#0055A5]", color: "#3B82F6", label: "❄️ COLD" },
 };
 
 const cleanInterestText = (text: string): string => {
@@ -36,29 +256,37 @@ const cleanInterestText = (text: string): string => {
   let cleaned = text;
   if (cleaned.includes("Câu hỏi:")) {
     const match = cleaned.match(/Câu hỏi:\s*["']([^"']+)["']/i);
-    if (match && match[1]) {
-      cleaned = match[1];
-    } else {
-      cleaned = cleaned.replace(/^Trích xuất từ phiên chat:[^.]+.\s*Câu hỏi:\s*/i, "");
-    }
+    if (match && match[1]) cleaned = match[1];
+    else cleaned = cleaned.replace(/^Trích xuất từ phiên chat:[^.]+.\s*Câu hỏi:\s*/i, "");
   }
-  // Remove phone numbers
   cleaned = cleaned.replace(/(?:0|\+84)\d{9,10}/g, "");
-  // Remove common prefix patterns
   cleaned = cleaned.replace(/tôi tên\s+[a-zà-ỹ\s]+số điện thoại\s+(?:tôi\s+)?là\s*/gi, "");
   cleaned = cleaned.replace(/tôi muốn\s+(?:các\s+|tìm\s+)?thông tin\s+/gi, "");
   cleaned = cleaned.replace(/hãy liên hệ với tôi sớm nhất/gi, "Yêu cầu liên hệ");
-  
   cleaned = cleaned.trim().replace(/^["']|["']$/g, "").trim();
-  if (cleaned) {
-    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-  }
-  if (cleaned.length > 40) {
-    return cleaned.slice(0, 37) + "...";
-  }
-  return cleaned || "Tư vấn gói cước";
+  if (cleaned) cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  return cleaned.length > 42 ? cleaned.slice(0, 39) + "…" : cleaned || "Tư vấn gói cước";
 };
 
+const formatPhone = (phone: string) => {
+  if (!phone) return "";
+  const cleaned = phone.replace(/\s/g, "");
+  return cleaned.length >= 7 ? `${cleaned.slice(0, 4)}***${cleaned.slice(-3)}` : phone;
+};
+
+const getPackagePrice = (interest: string) => {
+  const lower = (interest || "").toLowerCase();
+  if (lower.includes("tk199")) return 199000;
+  if (lower.includes("tk135") || lower.includes("135")) return 135000;
+  if (lower.includes("max299")) return 299000;
+  if (lower.includes("tk79")) return 79000;
+  if (lower.includes("esim")) return 50000;
+  return 120000;
+};
+
+/* ─────────────────────────────────────────────────────────
+   INTERFACES
+───────────────────────────────────────────────────────── */
 interface Lead {
   id: number;
   name: string | null;
@@ -66,7 +294,6 @@ interface Lead {
   interest: string;
   createdAt: string;
 }
-
 interface ChatLog {
   id: number;
   sessionId: string;
@@ -75,33 +302,151 @@ interface ChatLog {
   createdAt: string;
 }
 
+/* ─────────────────────────────────────────────────────────
+   KPI CARD (separate component to correctly use hooks)
+───────────────────────────────────────────────────────── */
+interface KpiCardData {
+  title: string;
+  rawValue: number;
+  displayValue: string;
+  change: string;
+  up: boolean;
+  color: string;
+  icon: React.ComponentType<{ size: number; style?: React.CSSProperties }>;
+  data: number[];
+  sub: string;
+  index: number;
+}
+function KpiCard({ k }: { k: KpiCardData }) {
+  const { icon: Icon } = k;
+  const animVal = useCountUp(Math.round(k.rawValue), 1200, [k.rawValue]);
+  const displayAnimated = k.title === "Tỷ Lệ Chuyển Đổi"
+    ? `${k.rawValue.toFixed(1)}%`
+    : k.title === "Doanh Thu Ước Tính"
+      ? `${k.rawValue.toFixed(1)}M đ`
+      : animVal.toString();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ delay: k.index * 0.07, type: "spring", stiffness: 300, damping: 24 }}
+      className="relative rounded-3xl p-5 flex flex-col gap-4 cursor-default group overflow-hidden"
+      style={{
+        background: "rgba(255,255,255,0.82)",
+        backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)",
+        border: `1px solid ${k.color}22`,
+        boxShadow: `0 2px 16px 0 ${k.color}0a, 0 0 0 1px ${k.color}10`,
+      }}
+      whileHover={{
+        y: -4,
+        boxShadow: `0 16px 40px 0 ${k.color}20, 0 0 0 1px ${k.color}25`,
+        transition: { duration: 0.2 },
+      }}
+    >
+      {/* Background glow */}
+      <div
+        className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-2xl"
+        style={{ background: `radial-gradient(circle, ${k.color}30, transparent)` }}
+      />
+
+      <div className="relative flex justify-between items-start">
+        <div>
+          <div className="text-[10px] font-extrabold tracking-widest uppercase mb-1.5" style={{ color: `${k.color}99` }}>
+            {k.title}
+          </div>
+          <div className="text-slate-800 text-2xl font-black tracking-tight tabular-nums">
+            {displayAnimated}
+          </div>
+        </div>
+        <div
+          className="w-12 h-12 rounded-2xl flex items-center justify-center border-2 shrink-0 shadow-inner"
+          style={{
+            background: `linear-gradient(135deg, ${k.color}12, ${k.color}06)`,
+            borderColor: `${k.color}20`,
+          }}
+        >
+          <Icon size={20} style={{ color: k.color }} />
+        </div>
+      </div>
+
+      <div className="relative flex justify-between items-end border-t pt-3.5" style={{ borderColor: `${k.color}15` }}>
+        <div>
+          <div className="flex items-center gap-1 mb-0.5">
+            {k.up
+              ? <TrendingUp size={11} className="text-emerald-500" />
+              : <TrendingDown size={11} className="text-rose-500" />}
+            <span className={`text-xs font-bold ${k.up ? "text-emerald-600" : "text-rose-600"}`}>{k.change}</span>
+          </div>
+          <div className="text-slate-400 text-[10px] font-semibold">{k.sub}</div>
+        </div>
+        <div className="pb-1 opacity-80 group-hover:opacity-100 transition-opacity">
+          <Spark data={k.data} color={k.color} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   CIRCULAR SCORE
+───────────────────────────────────────────────────────── */
+function CircleScore({ score, color }: { score: number; color: string }) {
+  const R = 16, C = 2 * Math.PI * R;
+  return (
+    <div className="relative w-11 h-11 shrink-0">
+      <svg width={44} height={44} viewBox="0 0 44 44" style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={22} cy={22} r={R} fill="none" stroke="#F1F5F9" strokeWidth={5} />
+        <motion.circle
+          cx={22} cy={22} r={R}
+          fill="none"
+          stroke={color}
+          strokeWidth={5}
+          strokeLinecap="round"
+          strokeDasharray={C}
+          initial={{ strokeDashoffset: C }}
+          animate={{ strokeDashoffset: C - (score / 100) * C }}
+          transition={{ duration: 0.9, ease: "easeOut" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-[10px] font-extrabold" style={{ color }}>{score}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────
+   MAIN COMPONENT
+───────────────────────────────────────────────────────── */
 export function DashboardPage() {
   const { token, logout, user } = useAuth();
   const navigate = useNavigate();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [chatLogs, setChatLogs] = useState<ChatLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [period, setPeriod] = useState("Hôm nay");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [leadFilter, setLeadFilter] = useState<"all" | "hot" | "warm" | "cold">("all");
+  const searchRef = useRef<HTMLInputElement>(null);
 
-  // Redirect if not admin or sales
   useEffect(() => {
-    if (!user || (user.role !== "admin" && user.role !== "sales")) {
-      navigate("/login");
-    }
+    if (!user || (user.role !== "admin" && user.role !== "sales")) navigate("/login");
   }, [user, navigate]);
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     if (!token) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
     try {
-      const config = {
-        headers: { Authorization: `Bearer ${token}` },
-      };
-
-      const leadsRes = await axios.get(`${API_BASE}/leads`, config);
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const [leadsRes, chatLogsRes] = await Promise.all([
+        axios.get(`${API_BASE}/leads`, config),
+        axios.get(`${API_BASE}/chat/history`, config),
+      ]);
       setLeads(leadsRes.data || []);
-
-      const chatLogsRes = await axios.get(`${API_BASE}/chat/history`, config);
       setChatLogs(chatLogsRes.data || []);
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu Dashboard:", error);
@@ -111,58 +456,44 @@ export function DashboardPage() {
       }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [token]);
+  useEffect(() => { fetchData(); }, [token]);
 
-  // Calculations
+  /* ── Derived Data ── */
   const totalLeads = leads.length;
-  const totalSessions = new Set(chatLogs.map(log => log.sessionId)).size;
-  const conversionRate = totalSessions > 0 ? ((totalLeads / totalSessions) * 100) : 0;
-
-  const getPackagePrice = (interest: string) => {
-    const lower = (interest || "").toLowerCase();
-    if (lower.includes("tk199")) return 199000;
-    if (lower.includes("tk135") || lower.includes("135")) return 135000;
-    if (lower.includes("max299")) return 299000;
-    if (lower.includes("tk79")) return 79000;
-    if (lower.includes("esim")) return 50000;
-    return 120000; // default estimated package value
-  };
-
-  const potentialRevenueVND = leads.reduce((sum, lead) => sum + getPackagePrice(lead.interest), 0);
+  const totalSessions = new Set(chatLogs.map(l => l.sessionId)).size;
+  const conversionRate = totalSessions > 0 ? (totalLeads / totalSessions) * 100 : 0;
+  const potentialRevenueVND = leads.reduce((sum, l) => sum + getPackagePrice(l.interest), 0);
   const potentialRevenueMillion = (potentialRevenueVND / 1000000).toFixed(1);
+  const todayLeads = leads.filter(l => new Date(l.createdAt).toDateString() === new Date().toDateString()).length;
 
-  // Group packages
   const packageCounts: Record<string, number> = {};
-  leads.forEach(lead => {
+  leads.forEach(l => {
     let pkg = "Khác";
-    const lower = (lead.interest || "").toLowerCase();
+    const lower = (l.interest || "").toLowerCase();
     if (lower.includes("tk135") || lower.includes("135")) pkg = "TK135";
     else if (lower.includes("tk199")) pkg = "TK199";
-    else if (lower.includes("esim")) pkg = "eSIM Premium";
+    else if (lower.includes("esim")) pkg = "eSIM";
     else if (lower.includes("max299")) pkg = "MAX299";
     else if (lower.includes("tk79")) pkg = "TK79";
     packageCounts[pkg] = (packageCounts[pkg] || 0) + 1;
   });
 
-  const topIntents = Object.entries(packageCounts)
-    .map(([pkg, count]) => ({
-      pkg,
-      count,
-      pct: totalLeads > 0 ? Math.round((count / totalLeads) * 100) : 0,
-      color: pkg === "TK135" ? "#F59E0B"
-        : pkg === "TK199" ? "#8B5CF6"
-        : pkg === "eSIM Premium" ? "#0055A5"
-        : pkg === "MAX299" ? "#EF4444"
-        : pkg === "TK79" ? "#10B981" : "#64748B"
-    }))
-    .sort((a, b) => b.count - a.count);
+  const PKG_COLORS: Record<string, string> = {
+    TK135: "#F59E0B", TK199: "#8B5CF6", eSIM: "#0055A5", MAX299: "#EF4444", TK79: "#10B981", Khác: "#64748B",
+  };
 
-  // Sparklines helper
+  const donutSlices: DonutSlice[] = Object.entries(packageCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, count]) => ({
+      label, count,
+      pct: totalLeads > 0 ? Math.round((count / totalLeads) * 100) : 0,
+      color: PKG_COLORS[label] ?? "#64748B",
+    }));
+
   const getSparklineData = (type: "leads" | "conversion" | "revenue" | "sessions") => {
     if (type === "leads") return [10, 15, 12, 18, 14, 22, 25, 20, totalLeads || 10];
     if (type === "conversion") return [15, 18, 16, 20, 19, 21, 23, 22, conversionRate || 10];
@@ -171,13 +502,12 @@ export function DashboardPage() {
   };
 
   const kpiData = [
-    { title: "Tổng Leads Thu Thập", value: totalLeads.toString(), change: `+${leads.filter(l => new Date(l.createdAt).toDateString() === new Date().toDateString()).length} hôm nay`, pct: "", up: true, color: "#0055A5", icon: Users, data: getSparklineData("leads"), sub: "Dữ liệu được RAG trích xuất" },
-    { title: "Tỷ Lệ Chuyển Đổi", value: `${conversionRate.toFixed(1)}%`, change: "+2.4% tuần qua", pct: "", up: true, color: "#10B981", icon: Target, data: getSparklineData("conversion"), sub: "Khách hàng gửi thông tin liên hệ" },
-    { title: "Doanh Thu Ước Tính", value: `${potentialRevenueMillion}M đ`, change: `+${(leads.filter(l => new Date(l.createdAt).toDateString() === new Date().toDateString()).reduce((sum, l) => sum + getPackagePrice(l.interest), 0) / 1000000).toFixed(1)}M hôm nay`, pct: "", up: true, color: "#F59E0B", icon: DollarSign, data: getSparklineData("revenue"), sub: "Tính theo đơn giá gói cước" },
-    { title: "Phiên Tương Tác", value: totalSessions.toString(), change: `+${chatLogs.filter(l => new Date(l.createdAt).toDateString() === new Date().toDateString()).length} hôm nay`, pct: "", up: true, color: "#8B5CF6", icon: MessageSquare, data: getSparklineData("sessions"), sub: "Tương tác trên đa kênh" },
+    { title: "Tổng Leads", value: totalLeads, displayValue: totalLeads.toString(), change: `+${todayLeads} hôm nay`, up: true, color: "#0055A5", icon: Users, data: getSparklineData("leads"), sub: "RAG extraction" },
+    { title: "Tỷ Lệ Chuyển Đổi", value: conversionRate, displayValue: `${conversionRate.toFixed(1)}%`, change: "+2.4% tuần qua", up: true, color: "#10B981", icon: Target, data: getSparklineData("conversion"), sub: "Leads / Sessions" },
+    { title: "Doanh Thu Ước Tính", value: Number(potentialRevenueMillion), displayValue: `${potentialRevenueMillion}M đ`, change: `+${(leads.filter(l => new Date(l.createdAt).toDateString() === new Date().toDateString()).reduce((sum, l) => sum + getPackagePrice(l.interest), 0) / 1000000).toFixed(1)}M hôm nay`, up: true, color: "#F59E0B", icon: DollarSign, data: getSparklineData("revenue"), sub: "Theo đơn giá gói cước" },
+    { title: "Phiên Tương Tác", value: totalSessions, displayValue: totalSessions.toString(), change: `+${chatLogs.filter(l => new Date(l.createdAt).toDateString() === new Date().toDateString()).length} hôm nay`, up: true, color: "#8B5CF6", icon: MessageSquare, data: getSparklineData("sessions"), sub: "Đa kênh" },
   ];
 
-  // Pipeline calculations
   const pipelineData = [
     { stage: "Tiếp cận (Sessions)", count: totalSessions, color: "#64748B", value: "—" },
     { stage: "Có thông tin (Leads)", count: totalLeads, color: "#0055A5", value: `${(potentialRevenueVND / 1000000).toFixed(1)}M` },
@@ -186,318 +516,459 @@ export function DashboardPage() {
     { stage: "Thành công (Ký HĐ)", count: Math.round(totalLeads * 0.15), color: "#10B981", value: `${((potentialRevenueVND * 0.15) / 1000000).toFixed(1)}M` },
   ];
 
-  const formatPhone = (phone: string) => {
-    if (!phone) return "";
-    const cleaned = phone.replace(/\s/g, "");
-    if (cleaned.length >= 7) {
-      return `${cleaned.slice(0, 4)}***${cleaned.slice(-3)}`;
-    }
-    return phone;
-  };
+  const getLeadScore = (lead: Lead) => Math.min(45 + (lead.interest?.length || 0) * 1.5 + (lead.name ? 15 : 0), 99);
 
-  const getLeadScore = (lead: Lead) => {
-    return Math.min(45 + (lead.interest?.length || 0) * 1.5 + (lead.name ? 15 : 0), 99);
-  };
-
-  const latestLeads = leads
+  const allProcessedLeads = leads
     .slice()
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5)
     .map(lead => {
       const score = getLeadScore(lead);
       const status = score >= 80 ? "hot" : score >= 60 ? "warm" : "cold";
       const diffMs = new Date().getTime() - new Date(lead.createdAt).getTime();
-      const diffMins = Math.max(1, Math.round(diffMs / (1000 * 60)));
-      const timeStr = diffMins > 60 ? `${Math.round(diffMins / 60)} giờ` : `${diffMins} phút`;
-
-      return {
-        name: lead.name || "Khách hàng ẩn danh",
-        phone: formatPhone(lead.phone),
-        pkg: lead.interest || "Tư vấn gói cước",
-        score,
-        status,
-        time: timeStr,
-      };
+      const diffMins = Math.max(1, Math.round(diffMs / 60000));
+      const timeStr = diffMins > 1440 ? `${Math.round(diffMins / 1440)} ngày` : diffMins > 60 ? `${Math.round(diffMins / 60)} giờ` : `${diffMins} phút`;
+      return { ...lead, score, status, time: timeStr };
     });
 
+  const filteredLeads = allProcessedLeads
+    .filter(l => leadFilter === "all" || l.status === leadFilter)
+    .filter(l => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        (l.name || "").toLowerCase().includes(q) ||
+        l.phone.includes(q) ||
+        (l.interest || "").toLowerCase().includes(q)
+      );
+    })
+    .slice(0, 6);
+
+  // Activity feed
+  const activityEvents: ActivityEvent[] = [
+    ...leads.slice(0, 3).map(l => ({
+      icon: "📝",
+      text: `Lead mới: ${l.name || "Khách hàng ẩn danh"} — ${cleanInterestText(l.interest)}`,
+      time: (() => {
+        const d = Math.max(1, Math.round((new Date().getTime() - new Date(l.createdAt).getTime()) / 60000));
+        return d > 60 ? `${Math.round(d / 60)} giờ trước` : `${d} phút trước`;
+      })(),
+      type: "lead" as const,
+    })),
+    { icon: "🤖", text: "Mia AI đang hoạt động — phản hồi trung bình 1.2 giây", time: "Liên tục", type: "system" as const },
+    { icon: "💬", text: `${chatLogs.length} tin nhắn được xử lý hôm nay`, time: "Cập nhật liên tục", type: "session" as const },
+    ...allProcessedLeads.filter(l => l.status === "hot").slice(0, 2).map(l => ({
+      icon: "🔥",
+      text: `Lead HOT: ${l.name || "Khách hàng ẩn danh"} — Score ${l.score}`,
+      time: `${l.time} trước`,
+      type: "hot" as const,
+    })),
+  ];
+
+  const tickerItems = [
+    `📊 Leads hôm nay: ${todayLeads}`,
+    `💰 Doanh thu ước tính: ${potentialRevenueMillion}M đ`,
+    `🟢 Mia AI Active — phản hồi 1.2s`,
+    `📞 ${allProcessedLeads.filter(l => l.status === "hot").length} leads HOT cần liên hệ`,
+    `💬 ${totalSessions} phiên tương tác`,
+    `🎯 Tỷ lệ chuyển đổi: ${conversionRate.toFixed(1)}%`,
+  ];
+
+
+
+  const exportCSV = () => {
+    const rows = [["Tên", "Số điện thoại", "Quan tâm", "Score", "Thời gian"].join(",")];
+    allProcessedLeads.forEach(l => {
+      rows.push([l.name || "Ẩn danh", l.phone, `"${cleanInterestText(l.interest)}"`, l.score, l.time].join(","));
+    });
+    const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `leads_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  /* ── Loading ── */
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-[75vh] gap-3 text-slate-400 font-outfit">
-        <Activity size={32} className="animate-spin text-[#0055A5]" />
-        <span className="font-bold text-sm">Đang phân tích dữ liệu bán hàng...</span>
+      <div className="flex flex-col items-center justify-center h-[75vh] gap-4 font-outfit">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#0055A5] to-[#E4002B] flex items-center justify-center shadow-lg shadow-[#0055A5]/25">
+            <Activity size={28} className="text-white animate-spin" />
+          </div>
+          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#0055A5]/20 to-[#E4002B]/20 blur-lg animate-pulse" />
+        </div>
+        <div className="text-slate-600 font-bold text-sm">Đang phân tích dữ liệu bán hàng...</div>
+        <div className="text-slate-400 font-semibold text-xs">Mia AI đang tổng hợp báo cáo</div>
       </div>
     );
   }
 
   return (
-    <div className="font-outfit flex flex-col gap-6 pb-10">
-      {/* Header section with telemetry */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200/60 pb-5 gap-4">
-        <div>
-          <h1 className="text-[#0F172A] font-black text-2xl tracking-tight">
-            Giám Sát Doanh Thu & Phễu Bán Hàng
-          </h1>
-          <p className="text-slate-400 text-xs font-semibold mt-1">Báo cáo hiệu quả hỗ trợ trực tuyến của Mia và đa kênh viễn thông</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl px-3.5 py-1.5 shadow-inner">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10B981] animate-pulse" />
-            <span className="text-emerald-700 text-xs font-bold">Mia Core Active</span>
-          </div>
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/60 rounded-xl px-3 py-1.5">
-            <Calendar size={13} className="text-slate-400" />
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value)}
-              className="border-none outline-none text-xs font-bold text-slate-600 bg-transparent cursor-pointer font-outfit"
-            >
-              <option>Hôm nay</option>
-              <option>7 ngày qua</option>
-              <option>Tháng này</option>
-            </select>
-          </div>
-        </div>
-      </div>
+    <div className="font-outfit flex flex-col gap-5 pb-10">
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {kpiData.map((k, i) => {
-          const Icon = k.icon;
-          return (
-            <motion.div
-              key={k.title}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="bg-white rounded-3xl p-5 border border-slate-200/60 shadow-xs flex flex-col gap-4 hover:shadow-md transition-all duration-300"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <div className="text-slate-400 text-[10px] font-bold tracking-widest uppercase mb-1.5">{k.title}</div>
-                  <div className="text-slate-800 text-2xl font-black tracking-tight">{k.value}</div>
-                </div>
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center border shrink-0"
-                  style={{
-                    backgroundColor: `${k.color}08`,
-                    borderColor: `${k.color}18`,
-                  }}
-                >
-                  <Icon size={18} style={{ color: k.color }} />
-                </div>
-              </div>
-              <div className="flex justify-between items-end border-t border-slate-100 border-dashed pt-3.5">
-                <div>
-                  <div className="flex items-center gap-1 mb-0.5">
-                    {k.up ? <TrendingUp size={11} className="text-emerald-500" /> : <TrendingDown size={11} className="text-red-500" />}
-                    <span className={`text-xs font-bold ${k.up ? "text-emerald-500" : "text-red-500"}`}>{k.change}</span>
-                  </div>
-                  <div className="text-slate-400 text-[10px] font-semibold">{k.sub}</div>
-                </div>
-                <div className="pb-1">
-                  <Spark data={k.data} color={k.color} />
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Main Stats / Funnel Pipeline section */}
+      {/* ══════════════════════════════════════════════════
+          HERO HEADER
+      ══════════════════════════════════════════════════ */}
       <motion.div
-        initial={{ opacity: 0, y: 15 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-white rounded-3xl p-6 border border-slate-200/60 shadow-xs hover:shadow-md transition-all duration-300"
+        className="rounded-3xl overflow-hidden relative"
+        style={{
+          background: "linear-gradient(135deg, #0055A5 0%, #003B75 45%, #1a0a2e 75%, #2d0a14 100%)",
+        }}
       >
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-          <div>
-            <div className="text-slate-800 font-extrabold text-base flex items-center gap-2">
-              <Zap size={16} className="text-amber-500 fill-amber-500" />
-              Phễu Chuyển Đổi & Ước Lượng Dòng Tiền Viễn Thông
+        {/* Grid texture overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: "linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+        {/* Glow blobs */}
+        <div className="absolute top-0 right-1/4 w-64 h-64 rounded-full opacity-20 blur-3xl"
+          style={{ background: "radial-gradient(circle, #E4002B, transparent)" }} />
+        <div className="absolute bottom-0 left-1/3 w-48 h-48 rounded-full opacity-15 blur-3xl"
+          style={{ background: "radial-gradient(circle, #60A5FA, transparent)" }} />
+
+        {/* Main header content */}
+        <div className="relative z-10 px-6 pt-5 pb-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            {/* Left: Title */}
+            <div>
+              <div className="flex items-center gap-2.5 mb-1.5">
+                <div className="w-8 h-8 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center border border-white/20">
+                  <Zap size={16} className="text-amber-300 fill-amber-300" />
+                </div>
+                <h1 className="text-white font-black text-xl sm:text-2xl tracking-tight">
+                  Giám Sát Doanh Thu & Phễu Bán Hàng
+                </h1>
+              </div>
+              <p className="text-white/55 text-xs font-semibold">
+                Báo cáo hiệu quả hỗ trợ trực tuyến của Mia và đa kênh viễn thông
+              </p>
             </div>
-            <div className="text-slate-400 text-xs font-semibold mt-0.5">Tiến trình khách hàng từ bước làm quen với Bot đến khi đăng ký gói cước thành công</div>
+
+            {/* Right: Status + Period */}
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {/* Mia Status */}
+              <div className="flex items-center gap-1.5 bg-emerald-500/20 border border-emerald-400/30 rounded-xl px-3 py-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34D399] animate-pulse" />
+                <Wifi size={11} className="text-emerald-300" />
+                <span className="text-emerald-300 text-[11px] font-bold">Mia Active</span>
+              </div>
+
+              {/* Period Selector — white bg for clear visibility */}
+              <div className="flex items-center gap-1.5 bg-white rounded-xl px-3 py-2 shadow-sm">
+                <Calendar size={12} className="text-slate-500" />
+                <select
+                  value={period}
+                  onChange={e => setPeriod(e.target.value)}
+                  className="border-none outline-none text-xs font-bold text-slate-700 bg-transparent cursor-pointer font-outfit"
+                >
+                  <option value="Hôm nay">Hôm nay</option>
+                  <option value="7 ngày qua">7 ngày qua</option>
+                  <option value="Tháng này">Tháng này</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <button
-            onClick={() => navigate("/admin/leads")}
-            className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-gradient-to-r from-[#0055A5] to-[#003B75] text-white border-none font-bold text-xs cursor-pointer shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0"
-          >
-            Quản lý Leads <ArrowRight size={13} />
-          </button>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-5 items-stretch bg-slate-50/40 p-5 rounded-2xl border border-slate-100/60">
-          {pipelineData.map((s, i) => (
-            <div key={s.stage} className="flex-1 flex flex-col justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200/40 shadow-xs">
-              <div className="flex justify-between items-start">
-                <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">{s.stage}</span>
-                <span className="text-slate-800 text-sm font-black">{s.count}</span>
-              </div>
-              <div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mb-2">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(s.count / (totalSessions || 1)) * 100}%` }}
-                    transition={{ duration: 0.8, delay: i * 0.05 }}
-                    className="h-full rounded-full"
-                    style={{ background: s.color }}
-                  />
-                </div>
-                <div className="flex justify-between items-center text-[10px] font-bold">
-                  <span className="text-slate-400">Tỷ lệ:</span>
-                  <span style={{ color: s.color }}>
-                    {((s.count / (totalSessions || 1)) * 100).toFixed(0)}%
-                  </span>
-                </div>
-              </div>
-              {s.value !== "—" && (
-                <div className="border-t border-slate-100 pt-2 flex justify-between items-center text-[10px] font-black">
-                  <span className="text-slate-400">Dòng tiền tiềm năng:</span>
-                  <span style={{ color: s.color }}>{s.value}đ</span>
-                </div>
-              )}
-            </div>
-          ))}
+        {/* Live ticker bar */}
+        <div className="relative z-10 px-6 py-2.5 border-t border-white/10 flex items-center gap-4">
+          <LiveTicker items={tickerItems} />
         </div>
       </motion.div>
 
-      {/* Bottom Row: Recent Leads & Top Packages */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
-        {/* Leads Table */}
+      {/* ══════════════════════════════════════════════════
+          QUICK ACTIONS BAR
+      ══════════════════════════════════════════════════ */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+        {/* Search */}
+        <div className="flex-1 flex items-center gap-2.5 bg-white border border-slate-200/70 rounded-2xl px-4 py-2.5 shadow-xs focus-within:border-[#0055A5]/40 focus-within:shadow-md focus-within:shadow-[#0055A5]/10 transition-all">
+          <Search size={15} className="text-slate-400 shrink-0" />
+          <input
+            ref={searchRef}
+            type="text"
+            placeholder="Tìm kiếm lead theo tên, SĐT, quan tâm..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="flex-1 border-none outline-none text-sm font-semibold text-slate-700 placeholder:text-slate-400 bg-transparent font-outfit"
+          />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} className="text-slate-400 hover:text-slate-600 text-xs font-bold shrink-0">✕</button>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={() => fetchData(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-200/70 text-slate-600 font-bold text-xs shadow-xs hover:border-[#0055A5]/30 hover:text-[#0055A5] transition-all active:scale-95"
+          >
+            <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">Làm mới</span>
+          </button>
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white border border-slate-200/70 text-slate-600 font-bold text-xs shadow-xs hover:border-emerald-400/40 hover:text-emerald-600 transition-all active:scale-95"
+          >
+            <Download size={14} />
+            <span className="hidden sm:inline">Export CSV</span>
+          </button>
+          <button
+            onClick={() => navigate("/admin/leads")}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-[#0055A5] to-[#003B75] text-white font-bold text-xs shadow-md hover:shadow-lg hover:shadow-[#0055A5]/25 transition-all active:scale-95"
+          >
+            <Bell size={14} />
+            <span className="hidden sm:inline">Quản lý Leads</span>
+            {allProcessedLeads.filter(l => l.status === "hot").length > 0 && (
+              <span className="w-4 h-4 rounded-full bg-rose-500 flex items-center justify-center text-[9px] font-extrabold -ml-0.5">
+                {allProcessedLeads.filter(l => l.status === "hot").length}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* ══════════════════════════════════════════════════
+          KPI CARDS — Glassmorphism
+      ══════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {kpiData.map((k, i) => (
+          <KpiCard
+            key={k.title}
+            k={{
+              title: k.title,
+              rawValue: k.value,
+              displayValue: k.displayValue,
+              change: k.change,
+              up: k.up,
+              color: k.color,
+              icon: k.icon as React.ComponentType<{ size: number; style?: React.CSSProperties }>,
+              data: k.data,
+              sub: k.sub,
+              index: i,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* ══════════════════════════════════════════════════
+          PIPELINE FUNNEL
+      ══════════════════════════════════════════════════ */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.28 }}
+        className="bg-white rounded-3xl p-6 border border-slate-200/60 shadow-xs hover:shadow-md transition-all duration-300"
+      >
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+          <div>
+            <div className="text-slate-800 font-extrabold text-base flex items-center gap-2">
+              <Zap size={16} className="text-amber-500 fill-amber-500" />
+              Phễu Chuyển Đổi & Ước Lượng Dòng Tiền
+            </div>
+            <div className="text-slate-400 text-xs font-semibold mt-0.5">
+              Tiến trình từ bước tiếp cận đến đăng ký gói cước thành công
+            </div>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+            <span className="w-2 h-2 rounded-full bg-slate-300" />
+            Tỷ lệ tính theo tổng phiên
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          {pipelineData.map((s, i) => (
+            <FunnelBar
+              key={s.stage}
+              stage={s.stage}
+              count={s.count}
+              maxCount={totalSessions || 1}
+              color={s.color}
+              value={s.value}
+              index={i}
+            />
+          ))}
+        </div>
+
+        {/* Arrow connector hint */}
+        <div className="flex items-center justify-center gap-1 mt-4 text-[10px] font-semibold text-slate-300">
+          <ChevronRight size={12} />
+          <span>Mỗi stage hẹp dần theo tỷ lệ chuyển đổi</span>
+          <ChevronRight size={12} />
+        </div>
+      </motion.div>
+
+      {/* ══════════════════════════════════════════════════
+          BOTTOM ROW: Leads Cards + Donut + Activity
+      ══════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+
+        {/* ── Leads Cards ── */}
         <motion.div
-          initial={{ opacity: 0, y: 15 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="xl:col-span-2 bg-white rounded-3xl border border-slate-200/60 shadow-xs overflow-hidden hover:shadow-md transition-all duration-300"
+          transition={{ delay: 0.32 }}
+          className="xl:col-span-7 bg-white rounded-3xl border border-slate-200/60 shadow-xs overflow-hidden hover:shadow-md transition-all duration-300"
         >
-          <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <div>
-              <div className="text-slate-800 font-extrabold text-base">Khách hàng tiềm năng mới</div>
+              <div className="text-slate-800 font-extrabold text-base">Khách Hàng Tiềm Năng</div>
               <div className="text-slate-400 text-xs font-semibold mt-0.5">Cập nhật liên tục từ chatbot RAG</div>
             </div>
-            <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0055A5] animate-pulse" />
-              <span className="text-[#0055A5] text-[10px] font-bold">Thời gian thực</span>
-            </div>
-          </div>
-
-          {latestLeads.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 text-sm font-bold">
-              Chưa có cuộc trò chuyện hoàn tất để xuất thông tin khách hàng.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left">
-                <thead>
-                  <tr className="bg-slate-50/50 border-b border-slate-100">
-                    {["Khách hàng", "Nội dung quan tâm", "Lead Score", "Độ tiềm năng", "Thời gian", ""].map(h => (
-                      <th key={h} className="px-5 py-3.5 text-slate-400 font-extrabold text-[10px] tracking-wider">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {latestLeads.map((l, i) => {
-                    const s = SCORES[l.status] || SCORES.cold;
-                    return (
-                      <tr
-                        key={i}
-                        className="border-b border-slate-100/80 hover:bg-slate-50/30 transition-colors duration-150"
-                      >
-                        <td className="px-5 py-3.5 whitespace-nowrap">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0055A5] to-[#E4002B] flex items-center justify-center text-white text-xs font-extrabold shrink-0 shadow-xs">
-                              {l.name.charAt(0)}
-                            </div>
-                            <div>
-                              <div className="text-slate-800 font-bold text-xs">{l.name}</div>
-                              <div className="text-slate-400 text-[10px] font-bold mt-0.5">{l.phone}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className="bg-blue-50/50 border border-blue-100 text-[#0055A5] rounded-xl px-2.5 py-1 text-[10px] font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] inline-block shadow-xs">
-                            {cleanInterestText(l.pkg)}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <div className="w-12 bg-slate-100 h-1 rounded-full overflow-hidden">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  width: `${l.score}%`,
-                                  backgroundColor: l.score > 80 ? "#10B981" : l.score > 60 ? "#F59E0B" : "#3B82F6",
-                                }}
-                              />
-                            </div>
-                            <span className="text-slate-700 font-extrabold text-xs">{l.score}</span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shadow-xs ${s.bg}`}>
-                            {s.label}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-slate-400 text-xs font-semibold">{l.time} trước</td>
-                        <td className="px-5 py-3.5 text-right">
-                          <a
-                            href={`tel:${l.phone}`}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#0055A5] to-[#004B91] hover:from-[#004B91] hover:to-[#0055A5] text-white font-bold text-[10px] tracking-wider uppercase cursor-pointer transition-all hover:scale-102 active:scale-98 shadow-xs border-none"
-                          >
-                            <Phone size={10} /> Gọi ngay
-                          </a>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </motion.div>
-
-        {/* Package Interest distribution */}
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-white rounded-3xl border border-slate-200/60 shadow-xs p-6 hover:shadow-md transition-all duration-300"
-        >
-          <div className="flex items-center gap-2 mb-1">
-            <Award size={16} className="text-[#E4002B]" />
-            <div className="text-slate-800 font-extrabold text-base">Gói Cước Ưa Chuộng Nhất</div>
-          </div>
-          <div className="text-slate-400 text-xs font-semibold mb-6">Tỷ lệ quan tâm đăng ký từ phễu RAG</div>
-
-          {topIntents.length === 0 ? (
-            <div className="py-8 text-center text-slate-400 text-sm font-bold">Chưa có đủ dữ liệu.</div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              {topIntents.map(it => (
-                <div key={it.pkg} className="bg-slate-50/40 border border-slate-100/80 rounded-2xl p-4 transition-colors hover:bg-slate-50/80">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-slate-700 font-bold text-xs">{it.pkg}</span>
-                    <div className="flex gap-2 items-center">
-                      <span className="text-slate-400 text-[10px] font-semibold">{it.count} khách</span>
-                      <span className="text-xs font-black" style={{ color: it.color }}>{it.pct}%</span>
-                    </div>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${it.pct}%` }}
-                      transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
-                      className="h-full rounded-full"
-                      style={{ backgroundColor: it.color }}
-                    />
-                  </div>
-                </div>
+            {/* Filter tabs */}
+            <div className="flex gap-1 bg-slate-100/70 rounded-xl p-1">
+              {(["all", "hot", "warm", "cold"] as const).map(f => (
+                <button
+                  key={f}
+                  onClick={() => setLeadFilter(f)}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all"
+                  style={{
+                    background: leadFilter === f ? "white" : "transparent",
+                    color: leadFilter === f
+                      ? f === "hot" ? "#EF4444" : f === "warm" ? "#F59E0B" : f === "cold" ? "#3B82F6" : "#0F172A"
+                      : "#94A3B8",
+                    boxShadow: leadFilter === f ? "0 1px 4px 0 rgba(0,0,0,0.08)" : "none",
+                  }}
+                >
+                  {f === "all" ? "Tất cả" : f === "hot" ? "🔥 HOT" : f === "warm" ? "☀️ WARM" : "❄️ COLD"}
+                </button>
               ))}
             </div>
+          </div>
+
+          {/* Cards */}
+          <div className="p-4 flex flex-col gap-3">
+            {filteredLeads.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 text-sm font-bold">
+                {searchQuery ? `Không tìm thấy kết quả cho "${searchQuery}"` : "Chưa có dữ liệu leads."}
+              </div>
+            ) : (
+              filteredLeads.map((l, i) => {
+                const s = SCORES[l.status] || SCORES.cold;
+                return (
+                  <motion.div
+                    key={l.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="flex items-center gap-3 p-3.5 rounded-2xl border transition-all hover:shadow-sm group"
+                    style={{ borderColor: `${s.color}25`, background: `${s.color}04` }}
+                    whileHover={{ borderColor: `${s.color}50`, background: `${s.color}08` }}
+                  >
+                    {/* Left accent */}
+                    <div className="w-1 h-12 rounded-full shrink-0 self-stretch" style={{ backgroundColor: s.color }} />
+
+                    {/* Avatar */}
+                    <div
+                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-extrabold shrink-0 shadow-xs"
+                      style={{ background: `linear-gradient(135deg, #0055A5, #E4002B)` }}
+                    >
+                      {(l.name || "?").charAt(0).toUpperCase()}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-slate-800 font-bold text-sm truncate">{l.name || "Khách hàng ẩn danh"}</span>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border ${s.bg}`}>
+                          {s.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className="text-slate-400 text-[11px] font-bold">{formatPhone(l.phone)}</span>
+                        <span className="text-slate-300">·</span>
+                        <span className="text-slate-500 text-[11px] font-semibold truncate max-w-[180px]">
+                          {cleanInterestText(l.interest)}
+                        </span>
+                      </div>
+                      <div className="text-slate-400 text-[10px] font-semibold mt-0.5">{l.time} trước</div>
+                    </div>
+
+                    {/* Score circle */}
+                    <CircleScore score={l.score} color={s.color} />
+
+                    {/* Actions */}
+                    <div className="flex gap-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <a
+                        href={`tel:${l.phone}`}
+                        className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-xs transition-transform hover:scale-110 active:scale-95"
+                        style={{ background: `linear-gradient(135deg, #0055A5, #003B75)` }}
+                        title="Gọi ngay"
+                      >
+                        <Phone size={13} />
+                      </a>
+                      <button
+                        onClick={() => navigate("/admin/leads")}
+                        className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-all active:scale-95"
+                        title="Xem chi tiết"
+                      >
+                        <ArrowRight size={13} className="text-slate-500" />
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </div>
+
+          {allProcessedLeads.length > 6 && (
+            <div className="px-6 py-3 border-t border-slate-100 text-center">
+              <button
+                onClick={() => navigate("/admin/leads")}
+                className="text-[#0055A5] text-xs font-bold hover:underline flex items-center gap-1 mx-auto"
+              >
+                Xem tất cả {allProcessedLeads.length} leads <ArrowRight size={12} />
+              </button>
+            </div>
           )}
         </motion.div>
+
+        {/* ── Right Column: Donut + Activity ── */}
+        <div className="xl:col-span-5 flex flex-col gap-5">
+
+          {/* Donut Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.36 }}
+            className="bg-white rounded-3xl border border-slate-200/60 shadow-xs p-6 hover:shadow-md transition-all duration-300"
+          >
+            <div className="flex items-center gap-2 mb-1">
+              <Award size={16} className="text-[#E4002B]" />
+              <div className="text-slate-800 font-extrabold text-base">Gói Cước Ưa Chuộng</div>
+            </div>
+            <div className="text-slate-400 text-xs font-semibold mb-5">Tỷ lệ quan tâm từ phễu RAG</div>
+            <DonutChart slices={donutSlices} total={totalLeads} />
+          </motion.div>
+
+          {/* Activity Feed */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="bg-white rounded-3xl border border-slate-200/60 shadow-xs p-6 hover:shadow-md transition-all duration-300"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-slate-800 font-extrabold text-base flex items-center gap-2">
+                  <Activity size={15} className="text-[#0055A5]" />
+                  Hoạt Động Gần Đây
+                </div>
+                <div className="text-slate-400 text-xs font-semibold mt-0.5">Thời gian thực</div>
+              </div>
+              <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-lg px-2 py-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0055A5] animate-pulse" />
+                <span className="text-[#0055A5] text-[10px] font-bold">Live</span>
+              </div>
+            </div>
+            <ActivityFeed events={activityEvents} />
+          </motion.div>
+        </div>
       </div>
     </div>
   );

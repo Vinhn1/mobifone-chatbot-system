@@ -72,6 +72,7 @@ export function ConversationsPage() {
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
+  const [sessionMode, setSessionMode] = useState<'bot' | 'human'>('bot');
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not admin or sales
@@ -219,6 +220,36 @@ export function ConversationsPage() {
     loadHistory();
   }, [token]);
 
+  // Lấy trạng thái session mode mỗi khi mở cuộc trò chuyện
+  useEffect(() => {
+    if (selected?.id && token) {
+      axios.get(`${API_BASE}/chat/session/${selected.id}/mode`, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(res => {
+        setSessionMode(res.data.mode || 'bot');
+      }).catch(err => {
+        console.error("Lỗi khi lấy session mode:", err);
+        setSessionMode('bot');
+      });
+    }
+  }, [selected?.id, token]);
+
+  const toggleSessionMode = async (targetMode: 'bot' | 'human') => {
+    if (!selected?.id || !token) return;
+    try {
+      const config = { headers: { Authorization: `Bearer ${token}` } };
+      await axios.post(`${API_BASE}/chat/session/${selected.id}/mode`, { mode: targetMode }, config);
+      setSessionMode(targetMode);
+      
+      const newStatus = targetMode === 'human' ? 'escalated' : 'resolved';
+      setConversations(prev => prev.map(c => c.id === selected.id ? { ...c, status: newStatus } : c));
+      setSelected(prev => prev ? { ...prev, status: newStatus } : null);
+    } catch (err) {
+      console.error("Lỗi khi chuyển đổi session mode:", err);
+      alert("Không thể đổi chế độ hỗ trợ!");
+    }
+  };
+
   // Tự động cuộn xuống cuối danh sách tin nhắn khi có cập nhật
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -329,6 +360,12 @@ export function ConversationsPage() {
           }
           return prevSelected;
         });
+      } else if (data && data.type === 'session-mode-changed') {
+        const payload = data.payload;
+        const sessId = payload.sessionId;
+        if (selected && selected.id === sessId) {
+          setSessionMode(payload.mode);
+        }
       }
     };
 
@@ -515,6 +552,23 @@ export function ConversationsPage() {
                   <div className="text-slate-400 text-[10px] font-bold mt-0.5">Phiên ID: {selected.id}</div>
                 </div>
                 <div className="flex gap-2 items-center">
+                  {/* Mode Badge & Toggle Button */}
+                  <button
+                    onClick={() => toggleSessionMode(sessionMode === 'human' ? 'bot' : 'human')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black tracking-wider border cursor-pointer transition-all ${
+                      sessionMode === 'human'
+                        ? 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100'
+                        : 'bg-blue-50 border-blue-200 text-[#0055A5] hover:bg-blue-100'
+                    }`}
+                    title={sessionMode === 'human' ? "Bấm để trả lại quyền trả lời tự động cho Bot AI" : "Bấm để tạm dừng Bot và tiếp nhận hỗ trợ trực tiếp"}
+                  >
+                    {sessionMode === 'human' ? (
+                      <>👤 CSKH Trực tiếp (Bot ngắt) · 🤖 Trao lại Bot</>
+                    ) : (
+                      <>🤖 Bot AI Tự động · 👤 Tiếp nhận chat</>
+                    )}
+                  </button>
+
                   {selected.phone !== "—" && (
                     <a
                       href={`tel:${selected.phone}`}

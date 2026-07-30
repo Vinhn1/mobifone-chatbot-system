@@ -110,7 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(prev => {
               const mappedUser: AuthUser = {
                 id: sub.id,
-                name: sub.name || `Thành viên ${sub.phoneNumber.slice(-4)}`,
+                name: sub.name || "",
                 phone: sub.phoneNumber,
                 email: sub.email || `${sub.phoneNumber}@mobifone.vn`,
                 role: "user",
@@ -263,7 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           
           const mappedUser: AuthUser = {
             id: sub.id,
-            name: sub.name || `Thành viên ${sub.phoneNumber.slice(-4)}`,
+            name: sub.name || "",
             phone: sub.phoneNumber,
             email: sub.email || `${sub.phoneNumber}@mobifone.vn`,
             role: "user",
@@ -339,7 +339,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(apiToken);
         const mappedUser: AuthUser = {
           id: sub.id,
-          name: sub.name || `Thành viên ${sub.phoneNumber.slice(-4)}`,
+          name: sub.name || "",
           phone: sub.phoneNumber,
           email: sub.email || `${sub.phoneNumber}@mobifone.vn`,
           role: "user",
@@ -375,7 +375,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await axios.post(`${API_BASE}/auth/register`, {
         username: phone,
         password: password,
-        name: name || `User_${phone.slice(-4)}`,
+        name: name || "",
       });
       // Đăng nhập ngay sau khi đăng ký thành công
       await login(phone, password);

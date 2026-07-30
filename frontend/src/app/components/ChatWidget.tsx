@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Send, ExternalLink, ChevronDown, Minimize2, Maximize2, Star, Sparkles, MessageCircle, Check, Phone } from "lucide-react";
+import { X, Send, ExternalLink, ChevronDown, Star, Sparkles, MessageCircle, Check, Phone } from "lucide-react";
 import { RobotAvatar } from "./RobotAvatar";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
@@ -218,7 +218,6 @@ const DEFAULT_ZALO_OA_ID = "1192122707863776201";
 export function ChatWidget() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
-  const [minimized, setMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -353,11 +352,11 @@ export function ChatWidget() {
         id: 1,
         type: "bot",
         text: name
-          ? `Chào mừng **${name}** quay lại với MobiFone!\n\nHôm nay, bạn có **ưu đãi đặc biệt** dành riêng cho thành viên **${user?.tier}**:\n- Gia hạn gói **TK135** → tặng thêm **15GB data**\n- Nhân đôi điểm tích lũy thành viên đến hết tuần này.\n\nBạn cần chuyên viên hỗ trợ tư vấn dịch vụ nào không?`
-          : `Xin chào! Tôi là **Mia** — Chuyên viên chăm sóc khách hàng của MobiFone!\n\nHôm nay MobiFone đang có rất nhiều ưu đãi gói cước data tốc độ cao cực hot và dịch vụ eSIM tiện lợi.\n\nBạn đang quan tâm đến gói cước dung lượng lớn hay dịch vụ nào khác của MobiFone, hãy chia sẻ để Mia hỗ trợ bạn ngay nhé!`,
+          ? `Chào mừng **${name}** quay lại với MobiFone! 👋\n\nTôi là **Mia** — trợ lý chăm sóc khách hàng của MobiFone, sẵn sàng hỗ trợ bạn 24/7.\n\nHôm nay bạn cần Mia tư vấn hoặc hỗ trợ vấn đề gì ạ?`
+          : `Xin chào! Tôi là **Mia** — Trợ lý chăm sóc khách hàng của MobiFone! 👋\n\nMia có thể giúp bạn:\n- Tư vấn và đăng ký gói cước phù hợp\n- Hỗ trợ dịch vụ eSIM, chuyển mạng\n- Giải đáp thắc mắc về tài khoản & hóa đơn\n\nBạn cần hỗ trợ vấn đề gì hôm nay?`,
         quickReplies: name
-          ? ["Gia hạn gói cước", "Kiểm tra ưu đãi", "Cần tư vấn thêm"]
-          : ["Đăng ký gói cước", "Đổi eSIM miễn phí", "Xem ưu đãi hot"],
+          ? ["Tư vấn gói cước", "Hỗ trợ tài khoản", "Liên hệ nhân viên"]
+          : ["Tư vấn gói cước", "Đăng ký eSIM", "Hỏi về dịch vụ"],
       }]);
     }, 1200);
   }, [open]);
@@ -422,12 +421,20 @@ export function ChatWidget() {
         userInfo,
       });
 
-      const botAnswer = response.data?.answer || "";
+      const botAnswer = response.data?.answer;
+      const responseMode = response.data?.mode;
       const botSources = response.data?.sources || [];
       const botSuggestions = response.data?.suggested_questions || [];
       const botImages = response.data?.images || [];
 
       setTyping(false);
+
+      // Nếu đang ở chế độ HUMAN CSKH (botAnswer === null), không tạo tin nhắn bot giả
+      if (responseMode === 'human' || botAnswer === null || botAnswer === undefined) {
+        setRobotState("idle");
+        return;
+      }
+
       setRobotState("talking");
       setMessages(prev => {
         const lastMsg = prev[prev.length - 1];
@@ -478,7 +485,6 @@ export function ChatWidget() {
   const handleOpen = () => {
     setOpen(true);
     setUnread(0);
-    setMinimized(false);
     fetchSuggestions();
   };
 
@@ -508,10 +514,61 @@ export function ChatWidget() {
         .chat-msg-scroll::-webkit-scrollbar{width:4px}
         .chat-msg-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:2px}
         .suggest-pills::-webkit-scrollbar{display:none}
+
+        /* Responsive Styles for ChatWidget */
+        .chat-widget-root {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          z-index: 1000;
+        }
+
+        .chat-window-box {
+          width: 385px;
+          height: 630px;
+          max-height: calc(100vh - 80px);
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          border-radius: 24px 24px 20px 20px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          background: rgba(0,10,25,0.94);
+          backdrop-filter: blur(28px);
+          border: 1px solid rgba(255,255,255,0.08);
+          box-shadow: 0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(48,176,235,0.15), inset 0 1px 0 rgba(255,255,255,0.08);
+          font-family: 'Outfit', sans-serif;
+        }
+
+        @media (max-width: 640px) {
+          .chat-widget-root {
+            bottom: 12px !important;
+            right: 12px !important;
+          }
+
+          .chat-window-box {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            max-height: 100dvh !important;
+            border-radius: 0 !important;
+            z-index: 99999 !important;
+          }
+
+          .chat-channels-stack {
+            right: 0 !important;
+            bottom: 84px !important;
+          }
+        }
       `}</style>
 
       {/* Floating robot trigger */}
-      <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000 }}>
+      <div className="chat-widget-root">
         {/* Contact Channels Stack (Messenger, Zalo, Web Chat) */}
         <AnimatePresence>
           {showChannels && !open && (
@@ -530,6 +587,7 @@ export function ChatWidget() {
                   }
                 }
               }}
+              className="chat-channels-stack"
               style={{
                 position: "absolute",
                 bottom: 96,
@@ -816,20 +874,7 @@ export function ChatWidget() {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 32, scale: 0.92 }}
               transition={{ duration: 0.3, ease: "easeOut" }}
-              style={{
-                width: 385,
-                height: minimized ? "auto" : 630,
-                position: "absolute", bottom: 0, right: 0,
-                borderRadius: "24px 24px 20px 20px",
-                overflow: "hidden",
-                display: "flex",
-                flexDirection: "column",
-                background: "rgba(0,10,25,0.94)",
-                backdropFilter: "blur(28px)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(48,176,235,0.15), inset 0 1px 0 rgba(255,255,255,0.08)",
-                fontFamily: "'Outfit', sans-serif",
-              }}
+              className="chat-window-box"
             >
               {/* Header */}
               <div style={{
@@ -862,12 +907,6 @@ export function ChatWidget() {
 
                 <div style={{ display: "flex", gap: 6 }}>
                   <button
-                    onClick={() => setMinimized(p => !p)}
-                    style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)", transition: "all 0.2s" }}
-                  >
-                    {minimized ? <Maximize2 size={13} /> : <Minimize2 size={13} />}
-                  </button>
-                  <button
                     onClick={() => setOpen(false)}
                     style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "rgba(255,255,255,0.6)", transition: "all 0.2s" }}
                   >
@@ -875,10 +914,6 @@ export function ChatWidget() {
                   </button>
                 </div>
               </div>
-
-              {!minimized && (
-                <>
-
 
                   {/* Messages container */}
                   <div
@@ -1204,8 +1239,6 @@ export function ChatWidget() {
                       <Send size={16} />
                     </motion.button>
                   </div>
-                </>
-              )}
             </motion.div>
           )}
         </AnimatePresence>

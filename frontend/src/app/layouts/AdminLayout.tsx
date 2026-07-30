@@ -81,7 +81,7 @@ export function AdminLayout() {
       .then(res => {
         const rawLogs = res.data || [];
         const activityMap: Record<string, number> = {};
-        
+
         rawLogs.forEach((log: any) => {
           const t = new Date(log.createdAt).getTime();
           if (!activityMap[log.sessionId] || t > activityMap[log.sessionId]) {
@@ -162,7 +162,7 @@ export function AdminLayout() {
           timestamp: data.timestamp,
           read: false
         };
-        
+
         setNotifications(prev => [newNotif, ...prev].slice(0, 50));
 
         // Xử lý hiển thị Toast và cập nhật các chỉ số thông báo thời gian thực
@@ -172,7 +172,7 @@ export function AdminLayout() {
             visible: true,
             type: 'lead'
           });
-          
+
           // Cộng thêm vào leadsCount nếu là lead mới chưa liên hệ
           if (data.payload.status === "Chưa liên hệ" || data.payload.status === "new") {
             setLeadsCount(prev => prev + 1);
@@ -185,7 +185,7 @@ export function AdminLayout() {
           // Cập nhật bản đồ thời gian hoạt động của các phiên
           setChatSessionsActivity(prev => {
             const updated = { ...prev, [sessId]: now };
-            
+
             // Tính toán lại ngay lập tức số phiên đang active
             const tenMinsMs = 10 * 60 * 1000;
             let active = 0;
@@ -364,27 +364,23 @@ export function AdminLayout() {
           gap: 10,
           flexShrink: 0
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, overflow: "hidden" }}>
-            <div style={{
-              width: 36,
-              height: 36,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0
-            }}>
-              <RobotAvatar size={36} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
+            <div style={{ flexShrink: 0 }}>
+              <RobotAvatar size={34} />
             </div>
             {!collapsed && (
               <motion.div
                 initial={{ opacity: 0, x: -5 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.2 }}
+                style={{ overflow: "hidden", whiteSpace: "nowrap" }}
               >
-                <div style={{ color: "white", fontWeight: 800, fontSize: 15, lineHeight: 1.1 }}>
+                <div style={{ color: "white", fontWeight: 800, fontSize: 15, lineHeight: 1.1, fontFamily: "'Outfit', sans-serif" }}>
                   mobi<span style={{ color: "#E4002B" }}>fone</span> CRM
                 </div>
-                <div style={{ color: "rgba(255, 255, 255, 0.35)", fontSize: 10, fontWeight: 500, marginTop: 1 }}>Sales Support Platform</div>
+                <div style={{ color: "rgba(255, 255, 255, 0.45)", fontSize: 10, fontWeight: 500, marginTop: 2 }}>
+                  Sales Support Platform
+                </div>
               </motion.div>
             )}
           </div>
@@ -410,7 +406,7 @@ export function AdminLayout() {
             {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
         </div>
- 
+
         {/* Live System Indicator */}
         {!collapsed && (
           <motion.div
@@ -551,7 +547,7 @@ export function AdminLayout() {
           background: "rgba(0, 0, 0, 0.15)"
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: collapsed ? "center" : "flex-start" }}>
-            <div 
+            <div
               onClick={() => navigate("/admin/profile")}
               style={{
                 width: 34,
@@ -578,7 +574,7 @@ export function AdminLayout() {
             </div>
             {!collapsed && (
               <>
-                <div 
+                <div
                   onClick={() => navigate("/admin/profile")}
                   style={{ flex: 1, minWidth: 0, cursor: "pointer" }}
                 >
@@ -751,7 +747,7 @@ export function AdminLayout() {
             {showNotifications && (
               <>
                 {/* Overlay to close when clicking outside */}
-                <div 
+                <div
                   onClick={() => setShowNotifications(false)}
                   style={{
                     position: "fixed",
@@ -791,7 +787,7 @@ export function AdminLayout() {
                     marginBottom: 8
                   }}>
                     <span style={{ fontWeight: 800, fontSize: 14, color: "#1E293B" }}>Thông báo</span>
-                    <button 
+                    <button
                       onClick={() => setNotifications([])}
                       style={{
                         background: "none",
@@ -806,7 +802,7 @@ export function AdminLayout() {
                     </button>
                   </div>
 
-                  <div 
+                  <div
                     className="custom-scrollbar"
                     style={{
                       overflowY: "auto",
@@ -836,7 +832,7 @@ export function AdminLayout() {
                         let iconColor = "#2563EB";
                         let title = "Thông báo hệ thống";
                         let message = "";
-                        
+
                         if (notif.type === 'new-lead') {
                           iconBg = "#ECFDF5";
                           iconColor = "#10B981";
@@ -868,7 +864,7 @@ export function AdminLayout() {
                         }
 
                         return (
-                          <div 
+                          <div
                             key={notif.id}
                             style={{
                               display: "flex",
@@ -922,7 +918,7 @@ export function AdminLayout() {
           {/* User drop */}
           {/* User drop */}
           <div style={{ position: "relative" }}>
-            <div 
+            <div
               onClick={() => setShowUserMenu(!showUserMenu)}
               style={{
                 display: "flex",
@@ -965,7 +961,7 @@ export function AdminLayout() {
               {showUserMenu && (
                 <>
                   {/* Overlay to close when clicking outside */}
-                  <div 
+                  <div
                     onClick={() => setShowUserMenu(false)}
                     style={{
                       position: "fixed",
