@@ -55,6 +55,35 @@ export class ChatController {
     }
   }
 
+  @Get('session/:sessionId/mode') // Lấy trạng thái session mode ('bot' | 'human')
+  async getSessionMode(@Param('sessionId') sessionId: string) {
+    if (!sessionId) {
+      throw new HttpException('Session ID không được trống', HttpStatus.BAD_REQUEST);
+    }
+    const mode = await this.chatService.getSessionMode(sessionId);
+    return { sessionId, mode };
+  }
+
+  @Post('session/:sessionId/mode') // Đổi trạng thái session mode thủ công (Admin/Sales)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'sales')
+  async setSessionMode(
+    @Param('sessionId') sessionId: string,
+    @Body('mode') mode: 'bot' | 'human',
+  ) {
+    if (!sessionId || !mode || (mode !== 'bot' && mode !== 'human')) {
+      throw new HttpException('Vui lòng truyền sessionId và mode hợp lệ (bot/human)', HttpStatus.BAD_REQUEST);
+    }
+    try {
+      return await this.chatService.setSessionMode(sessionId, mode);
+    } catch (error) {
+      throw new HttpException(
+        error.message || 'Lỗi đổi trạng thái session',
+        HttpStatus.INTERNAL_SERVER_ERROR
+      );
+    }
+  }
+
   @Post('reply') // Sales/Admin gửi tin nhắn phản hồi thủ công
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'sales')

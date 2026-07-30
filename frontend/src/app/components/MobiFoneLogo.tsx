@@ -1,21 +1,18 @@
-export function MobiFoneLogo({ size = 28, dark = false }: { size?: number; dark?: boolean }) {
+export function MobiFoneLogo({ size = 28, height, className }: { size?: number; height?: number; dark?: boolean; showText?: boolean; className?: string }) {
+  const logoHeight = height || size;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, userSelect: "none" }}>
-      {/* Brand Waves */}
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 2.5, height: size - 8 }}>
-        <div style={{ width: 3.5, height: "35%", backgroundColor: "#0055A5", borderRadius: 1.5 }} />
-        <div style={{ width: 3.5, height: "65%", backgroundColor: "#0055A5", borderRadius: 1.5 }} />
-        <div style={{ width: 3.5, height: "95%", backgroundColor: "#E4002B", borderRadius: 1.5 }} />
-      </div>
-      <span style={{
-        color: dark ? "#0055A5" : "white",
-        fontSize: size - 8,
-        fontWeight: 900,
-        letterSpacing: -0.5,
-        fontFamily: "'Outfit', sans-serif"
-      }}>
-        mobi<span style={{ color: "#E4002B" }}>fone</span>
-      </span>
+    <div style={{ display: "inline-flex", alignItems: "center", userSelect: "none" }} className={className}>
+      <img
+        src="/logo.png"
+        alt="MobiFone"
+        style={{
+          height: logoHeight,
+          width: "auto",
+          maxHeight: "100%",
+          objectFit: "contain",
+          display: "block"
+        }}
+      />
     </div>
   );
 }

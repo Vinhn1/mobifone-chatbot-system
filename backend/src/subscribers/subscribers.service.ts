@@ -50,35 +50,44 @@ export class SubscribersService implements OnModuleInit {
   }
 
   // 1. Gửi OTP qua Email (Tạo mới hoặc cập nhật thông tin email cho thuê bao)
-  async sendOtp(email: string): Promise<{ success: boolean; message: string }> {
+  async sendOtp(email: string, phoneNumber?: string, name?: string): Promise<{ success: boolean; message: string }> {
     if (!email || !email.includes('@')) {
       throw new BadRequestException('Địa chỉ Email không hợp lệ.');
     }
 
     const emailLower = email.toLowerCase().trim();
     let subscriber = await this.subscriberRepository.findOneBy({ email: emailLower });
-    
+
     if (!subscriber) {
-      // Tự động sinh số điện thoại duy nhất cho Email đăng ký mới
-      let uniquePhone = '';
-      while (true) {
-        const rand = '09' + Math.floor(10000000 + Math.random() * 90000000).toString();
-        const existing = await this.subscriberRepository.findOneBy({ phoneNumber: rand });
-        if (!existing) {
-          uniquePhone = rand;
-          break;
+      // Nếu người dùng cung cấp số điện thoại, dùng số đó; không tự sinh nữa
+      let phone = '';
+      if (phoneNumber) {
+        const cleanPhone = phoneNumber.replace(/[\s.-]/g, '');
+        // Kiểm tra số điện thoại đã tồn tại chưa
+        const existingPhone = await this.subscriberRepository.findOneBy({ phoneNumber: cleanPhone });
+        if (existingPhone) {
+          throw new BadRequestException('Số điện thoại này đã được đăng ký. Vui lòng dùng số khác hoặc đăng nhập.');
         }
+        phone = cleanPhone;
+      } else {
+        throw new BadRequestException('Vui lòng cung cấp số điện thoại để đăng ký tài khoản.');
       }
 
-      // Khởi tạo thuê bao mới với các thông tin mặc định
+      // Khởi tạo thuê bao mới với thông tin người dùng nhập
       subscriber = this.subscriberRepository.create({
-        phoneNumber: uniquePhone,
+        phoneNumber: phone,
         email: emailLower,
+        name: name || '',
         currentPackage: null,
         dataTotalGB: 0,
         dataUsedGB: 0,
         packageExpiry: null,
       });
+    } else {
+      // Luôn cập nhật tên mới nếu được cung cấp (kể cả khi subscriber đã có tên cũ tự sinh)
+      if (name && name.trim()) {
+        subscriber.name = name.trim();
+      }
     }
 
     // Sinh mã OTP 6 chữ số ngẫu nhiên
@@ -224,8 +233,9 @@ export class SubscribersService implements OnModuleInit {
     } else {
       subscriber.password = hashedPassword;
     }
-    if (name) {
-      subscriber.name = name;
+    // Luôn cập nhật tên nếu được truyền vào (kể cả khi subscriber đã có tên cũ tự sinh)
+    if (name && name.trim()) {
+      subscriber.name = name.trim();
     }
     return await this.subscriberRepository.save(subscriber);
   }

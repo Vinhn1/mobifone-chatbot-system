@@ -56,9 +56,77 @@ export class ChatService {
     return match ? match[0] : null;
   }
 
+  private sessionModes = new Map<string, { mode: 'bot' | 'human'; staffName?: string; updatedAt: Date }>();
+
+  async getSessionMode(sessionId: string): Promise<'bot' | 'human'> {
+    if (!sessionId) return 'bot';
+    const entry = this.sessionModes.get(sessionId);
+    return entry ? entry.mode : 'bot';
+  }
+
+  async setSessionMode(sessionId: string, mode: 'bot' | 'human', staffName?: string) {
+    if (!sessionId) return { sessionId, mode: 'bot' };
+    this.sessionModes.set(sessionId, {
+      mode,
+      staffName,
+      updatedAt: new Date(),
+    });
+    console.log(`[SESSION-MODE] Đã chuyển session ${sessionId} sang chế độ: ${mode.toUpperCase()}`);
+    try {
+      this.notificationsService.emitNotification('session-mode-changed', {
+        sessionId,
+        mode,
+        staffName,
+      });
+    } catch (err) {
+      console.error('Lỗi khi phát sự kiện session-mode-changed:', err.message);
+    }
+    return { sessionId, mode, staffName };
+  }
+
   async sendMessageToAi(message: string, sessionId?: string, userInfo?: any) {
     const aiServiceUrl = this.getAiServiceUrl('/chat');
     let historyPayload: { role: string; message: string }[] = [];
+
+    // 0. Kiểm tra trạng thái Session Mode (BOT hay HUMAN)
+    if (sessionId) {
+      const currentMode = await this.getSessionMode(sessionId);
+      if (currentMode === 'human') {
+        // Tạm dừng Chatbot tự động: chỉ lưu tin nhắn của User & bắn thông báo realtime cho Admin Portal
+        await this.chatHistoryService.saveMessage(sessionId, 'user', message);
+
+        // Tự động quét và trích xuất Lead (SĐT khách hàng) từ nội dung tin nhắn
+        const extractedPhone = this.extractPhoneNumber(message);
+        if (extractedPhone) {
+          try {
+            await this.leadsService.createLead({
+              phone: extractedPhone,
+              interest: `Trích xuất từ phiên chat: ${sessionId}. Câu hỏi: "${message.substring(0, 100)}"`,
+            });
+            console.log(`[AUTO-LEAD] Đã tự động tạo Lead cho SĐT: ${extractedPhone}`);
+          } catch (leadError) {
+            console.error('Lỗi khi tự động lưu Lead từ tin nhắn chat:', leadError.message);
+          }
+        }
+
+        // Phát sự kiện tin nhắn User đến Admin Dashboard
+        try {
+          this.notificationsService.emitNotification('new-message', {
+            sessionId: sessionId || 'anonymous',
+            sender: 'user',
+            message,
+          });
+        } catch (err) {
+          console.error('Lỗi khi phát sự kiện user message:', err.message);
+        }
+
+        return {
+          answer: null,
+          mode: 'human',
+          message: 'Tin nhắn đã được gửi tới chuyên viên CSKH.',
+        };
+      }
+    }
 
     // 1. Lấy lịch sử hội thoại trước đó (nếu có sessionId)
     if (sessionId) {
@@ -164,19 +232,8 @@ export class ChatService {
           console.error('Lỗi khi phát sự kiện bot reply:', err.message);
         }
 
-        // Nếu là fallback (cần chuyển giao hỗ trợ), phát tín hiệu manual-intervention-required
-        if (result.is_fallback) {
-          try {
-            this.notificationsService.emitNotification('manual-intervention-required', {
-              sessionId: sessionId || 'anonymous',
-              message: message,
-              answer: result.answer,
-            });
-            console.log(`[HANDOFF] Đã kích hoạt chuyển giao hỗ trợ cho session: ${sessionId}`);
-          } catch (err) {
-            console.error('Lỗi khi phát sự kiện manual-intervention-required:', err.message);
-          }
-        }
+        // Đã loại bỏ hoàn toàn cơ chế tự động chuyển phiên chat sang human mode.
+        // Bot luôn trả lời tự động liên tục. Chế độ human chỉ bật khi nhân viên CSKH chủ động phản hồi từ Admin Dashboard.
       }
 
       return result;
@@ -197,6 +254,11 @@ export class ChatService {
 
   // Nhân viên phản hồi thủ công
   async sendStaffReply(sessionId: string, message: string) {
+    // 0. Tự động chuyển mode sang 'human' để tạm dừng Bot
+    if (sessionId) {
+      await this.setSessionMode(sessionId, 'human');
+    }
+
     // 1. Lưu tin nhắn của nhân viên vào DB (đóng vai trò 'bot' gửi đi)
     const saved = await this.chatHistoryService.saveMessage(sessionId, 'bot', message);
 
