@@ -57,8 +57,9 @@ jobs:
             docker compose down --remove-orphans 2>/dev/null || true
             docker rm -f mobifone_frontend mobifone_backend mobifone_ai_core mobifone_db 2>/dev/null || true
 
-            # Khởi động lại hệ thống
-            docker compose up -d --build
+            # Build không cache để đảm bảo code mới nhất được compile
+            docker compose build --no-cache frontend
+            docker compose up -d
         env:
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
