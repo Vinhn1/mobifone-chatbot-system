@@ -82,9 +82,9 @@ export function ConversationsPage() {
     }
   }, [user, navigate]);
 
-  const loadHistory = async () => {
+"  const loadHistory = async (showLoadingSpinner = false) => {
     if (!token) return;
-    setLoading(true);
+    if (showLoadingSpinner) setLoading(true);
     try {
       const config = {
         headers: { Authorization: `Bearer ${token}` },
@@ -205,6 +205,13 @@ export function ConversationsPage() {
       parsedConversations.sort((a, b) => b.lastActiveTime - a.lastActiveTime);
 
       setConversations(parsedConversations);
+
+      // Cập nhật lại khung chat đang chọn với dữ liệu mới
+      setSelected(prevSelected => {
+        if (!prevSelected) return null;
+        const fresh = parsedConversations.find(c => c.id === prevSelected.id);
+        return fresh || prevSelected;
+      });
     } catch (error) {
       console.error("Lỗi khi tải lịch sử hội thoại:", error);
       if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
@@ -217,7 +224,7 @@ export function ConversationsPage() {
   };
 
   useEffect(() => {
-    loadHistory();
+    loadHistory(true);
   }, [token]);
 
   // Lấy trạng thái session mode mỗi khi mở cuộc trò chuyện
@@ -267,6 +274,13 @@ export function ConversationsPage() {
         const sessId = payload.sessionId;
         
         setConversations(prev => {
+          const exists = prev.some(c => c.id === sessId);
+          if (!exists) {
+            // Tải lại dữ liệu phiên mới ngay lập tức
+            loadHistory(false);
+            return prev;
+          }
+
           const updated = prev.map(c => {
             if (c.id === sessId) {
               const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -420,12 +434,12 @@ export function ConversationsPage() {
           <p className="text-slate-400 text-xs font-semibold mt-0.5">Bản ghi chi tiết các cuộc trò chuyện và thông tin tự động phân đoạn bởi AI</p>
         </div>
         <button
-          onClick={loadHistory}
+          onClick={() => loadHistory(false)}
           className="gradient-btn-primary flex items-center gap-2 px-5 py-2.5 text-xs font-bold shadow-md shadow-blue-500/10 cursor-pointer"
         >
           Làm Mới Dữ Liệu
         </button>
-      </div>
+      </div>"
 
       {/* Filters & Tabs */}
       <div className="flex gap-3 flex-wrap items-center">

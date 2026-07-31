@@ -145,96 +145,119 @@ export function AdminLayout() {
     return () => clearInterval(interval);
   }, [chatSessionsActivity]);
 
-  // 4. Kết nối SSE để nhận sự kiện realtime từ Backend
+"  // 4. Kết nối SSE để nhận sự kiện realtime từ Backend với tự động kết nối lại khi đứt mạng
   useEffect(() => {
     const adminToken = localStorage.getItem("mobifone_admin_token");
     if (!adminToken) return;
 
-    const eventSource = new EventSource(`${API_BASE}/notifications/sse?token=${adminToken}`);
+    let eventSource: EventSource | null = null;
+    let reconnectTimeout: any = null;
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        const newNotif = {
-          id: data.timestamp + '-' + Math.random(),
-          type: data.type,
-          payload: data.payload,
-          timestamp: data.timestamp,
-          read: false
-        };
-
-        setNotifications(prev => [newNotif, ...prev].slice(0, 50));
-
-        // Xử lý hiển thị Toast và cập nhật các chỉ số thông báo thời gian thực
-        if (data.type === 'new-lead') {
-          setToast({
-            message: `Khách hàng mới: ${data.payload.phone} vừa quan tâm gói cước!`,
-            visible: true,
-            type: 'lead'
-          });
-
-          // Cộng thêm vào leadsCount nếu là lead mới chưa liên hệ
-          if (data.payload.status === "Chưa liên hệ" || data.payload.status === "new") {
-            setLeadsCount(prev => prev + 1);
-          }
-        } else if (data.type === 'new-message') {
-          // data.payload có cấu trúc: { sessionId, sender, message }
-          const sessId = data.payload.sessionId || 'anonymous';
-          const now = Date.now();
-
-          // Cập nhật bản đồ thời gian hoạt động của các phiên
-          setChatSessionsActivity(prev => {
-            const updated = { ...prev, [sessId]: now };
-
-            // Tính toán lại ngay lập tức số phiên đang active
-            const tenMinsMs = 10 * 60 * 1000;
-            let active = 0;
-            Object.values(updated).forEach(time => {
-              if (now - time < tenMinsMs) {
-                active++;
-              }
-            });
-            setActiveChatsCount(active);
-            return updated;
-          });
-        } else if (data.type === 'doc-status') {
-          setToast({
-            message: `${data.payload.name}: ${data.payload.message}`,
-            visible: data.payload.status !== 'synced',
-            type: 'doc'
-          });
-        } else if (data.type === 'manual-intervention-required') {
-          setToast({
-            message: `Yêu cầu hỗ trợ trực tiếp từ phiên ${data.payload.sessionId.substring(0, 8)}...`,
-            visible: true,
-            type: 'warning'
-          });
-
-          // Kích hoạt Browser Push Notification
-          if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-            new Notification('MobiFone CSKH - Cần hỗ trợ!', {
-              body: `Phiên chat ${data.payload.sessionId.substring(0, 8)}... cần nhân viên hỗ trợ trực tiếp.`,
-              icon: '/favicon.ico'
-            });
-          }
-        }
-
-        // Phát ra CustomEvent để các trang con tự cập nhật
-        window.dispatchEvent(new CustomEvent('app-notification', { detail: data }));
-      } catch (err) {
-        console.error("Lỗi khi đọc sự kiện SSE:", err);
+    const connectSSE = () => {
+      if (eventSource) {
+        eventSource.close();
       }
+
+      eventSource = new EventSource(`${API_BASE}/notifications/sse?token=${adminToken}`);
+
+      eventSource.onopen = () => {
+        console.log("[SSE REALTIME] Đã kết nối lắng nghe sự kiện thời gian thực.");
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const newNotif = {
+            id: data.timestamp + '-' + Math.random(),
+            type: data.type,
+            payload: data.payload,
+            timestamp: data.timestamp,
+            read: false
+          };
+
+          setNotifications(prev => [newNotif, ...prev].slice(0, 50));
+
+          // Xử lý hiển thị Toast và cập nhật các chỉ số thông báo thời gian thực
+          if (data.type === 'new-lead') {
+            setToast({
+              message: `Khách hàng mới: ${data.payload.phone} vừa quan tâm gói cước!`,
+              visible: true,
+              type: 'lead'
+            });
+
+            // Cộng thêm vào leadsCount nếu là lead mới chưa liên hệ
+            if (data.payload.status === "Chưa liên hệ" || data.payload.status === "new") {
+              setLeadsCount(prev => prev + 1);
+            }
+          } else if (data.type === 'new-message') {
+            // data.payload có cấu trúc: { sessionId, sender, message }
+            const sessId = data.payload.sessionId || 'anonymous';
+            const now = Date.now();
+
+            // Cập nhật bản đồ thời gian hoạt động của các phiên
+            setChatSessionsActivity(prev => {
+              const updated = { ...prev, [sessId]: now };
+
+              // Tính toán lại ngay lập tức số phiên đang active
+              const tenMinsMs = 10 * 60 * 1000;
+              let active = 0;
+              Object.values(updated).forEach(time => {
+                if (now - time < tenMinsMs) {
+                  active++;
+                }
+              });
+              setActiveChatsCount(active);
+              return updated;
+            });
+          } else if (data.type === 'doc-status') {
+            setToast({
+              message: `${data.payload.name}: ${data.payload.message}`,
+              visible: data.payload.status !== 'synced',
+              type: 'doc'
+            });
+          } else if (data.type === 'manual-intervention-required') {
+            setToast({
+              message: `Yêu cầu hỗ trợ trực tiếp từ phiên ${data.payload.sessionId.substring(0, 8)}...`,
+              visible: true,
+              type: 'warning'
+            });
+
+            // Kích hoạt Browser Push Notification
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              new Notification('MobiFone CSKH - Cần hỗ trợ!', {
+                body: `Phiên chat ${data.payload.sessionId.substring(0, 8)}... cần nhân viên hỗ trợ trực tiếp.`,
+                icon: '/favicon.ico'
+              });
+            }
+          }
+
+          // Phát ra CustomEvent để các trang con tự cập nhật
+          window.dispatchEvent(new CustomEvent('app-notification', { detail: data }));
+        } catch (err) {
+          console.error("Lỗi khi đọc sự kiện SSE:", err);
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        console.warn("Kết nối SSE bị ngắt, đang tự động kết nối lại sau 3 giây...", err);
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
+        }
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = setTimeout(connectSSE, 3000);
+      };
     };
 
-    eventSource.onerror = (err) => {
-      console.error("Lỗi kết nối SSE:", err);
-      eventSource.close();
-    };
+    connectSSE();
 
     return () => {
-      eventSource.close();
+      clearTimeout(reconnectTimeout);
+      if (eventSource) {
+        eventSource.close();
+      }
     };
-  }, [user]);
+  }, [user]);"
 
   useEffect(() => {
     if (toast?.visible) {
