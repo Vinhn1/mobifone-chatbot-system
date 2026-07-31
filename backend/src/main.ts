@@ -14,9 +14,9 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Tăng giới hạn dung lượng body để hỗ trợ upload avatar ảnh dạng base64
-  app.use(json({ limit: '10mb' }));
-  app.use(urlencoded({ limit: '10mb', extended: true }));
+  // Tăng giới hạn dung lượng body để hỗ trợ upload tài liệu lớn (PDF, DOCX, XLSX...)
+  app.use(json({ limit: '100mb' }));
+  app.use(urlencoded({ limit: '100mb', extended: true }));
 
   await app.listen(process.env.PORT ?? 3000);
 }

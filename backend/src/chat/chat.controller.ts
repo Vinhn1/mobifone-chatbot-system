@@ -163,7 +163,9 @@ export class ChatController {
   @Post('upload') // Tải lên tài liệu mới (PDF, TXT, WORD, EXCEL)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 100 * 1024 * 1024 } // Giới hạn 100MB
+  }))
   async uploadFile(@UploadedFile() file: any) {
     if (!file) {
       throw new HttpException('Vui lòng tải lên 1 file hợp lệ', HttpStatus.BAD_REQUEST);

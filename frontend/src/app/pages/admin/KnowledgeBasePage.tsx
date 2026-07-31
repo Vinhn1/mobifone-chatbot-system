@@ -248,9 +248,19 @@ export function KnowledgeBasePage() {
       await axios.post(`${API_BASE}/chat/upload`, formData, config);
       const response = await axios.get(`${API_BASE}/chat/documents`, { headers: { Authorization: `Bearer ${token}` } });
       setDocs(response.data || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Lỗi khi tải tài liệu lên:", error);
-      const errMsg = axios.isAxiosError(error) ? error.response?.data?.message : "Vui lòng kiểm tra lại cấu hình.";
+      let errMsg = "Vui lòng kiểm tra lại cấu hình hệ thống.";
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 413) {
+          errMsg = "Dung lượng file quá lớn (vượt quá giới hạn 100MB của hệ thống).";
+        } else if (error.response?.data) {
+          const resData = error.response.data;
+          errMsg = typeof resData === "string" ? resData : (resData.message || resData.detail || error.message);
+        } else {
+          errMsg = error.message;
+        }
+      }
       alert(`Lỗi upload tài liệu: ${errMsg}`);
       setDocs(prev => prev.filter(d => d.name !== tempDocName));
     } finally {
