@@ -435,7 +435,7 @@ export function ConversationsPage() {
     } finally {
       setSendingReply(false);
     }
-  };"
+  };
 
   const filtered = conversations.filter(c =>
     (statusFilter === "all" || c.status === statusFilter) &&

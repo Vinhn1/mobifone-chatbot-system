@@ -257,7 +257,7 @@ export function AdminLayout() {
         eventSource.close();
       }
     };
-  }, [user]);"
+  }, [user]);
 
   useEffect(() => {
     if (toast?.visible) {
