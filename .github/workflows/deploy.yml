@@ -62,9 +62,12 @@ jobs:
               "SUBSCRIBER_SEED_PASSWORD=${SUBSCRIBER_SEED_PASSWORD}" \
               > .env
 
-            # Dọn dẹp container cũ (kể cả container bị kẹt)
+            # Dọn dẹp TOÀN BỘ container cũ (tránh lỗi "container name already in use")
             docker compose down --remove-orphans 2>/dev/null || true
+            docker stop mobifone_frontend mobifone_backend mobifone_ai_core mobifone_db 2>/dev/null || true
             docker rm -f mobifone_frontend mobifone_backend mobifone_ai_core mobifone_db 2>/dev/null || true
+            # Đợi Docker giải phóng hoàn toàn tài nguyên
+            sleep 3
 
             # Build không cache và ép buộc recreate container để đảm bảo code mới được nạp vào
             docker compose build --no-cache frontend
