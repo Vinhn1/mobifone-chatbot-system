@@ -32,6 +32,7 @@ services:
     volumes:
       - ./ai-core/chroma_db:/app/chroma_db
       - ./ai-core/static:/app/static
+      - ./ai-core/rag_config.json:/app/rag_config.json
     depends_on:
       - db
 
