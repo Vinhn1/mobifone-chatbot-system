@@ -84,7 +84,7 @@ export function ConversationsPage() {
     }
   }, [user, navigate]);
 
-"  const loadHistory = async (showLoadingSpinner = false) => {
+  const loadHistory = async (showLoadingSpinner = false) => {
     if (!token) return;
     if (showLoadingSpinner) setLoading(true);
     try {
@@ -389,7 +389,7 @@ export function ConversationsPage() {
     return () => window.removeEventListener('app-notification', handleNotification);
   }, [selected]);
 
-"  const handleSendReply = async () => {
+  const handleSendReply = async () => {
     if (!selected || !replyText.trim() || !token) return;
     const sentMsg = replyText.trim();
     const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -465,7 +465,7 @@ export function ConversationsPage() {
         >
           Làm Mới Dữ Liệu
         </button>
-      </div>"
+      </div>
 
       {/* Filters & Tabs */}
       <div className="flex gap-3 flex-wrap items-center">
@@ -496,7 +496,7 @@ export function ConversationsPage() {
       </div>
 
       <div className="flex gap-5 flex-1 min-h-0 overflow-hidden">
-"        {/* Conversation List */}
+        {/* Conversation List */}
         <div className={`flex flex-col gap-3.5 overflow-y-auto pr-1 ${selected ? (isChatExpanded ? "hidden" : "w-[400px] shrink-0") : "flex-1"}`}>
           {filtered.length === 0 ? (
             <div className="py-12 bg-white rounded-2xl text-center border border-dashed border-slate-200 text-slate-400 text-xs font-semibold">
@@ -681,7 +681,7 @@ export function ConversationsPage() {
                     )}
                   </AnimatePresence>
                 </div>
-              )}"
+              )}
 
               {/* Messages Container */}
               <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-5 flex flex-col gap-4.5 bg-slate-50/50">
