@@ -21,6 +21,7 @@ type Doc = {
   upload_date: string;
   vectors: number;
   chunks: number;
+  timestamp?: number;
 };
 
 const STATUS_CONFIG: Record<DocStatus, { label: string; textClass: string; bgClass: string; borderClass: string; icon: React.ElementType }> = {
@@ -198,7 +199,8 @@ export function KnowledgeBasePage() {
               progress: payload.progress,
               upload_date: "Vừa xong",
               vectors: 0,
-              chunks: 0
+              chunks: 0,
+              timestamp: Date.now()
             };
             return [newDoc, ...prev];
           }
@@ -233,7 +235,8 @@ export function KnowledgeBasePage() {
       progress: 40,
       upload_date: "Hôm nay",
       vectors: 0,
-      chunks: 0
+      chunks: 0,
+      timestamp: Date.now()
     };
 
     setDocs(prev => [tempDoc, ...prev]);
@@ -300,7 +303,8 @@ export function KnowledgeBasePage() {
 
   const parseDocDate = (d: Doc) => {
     if (d.status === "chunking" || d.status === "vectorizing") return Infinity;
-    if (d.upload_date === "Vừa xong" || d.upload_date === "Hôm nay") return Infinity - 1;
+    if (d.timestamp) return d.timestamp > 1e11 ? d.timestamp : d.timestamp * 1000;
+    if (d.upload_date === "Vừa xong" || d.upload_date === "Hôm nay") return Date.now();
     if (!d.upload_date || d.upload_date === "N/A") return 0;
     
     const parts = d.upload_date.split(" ");
