@@ -12,13 +12,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Set up SSH & Deploy
+      - name: Open Firewall for GitHub Runner IP
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "Runner IP: $RUNNER_IP"
+          # Lưu IP để dùng ở step sau
+          echo "RUNNER_IP=$RUNNER_IP" >> $GITHUB_ENV
+
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v0.1.10
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: DB_USERNAME,DB_PASSWORD,DB_DATABASE,DB_SYNCHRONIZE,JWT_SECRET,JWT_EXPIRES_IN,GEMINI_API_KEY,AI_PROVIDER,GEMINI_MODEL,OPENAI_API_KEY,EVAL_JUDGE_PROVIDER,EVAL_JUDGE_MODEL,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS,SMTP_FROM,CORS_ALLOWED_ORIGINS,ADMIN_SEED_PASSWORD,SALES_SEED_PASSWORD,SUBSCRIBER_SEED_PASSWORD
+          command_timeout: 30m
+          request_timeout: 60s
           script: |
             # Clone nếu chưa có git repo, ngược lại pull code mới
             if [ ! -d "/opt/mobifone-chatbot-system/.git" ]; then
