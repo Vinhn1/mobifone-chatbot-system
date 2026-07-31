@@ -667,7 +667,12 @@ export class ChatService {
 
     // 2. Gọi AI sinh câu trả lời (lưu lịch sử chat theo format zalo_senderId)
     const result = await this.sendMessageToAi(text, `zalo_${senderId}`);
-    let answer = result?.answer || 'Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi này.';
+    if (result?.mode === 'human' || !result?.answer) {
+      console.log(`[ZALO-WEBHOOK] Session zalo_${senderId} đang ở chế độ HUMAN CSKH. Tạm ngưng Bot tự động.`);
+      return;
+    }
+
+    let answer = result.answer;
 
     // Làm sạch định dạng markdown/asterisks và định dạng gạch đầu dòng
     answer = this.cleanMarkdown(answer);
