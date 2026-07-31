@@ -345,8 +345,9 @@ export class ChatService {
     formData.append('file', blob, originalname);
 
     try {
+      // Đặt timeout 10 phút cho tác vụ xử lý trích xuất & nạp vector tài liệu
       const response = await firstValueFrom(
-        this.httpService.post(aiServiceUrl, formData, { timeout: this.aiRequestTimeoutMs })
+        this.httpService.post(aiServiceUrl, formData, { timeout: 600000 })
       );
       
       const resultData = response.data;

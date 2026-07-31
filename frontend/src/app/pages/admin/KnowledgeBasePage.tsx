@@ -253,9 +253,19 @@ export function KnowledgeBasePage() {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 413) {
           errMsg = "Dung lượng file quá lớn (vượt quá giới hạn 100MB của hệ thống).";
+        } else if (error.response?.status === 504) {
+          errMsg = "Quá thời gian xử lý (504 Gateway Timeout). File của bạn đang được hệ thống tiếp tục trích xuất ở chế độ ngầm.";
         } else if (error.response?.data) {
           const resData = error.response.data;
-          errMsg = typeof resData === "string" ? resData : (resData.message || resData.detail || error.message);
+          if (typeof resData === "string") {
+            if (resData.includes("<html") || resData.includes("504 Gateway")) {
+              errMsg = "Hệ thống đang phản hồi chậm khi xử lý file lớn, vui lòng tải lại danh sách sau 1-2 phút.";
+            } else {
+              errMsg = resData;
+            }
+          } else {
+            errMsg = resData.message || resData.detail || error.message;
+          }
         } else {
           errMsg = error.message;
         }
