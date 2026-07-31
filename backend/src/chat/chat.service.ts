@@ -689,7 +689,7 @@ export class ChatService {
         const sendRequest = async (tokenToUse: string) => {
           const cleanToken = (tokenToUse || '').trim();
           console.log(`[ZALO-WEBHOOK] Đang gửi tin nhắn Zalo với token: "${cleanToken.substring(0, 15)}..."`);
-          const targetUrl = `https://openapi.zalo.me/v3.0/oa/message/cs?access_token=${encodeURIComponent(cleanToken)}`;
+          const targetUrl = 'https://openapi.zalo.me/v3.0/oa/message/cs';
           return await firstValueFrom(
             this.httpService.post(targetUrl, {
               recipient: { user_id: senderId },
