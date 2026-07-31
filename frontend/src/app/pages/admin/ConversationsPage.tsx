@@ -387,9 +387,34 @@ export function ConversationsPage() {
     return () => window.removeEventListener('app-notification', handleNotification);
   }, [selected]);
 
-  const handleSendReply = async () => {
+"  const handleSendReply = async () => {
     if (!selected || !replyText.trim() || !token) return;
+    const sentMsg = replyText.trim();
+    const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const targetSessId = selected.id;
+
+    // 1. Cập nhật ngay lập tức giao diện Admin (Optimistic UI Update)
+    const newMsgObj = { role: "bot" as const, text: sentMsg, time: nowStr };
+
+    setSelected(prev => prev && prev.id === targetSessId ? {
+      ...prev,
+      messages: prev.messages + 1,
+      status: 'escalated',
+      transcript: [...prev.transcript, newMsgObj],
+      lastActiveTime: Date.now()
+    } : prev);
+
+    setConversations(prev => prev.map(c => c.id === targetSessId ? {
+      ...c,
+      messages: c.messages + 1,
+      status: 'escalated',
+      transcript: [...c.transcript, newMsgObj],
+      lastActiveTime: Date.now()
+    } : c).sort((a, b) => b.lastActiveTime - a.lastActiveTime));
+
+    setReplyText("");
     setSendingReply(true);
+
     try {
       const config = {
         headers: { Authorization: `Bearer ${token}` },
@@ -397,19 +422,18 @@ export function ConversationsPage() {
       await axios.post(
         `${API_BASE}/chat/reply`,
         {
-          sessionId: selected.id,
-          message: replyText.trim(),
+          sessionId: targetSessId,
+          message: sentMsg,
         },
         config
       );
-      setReplyText("");
     } catch (err) {
       console.error("Lỗi khi gửi phản hồi của nhân viên:", err);
       alert("Không thể gửi phản hồi, vui lòng thử lại!");
     } finally {
       setSendingReply(false);
     }
-  };
+  };"
 
   const filtered = conversations.filter(c =>
     (statusFilter === "all" || c.status === statusFilter) &&
