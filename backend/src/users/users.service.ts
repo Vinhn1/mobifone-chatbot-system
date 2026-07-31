@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ILike } from 'typeorm';
 import { User } from './user.entity';
 import { EmailService } from '../email/email.service';
 import * as bcrypt from 'bcrypt';
@@ -85,7 +85,15 @@ export class UsersService implements OnModuleInit {
 
   // 2. Hàm tìm người dùng theo username (dành cho module Auth kiểm tra)
   async findByUsername(username: string): Promise<User | null> {
-    return await this.userRepository.findOne({ where: { username } });
+    if (!username) return null;
+    const cleanId = username.trim();
+    return await this.userRepository.findOne({
+      where: [
+        { username: ILike(cleanId) },
+        { email: ILike(cleanId) },
+        { phone: cleanId },
+      ],
+    });
   }
 
   // 3. Lấy profile admin theo id

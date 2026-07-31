@@ -191,10 +191,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
 
-    const idLower = identifier.toLowerCase().trim();
-    let loginUsername = idLower;
-    if (idLower.endsWith("@mobifone.vn")) {
-      loginUsername = idLower.split("@")[0];
+    const idClean = identifier.trim();
+    let loginUsername = idClean;
+    if (idClean.toLowerCase().endsWith("@mobifone.vn")) {
+      loginUsername = idClean.split("@")[0];
     }
     // 1. Thử đăng nhập hệ thống Admin/Sales (qua /auth/login)
     try {
