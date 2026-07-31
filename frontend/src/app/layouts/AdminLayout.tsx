@@ -145,7 +145,7 @@ export function AdminLayout() {
     return () => clearInterval(interval);
   }, [chatSessionsActivity]);
 
-"  // 4. Kết nối SSE để nhận sự kiện realtime từ Backend với tự động kết nối lại khi đứt mạng
+  // 4. Kết nối SSE để nhận sự kiện realtime từ Backend với tự động kết nối lại khi đứt mạng
   useEffect(() => {
     const adminToken = localStorage.getItem("mobifone_admin_token");
     if (!adminToken) return;
