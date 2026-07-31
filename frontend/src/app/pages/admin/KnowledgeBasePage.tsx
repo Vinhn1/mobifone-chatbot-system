@@ -242,7 +242,6 @@ export function KnowledgeBasePage() {
       const config = {
         headers: {
           Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data"
         },
       };
       await axios.post(`${API_BASE}/chat/upload`, formData, config);
