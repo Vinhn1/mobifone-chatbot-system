@@ -663,7 +663,9 @@ export function AdminLayout() {
           alignItems: "center",
           padding: "0 20px",
           gap: 16,
-          flexShrink: 0
+          flexShrink: 0,
+          position: "relative",
+          zIndex: 100
         }}>
           {/* Quick Search */}
           <div style={{

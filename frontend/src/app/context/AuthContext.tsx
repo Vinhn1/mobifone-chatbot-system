@@ -196,54 +196,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (idLower.endsWith("@mobifone.vn")) {
       loginUsername = idLower.split("@")[0];
     }
-    const isStaff = loginUsername === "admin" || loginUsername === "sales";
-
-    if (isStaff) {
-      try {
-        const response = await axios.post(`${API_BASE}/auth/login`, {
-          username: loginUsername,
-          password: password,
-        });
-        
-        if (response.data?.require2fa) {
-          return "require_2fa";
-        }
-
-        const apiToken = response.data?.access_token;
-        const apiUser = response.data?.user;
-        if (apiToken && apiUser) {
-          localStorage.setItem("mobifone_admin_token", apiToken);
-          setToken(apiToken);
-          const staffUser: AuthUser = {
-            id: String(apiUser.id),
-            name: apiUser.name || (apiUser.role === "sales" ? "Nhân viên CSKH MobiFone" : "MobiFone Administrator"),
-            phone: apiUser.phone || "0987654321",
-            email: apiUser.email || (apiUser.role === "sales" ? "sales@mobifone.vn" : "admin@mobifone.vn"),
-            role: (apiUser.role || "admin") as AuthRole,
-            tier: apiUser.role === "sales" ? "Gold" : "Diamond",
-            package: apiUser.role === "sales" ? "CSKH" : "Staff",
-            packageCode: apiUser.role === "sales" ? "SALES" : "STAFF",
-            packageExpiry: "31/12/2026",
-            dataUsedGB: 0,
-            dataTotalGB: 0,
-            voiceUsedMin: 0,
-            voiceTotalMin: 0,
-            balance: 0,
-            points: 0,
-            joinDate: "01/01/2020",
-            address: apiUser.address || "MobiFone HQ, Hà Nội",
-            dob: apiUser.dob || "1988-05-12",
-            avatar: apiUser.avatar || undefined,
-            twoFaEnabled: apiUser.twoFaEnabled || false,
-          };
-          localStorage.setItem("mobifone_admin_user", JSON.stringify(staffUser));
-          setUser(staffUser);
-          return apiUser.role === "sales" ? "sales" : "admin";
-        }
-      } catch (error) {
-        console.error("Lỗi xác thực Admin/Sales:", error);
-        return "error";
+    // 1. Thử đăng nhập hệ thống Admin/Sales (qua /auth/login)
+    try {
+      const response = await axios.post(`${API_BASE}/auth/login`, {
+        username: loginUsername,
+        password: password,
+      });
+      
+      if (response.data?.require2fa) {
+        return "require_2fa";
       }
+
+      const apiToken = response.data?.access_token;
+      const apiUser = response.data?.user;
+      if (apiToken && apiUser) {
+        localStorage.setItem("mobifone_admin_token", apiToken);
+        setToken(apiToken);
+        const staffUser: AuthUser = {
+          id: String(apiUser.id),
+          name: apiUser.name || (apiUser.role === "sales" ? "Nhân viên CSKH MobiFone" : "MobiFone Administrator"),
+          phone: apiUser.phone || "0987654321",
+          email: apiUser.email || (apiUser.role === "sales" ? "sales@mobifone.vn" : "admin@mobifone.vn"),
+          role: (apiUser.role || "sales") as AuthRole,
+          tier: apiUser.role === "sales" ? "Gold" : "Diamond",
+          package: apiUser.role === "sales" ? "CSKH" : "Staff",
+          packageCode: apiUser.role === "sales" ? "SALES" : "STAFF",
+          packageExpiry: "31/12/2026",
+          dataUsedGB: 0,
+          dataTotalGB: 0,
+          voiceUsedMin: 0,
+          voiceTotalMin: 0,
+          balance: 0,
+          points: 0,
+          joinDate: "01/01/2020",
+          address: apiUser.address || "MobiFone HQ, Hà Nội",
+          dob: apiUser.dob || "1988-05-12",
+          avatar: apiUser.avatar || undefined,
+          twoFaEnabled: apiUser.twoFaEnabled || false,
+        };
+        localStorage.setItem("mobifone_admin_user", JSON.stringify(staffUser));
+        setUser(staffUser);
+        return apiUser.role === "sales" ? "sales" : "admin";
+      }
+    } catch (error) {
+      // Bỏ qua lỗi và tiếp tục thử đăng nhập Portal Subscriber nếu /auth/login thất bại
     }
 
     // Tài khoản user thường: Phải có độ dài từ 6 ký tự trở lên và không chứa chữ "admin" để tránh nhầm lẫn
