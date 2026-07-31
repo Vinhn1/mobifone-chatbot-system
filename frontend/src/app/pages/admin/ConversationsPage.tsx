@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, ChevronRight, Phone, TrendingUp, CheckCircle2, AlertCircle, X, Activity, MessageSquare } from "lucide-react";
+import { Search, ChevronRight, Phone, TrendingUp, CheckCircle2, AlertCircle, X, Activity, MessageSquare, Sparkles, ChevronDown, Maximize2, Minimize2 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
@@ -73,6 +73,8 @@ export function ConversationsPage() {
   const [replyText, setReplyText] = useState("");
   const [sendingReply, setSendingReply] = useState(false);
   const [sessionMode, setSessionMode] = useState<'bot' | 'human'>('bot');
+  const [showExtractedData, setShowExtractedData] = useState<boolean>(false);
+  const [isChatExpanded, setIsChatExpanded] = useState<boolean>(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not admin or sales
@@ -494,8 +496,8 @@ export function ConversationsPage() {
       </div>
 
       <div className="flex gap-5 flex-1 min-h-0 overflow-hidden">
-        {/* Conversation List */}
-        <div className={`flex flex-col gap-3.5 overflow-y-auto pr-1 ${selected ? "w-[400px] shrink-0" : "flex-1"}`}>
+"        {/* Conversation List */}
+        <div className={`flex flex-col gap-3.5 overflow-y-auto pr-1 ${selected ? (isChatExpanded ? "hidden" : "w-[400px] shrink-0") : "flex-1"}`}>
           {filtered.length === 0 ? (
             <div className="py-12 bg-white rounded-2xl text-center border border-dashed border-slate-200 text-slate-400 text-xs font-semibold">
               Không tìm thấy phiên hội thoại nào hợp lệ.
@@ -616,6 +618,13 @@ export function ConversationsPage() {
                     </a>
                   )}
                   <button
+                    onClick={() => setIsChatExpanded(!isChatExpanded)}
+                    className="bg-slate-100 hover:bg-slate-200 border-none rounded-xl w-8 h-8 flex items-center justify-center cursor-pointer text-slate-500 transition-colors"
+                    title={isChatExpanded ? "Thu nhỏ về giao diện chia đôi" : "Mở rộng khung chat toàn chiều rộng"}
+                  >
+                    {isChatExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                  </button>
+                  <button
                     onClick={() => setSelected(null)}
                     className="bg-slate-100 hover:bg-slate-200 border-none rounded-xl w-8 h-8 flex items-center justify-center cursor-pointer text-slate-500 transition-colors"
                   >
@@ -624,22 +633,55 @@ export function ConversationsPage() {
                 </div>
               </div>
 
-              {/* Extracted data */}
+              {/* Extracted data collapsible accordion */}
               {Object.values(selected.extractedData).some(v => v !== undefined) && (
-                <div className="px-6 py-4 bg-emerald-500/5 border-b border-emerald-100 flex flex-col gap-2 shrink-0">
-                  <div className="text-emerald-700 text-[9px] font-black tracking-widest uppercase">Dữ liệu khai thác AI</div>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(selected.extractedData).map(([k, v]) => v && (
-                      <div key={k} className="bg-white border border-emerald-100 rounded-xl px-3 py-1.5 shadow-xs">
-                        <div className="text-slate-400 text-[9px] font-black tracking-wider uppercase">
-                          {k.toUpperCase() === "PACKAGE" ? "GÓI DỊCH VỤ" : k.toUpperCase() === "BUDGET" ? "NGÂN SÁCH" : k.toUpperCase()}
+                <div className="bg-emerald-500/5 border-b border-emerald-100 shrink-0 transition-all">
+                  <button
+                    onClick={() => setShowExtractedData(!showExtractedData)}
+                    className="w-full px-6 py-2.5 flex justify-between items-center bg-transparent border-none cursor-pointer hover:bg-emerald-500/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={13} className="text-emerald-600" />
+                      <span className="text-emerald-700 text-[10px] font-black tracking-widest uppercase">
+                        Dữ liệu khai thác AI
+                      </span>
+                      {!showExtractedData && (
+                        <div className="flex gap-1.5 ml-2 overflow-hidden">
+                          {Object.entries(selected.extractedData).map(([k, v]) => v && (
+                            <span key={k} className="bg-white border border-emerald-200 text-emerald-800 px-2 py-0.5 rounded-md text-[9px] font-extrabold shrink-0 shadow-2xs">
+                              {k === "package" ? `GÓI: ${v}` : k === "phone" ? `SĐT: ${v}` : `${k.toUpperCase()}: ${v}`}
+                            </span>
+                          ))}
                         </div>
-                        <div className="text-slate-800 font-extrabold text-xs mt-0.5">{v}</div>
-                      </div>
-                    ))}
-                  </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 text-emerald-700 text-[10px] font-extrabold">
+                      <span>{showExtractedData ? "Thu gọn" : "Xem chi tiết"}</span>
+                      <ChevronDown size={14} className={`transform transition-transform duration-200 ${showExtractedData ? "rotate-180" : ""}`} />
+                    </div>
+                  </button>
+
+                  <AnimatePresence>
+                    {showExtractedData && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="px-6 pb-3 pt-1 flex flex-wrap gap-2 overflow-hidden border-t border-emerald-100/50"
+                      >
+                        {Object.entries(selected.extractedData).map(([k, v]) => v && (
+                          <div key={k} className="bg-white border border-emerald-100 rounded-xl px-3 py-1.5 shadow-xs">
+                            <div className="text-slate-400 text-[9px] font-black tracking-wider uppercase">
+                              {k.toUpperCase() === "PACKAGE" ? "GÓI DỊCH VỤ" : k.toUpperCase() === "BUDGET" ? "NGÂN SÁCH" : k.toUpperCase()}
+                            </div>
+                            <div className="text-slate-800 font-extrabold text-xs mt-0.5">{v}</div>
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              )}
+              )}"
 
               {/* Messages Container */}
               <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-5 flex flex-col gap-4.5 bg-slate-50/50">
