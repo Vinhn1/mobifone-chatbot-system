@@ -243,6 +243,50 @@ export function ConversationsPage() {
     }
   }, [selected?.id, token]);
 
+  // Auto-polling 3s: tự động tải lại tin nhắn mới khi đang xem conversation ở chế độ nhân viên CSKH
+  useEffect(() => {
+    if (!selected?.id || !token) return;
+    // Chỉ polling khi session đang ở chế độ human hoặc status là escalated
+    if (sessionMode !== 'human' && selected.status !== 'escalated') return;
+
+    const fetchLatestTranscript = async () => {
+      try {
+        // Dùng endpoint lịch sử của từng session thay vì fetch toàn bộ (nhẹ hơn)
+        const res = await axios.get(`${API_BASE}/chat/history/${selected.id}`);
+        const sessLogs: any[] = (res.data || []).sort(
+          (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+
+        if (sessLogs.length === 0) return;
+
+        const freshTranscript = sessLogs.map((log: any) => ({
+          role: log.role as 'bot' | 'user',
+          text: log.message,
+          time: new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }));
+
+        // Chỉ cập nhật nếu có tin nhắn mới (so sánh số lượng)
+        setSelected(prev => {
+          if (!prev || prev.id !== selected.id) return prev;
+          if (prev.transcript.length === freshTranscript.length) return prev;
+          return { ...prev, transcript: freshTranscript, messages: freshTranscript.length, lastActiveTime: Date.now() };
+        });
+
+        // Cập nhật luôn danh sách conversations
+        setConversations(prev => prev.map(c => {
+          if (c.id !== selected.id) return c;
+          if (c.transcript.length === freshTranscript.length) return c;
+          return { ...c, transcript: freshTranscript, messages: freshTranscript.length, lastActiveTime: Date.now() };
+        }));
+      } catch {
+        // Silent fail - không làm gián đoạn UX
+      }
+    };
+
+    const pollInterval = setInterval(fetchLatestTranscript, 3000);
+    return () => clearInterval(pollInterval);
+  }, [selected?.id, sessionMode, selected?.status, token]);
+
   const toggleSessionMode = async (targetMode: 'bot' | 'human') => {
     if (!selected?.id || !token) return;
     try {
