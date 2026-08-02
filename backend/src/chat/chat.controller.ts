@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards, UseInterceptors, UploadedFile, Param, Delete, Res } from '@nestjs/common';
+import { Controller, Post, Get, Body, HttpException, HttpStatus, UseGuards, UseInterceptors, UploadedFile, Param, Delete, Res, Query } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ChatService } from './chat.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -147,7 +147,21 @@ export class ChatController {
     }
   }
 
-  @Delete('documents/:name') // Xóa tài liệu khỏi tri thức
+  @Delete('documents') // Xóa tài liệu qua Query parameter
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async deleteDocumentByQuery(@Query('name') name: string) {
+    try {
+      return await this.chatService.deleteDocument(name);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Delete('documents/*name') // Xóa tài liệu (wildcard match cho URL có dấu /)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   async deleteDocument(@Param('name') name: string) {
@@ -160,6 +174,7 @@ export class ChatController {
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
+
 
   @Post('ingest-url') // Crawl một trang web MobiFone và nạp nội dung vào Knowledge Base
   @UseGuards(JwtAuthGuard, RolesGuard)
