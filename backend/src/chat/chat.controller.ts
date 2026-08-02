@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/guards/roles.decorator';
 
+
 // Định nghĩa route bắt đầu bằng /chat
 @Controller('chat')
 export class ChatController {
@@ -160,18 +161,44 @@ export class ChatController {
     }
   }
 
-  @Post('upload') // Tải lên tài liệu mới (PDF, TXT, WORD, EXCEL)
+  @Post('ingest-url') // Crawl một trang web MobiFone và nạp nội dung vào Knowledge Base
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  async ingestFromUrl(@Body('url') url: string) {
+    if (!url || !url.trim()) {
+      throw new HttpException('URL không được để trống', HttpStatus.BAD_REQUEST);
+    }
+    // Validate định dạng URL cơ bản trước khi gửi xuống AI Service
+    const trimmedUrl = url.trim();
+    const urlToValidate = trimmedUrl.startsWith('http') ? trimmedUrl : `https://${trimmedUrl}`;
+    try {
+      new URL(urlToValidate);
+    } catch {
+      throw new HttpException('URL không hợp lệ', HttpStatus.BAD_REQUEST);
+    }
+    try {
+      return await this.chatService.ingestFromUrl(trimmedUrl);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Post('upload') // Tải lên tài liệu mới (PDF, TXT, WORD, EXCEL) hoặc file chat mẫu
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @UseInterceptors(FileInterceptor('file', {
     limits: { fileSize: 100 * 1024 * 1024 } // Giới hạn 100MB
   }))
-  async uploadFile(@UploadedFile() file: any) {
+  async uploadFile(@UploadedFile() file: any, @Body('ingest_type') ingestType: string) {
     if (!file) {
       throw new HttpException('Vui lòng tải lên 1 file hợp lệ', HttpStatus.BAD_REQUEST);
     }
+    const type: 'rag' | 'conversation' = ingestType === 'conversation' ? 'conversation' : 'rag';
     try {
-      return await this.chatService.uploadDocument(file);
+      return await this.chatService.uploadDocument(file, type);
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;

@@ -2,8 +2,10 @@ import os
 import sys
 import json
 import time
+import re
 import subprocess
 from typing import List, Optional
+from urllib.parse import urlparse
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,7 +13,8 @@ from rag_pipeline import AIServiceError, MobiFoneRAG
 
 # Tự động kiểm tra và cài đặt các thư viện đọc tài liệu nếu thiếu
 def install_dependencies():
-    packages = ["pypdf", "python-docx", "openpyxl", "pandas", "python-pptx"]
+    packages = ["pypdf", "python-docx", "openpyxl", "pandas", "python-pptx",
+                "trafilatura", "beautifulsoup4", "requests", "lxml"]
     for package in packages:
         try:
             if package == "pypdf":
@@ -50,6 +53,149 @@ app.add_middleware(
 # Khởi tạo RAG bot
 bot = MobiFoneRAG()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# ─────────────────────────────────────────────────────
+# Whitelist domain được phép crawl (chống SSRF)
+# ─────────────────────────────────────────────────────
+MOBIFONE_ALLOWED_DOMAINS = [
+    "mobifone.vn",
+    "www.mobifone.vn",
+    "shop.mobifone.vn",
+    "services.mobifone.vn",
+    "sso.mobifone.vn",
+    "my.mobifone.vn",
+    "id.mobifone.vn",
+]
+
+def _validate_mobifone_url(url: str) -> str:
+    """Kiểm tra URL có thuộc whitelist domain MobiFone không.
+    Trả về URL đã chuẩn hoá, raise HTTPException nếu không hợp lệ."""
+    url = url.strip()
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname or ""
+        # Cho phép hostname chính xác hoặc dạng *.mobifone.vn
+        is_allowed = (
+            hostname in MOBIFONE_ALLOWED_DOMAINS
+            or hostname.endswith(".mobifone.vn")
+        )
+        if not is_allowed:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Domain '{hostname}' không nằm trong whitelist. Chỉ cho phép crawl domain mobifone.vn và các subdomain liên quan."
+            )
+        return url
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=400, detail="URL không hợp lệ.")
+
+
+def _crawl_url(url: str) -> tuple[str, str]:
+    """Crawl nội dung từ URL, trả về (title, text_content).
+    Thử trafilatura trước, fallback sang BeautifulSoup nếu kết quả trống."""
+    import requests as req
+    HEADERS = {
+        "User-Agent": "MobiFone-KnowledgeBot/1.0 (+https://mobifone.vn)",
+        "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
+    }
+    TIMEOUT = 30
+    MAX_CONTENT_BYTES = 500_000  # 500 KB
+
+    # Bước 1: Tải HTML thô
+    try:
+        resp = req.get(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
+        resp.raise_for_status()
+        html_bytes = resp.content[:MAX_CONTENT_BYTES]
+        html_text = html_bytes.decode("utf-8", errors="ignore")
+    except req.exceptions.Timeout:
+        raise HTTPException(status_code=504, detail=f"Không thể kết nối tới '{url}': timeout sau {TIMEOUT}s.")
+    except req.exceptions.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"Lỗi HTTP khi crawl '{url}': {e}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Lỗi khi tải trang '{url}': {str(e)}")
+
+    # Bước 2: Trích xuất bằng trafilatura
+    title = ""
+    text_content = ""
+    try:
+        import trafilatura
+        text_content = trafilatura.extract(
+            html_text,
+            include_tables=True,
+            include_links=False,
+            include_images=False,
+            favor_recall=True,
+        ) or ""
+        # Lấy tiêu đề trang
+        meta = trafilatura.extract_metadata(html_text)
+        if meta:
+            title = meta.title or ""
+    except Exception as e:
+        print(f"⚠️ trafilatura lỗi, fallback BeautifulSoup: {e}")
+
+    # Bước 3: Fallback sang BeautifulSoup nếu trafilatura trả về trống
+    if len(text_content.strip()) < 100:
+        try:
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(html_text, "lxml")
+            # Xoá script, style, nav, footer, header
+            for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):
+                tag.decompose()
+            # Lấy title
+            if not title and soup.title:
+                title = soup.title.get_text(strip=True)
+            # Lấy text từ body
+            body = soup.find("body")
+            text_content = body.get_text(separator="\n", strip=True) if body else soup.get_text(separator="\n", strip=True)
+        except Exception as e:
+            print(f"⚠️ BeautifulSoup lỗi: {e}")
+
+    if not title:
+        title = url
+
+    text_content = re.sub(r"\n{3,}", "\n\n", text_content).strip()
+    return title, text_content
+
+
+def _extract_qa_pairs_from_conversation(text_content: str, filename: str) -> list:
+    """Dùng Gemini phân tích đoạn chat mẫu của nhân viên CSKH và trích xuất cặp Q&A.
+    Trả về list[dict] với keys: question, answer, topic."""
+    print(f"[CONVERSATION] Đang phân tích file chat mẫu: {filename}")
+    prompt = f"""Bạn là chuyên gia phân tích hội thoại CSKH của nhà mạng MobiFone.
+Hãy đọc đoạn chat/hội thoại sau đây giữa nhân viên tư vấn và khách hàng.
+Trích xuất TẤT CẢ các cặp hỏi-đáp có giá trị (câu hỏi của khách + câu trả lời chuyên nghiệp của nhân viên).
+
+Với mỗi cặp, hãy trả về JSON theo cấu trúc:
+- question: Câu hỏi hoặc yêu cầu của khách hàng (viết lại tự nhiên, không copy nguyên văn)
+- answer: Câu trả lời chuyên nghiệp, đầy đủ của nhân viên (giữ nguyên thông tin, cải thiện văn phong nếu cần)
+- topic: Chủ đề chính của cặp hỏi-đáp (ví dụ: "gói cước", "thanh toán", "hỗ trợ kỹ thuật", "đăng ký dịch vụ")
+
+LƯU Ý:
+- Chỉ trả về mảng JSON thuần, KHÔNG có markdown, KHÔNG có giải thích.
+- Bỏ qua các câu chào hỏi thuần tuý không có thông tin.
+- Nếu không tìm thấy cặp hỏi-đáp nào, trả về mảng rỗng [].
+
+Đoạn hội thoại cần phân tích:
+{text_content[:12000]}
+"""
+    try:
+        raw = bot._call_llm_with_retry(prompt, temperature=0.1)
+        cleaned = raw.strip()
+        # Loại bỏ markdown fence nếu có
+        if cleaned.startswith("```"):
+            lines = cleaned.splitlines()
+            cleaned = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:]).strip()
+        qa_pairs = json.loads(cleaned)
+        if not isinstance(qa_pairs, list):
+            return []
+        print(f"[CONVERSATION] Trích xuất được {len(qa_pairs)} cặp Q&A từ '{filename}'")
+        return qa_pairs
+    except Exception as e:
+        print(f"⚠️ Lỗi khi phân tích chat mẫu bằng Gemini: {e}")
+        return []
 
 # Cấu hình StaticFiles để phục vụ ảnh trích xuất
 from fastapi.staticfiles import StaticFiles
@@ -530,9 +676,101 @@ def extract_pptx_slides_and_text(temp_file_path: str, filename: str) -> list:
             
     return slide_chunks
 
+# ─────────────────────────────────────────────────────
+# Endpoint: Ingest từ URL (chỉ whitelist mobifone.vn)
+# ─────────────────────────────────────────────────────
+@app.post("/ingest-url")
+async def ingest_from_url(url: str = Form(...)):
+    """Crawl một trang web MobiFone và nạp nội dung vào ChromaDB."""
+    # 1. Validate và whitelist domain
+    validated_url = _validate_mobifone_url(url)
+
+    # 2. Crawl nội dung
+    print(f"[INGEST-URL] Bắt đầu crawl: {validated_url}")
+    title, text_content = _crawl_url(validated_url)
+
+    if not text_content.strip() or len(text_content.strip()) < 50:
+        raise HTTPException(
+            status_code=400,
+            detail="Không thể trích xuất nội dung từ URL này. Trang có thể yêu cầu JavaScript hoặc đăng nhập."
+        )
+
+    print(f"[INGEST-URL] Trích xuất được {len(text_content)} ký tự từ '{title}'")
+
+    # 3. Chunking (dùng cùng logic với /upload)
+    upload_date = time.strftime("%d %b %Y")
+    words = text_content.split()
+    chunk_size = 300
+    overlap = 50
+    step = chunk_size - overlap
+    chunks = []
+    for i in range(0, len(words), step):
+        chunk = " ".join(words[i:i + chunk_size])
+        if chunk.strip():
+            chunks.append(chunk)
+
+    if not chunks:
+        raise HTTPException(status_code=400, detail="Không thể chia nhỏ nội dung trang web.")
+
+    # Tên tài liệu dùng làm source_title (dùng title trang hoặc URL nếu title trống)
+    source_title = title[:200] if title else validated_url
+
+    # 4. Xóa vector cũ cùng URL (nếu đã từng ingest)
+    try:
+        bot.collection.delete(where={"source_url": validated_url})
+    except Exception as e:
+        print(f"⚠️ Cảnh báo khi dọn dẹp vector cũ của URL: {e}")
+
+    # 5. Nạp vào ChromaDB
+    documents = []
+    metadatas = []
+    ids = []
+    ts = int(time.time())
+    for idx, chunk in enumerate(chunks):
+        documents.append(chunk)
+        metadatas.append({
+            "source_title": source_title,
+            "source_url": validated_url,
+            "type": "WEB",
+            "upload_date": upload_date,
+            "timestamp": ts,
+            "images": "",
+        })
+        ids.append(f"web_{ts}_{idx}")
+
+    try:
+        batch_size = 100
+        for i in range(0, len(documents), batch_size):
+            bot.collection.add(
+                documents=documents[i:i + batch_size],
+                metadatas=metadatas[i:i + batch_size],
+                ids=ids[i:i + batch_size],
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi nạp vector vào ChromaDB: {e}")
+
+    # Cập nhật gợi ý động background
+    threading.Thread(target=generate_dynamic_suggestions, daemon=True).start()
+
+    print(f"[INGEST-URL] ✅ Nạp thành công {len(chunks)} chunks từ '{source_title}'")
+    return {
+        "status": "success",
+        "message": f"Đã nạp thành công nội dung từ '{source_title}'",
+        "url": validated_url,
+        "source_title": source_title,
+        "chunks_count": len(chunks),
+        "type": "WEB",
+    }
+
+
+# ─────────────────────────────────────────────────────
 # Upload tài liệu và nạp vector tức thì (Hot-reload Ingestion)
+# ─────────────────────────────────────────────────────
 @app.post("/upload")
-async def upload_document(file: UploadFile = File(...)):
+async def upload_document(
+    file: UploadFile = File(...),
+    ingest_type: str = Form("rag"),  # "rag" (mặc định) hoặc "conversation"
+):
     filename = file.filename
     content_type = file.content_type
     
@@ -598,12 +836,83 @@ async def upload_document(file: UploadFile = File(...)):
     if not is_pptx and (not text_content.strip() or len(text_content.strip()) < 10):
         raise HTTPException(status_code=400, detail="Nội dung file trống hoặc quá ngắn, không thể nạp vector.")
 
+    upload_date = time.strftime("%d %b %Y")
+    ts = int(time.time())
+
+    # ─────────────────────────────────────────────────────
+    # Nhánh CONVERSATION: Phân tích chat mẫu → lưu cặp Q&A
+    # ─────────────────────────────────────────────────────
+    if ingest_type == "conversation":
+        qa_pairs = _extract_qa_pairs_from_conversation(text_content, filename)
+        if not qa_pairs:
+            raise HTTPException(
+                status_code=400,
+                detail="Không tìm thấy cặp hỏi-đáp nào trong file. Hãy kiểm tra định dạng file chat mẫu."
+            )
+
+        documents = []
+        metadatas = []
+        ids = []
+        for idx, qa in enumerate(qa_pairs):
+            question = qa.get("question", "").strip()
+            answer = qa.get("answer", "").strip()
+            topic = qa.get("topic", "tư vấn").strip()
+            if not question or not answer:
+                continue
+            # Lưu dưới dạng: "Câu hỏi: ...\nCâu trả lời: ..." để RAG truy xuất tự nhiên
+            doc_text = f"Câu hỏi khách hàng: {question}\nCâu trả lời chuyên viên CSKH: {answer}"
+            documents.append(doc_text)
+            metadatas.append({
+                "source_title": filename,
+                "source_url": f"upload://{filename}",
+                "type": "CONVERSATION",
+                "topic": topic,
+                "size_bytes": size_bytes,
+                "upload_date": upload_date,
+                "timestamp": ts,
+                "images": "",
+            })
+            ids.append(f"conv_{filename}_{ts}_{idx}")
+
+        if not documents:
+            raise HTTPException(status_code=400, detail="Không có cặp Q&A hợp lệ sau khi lọc.")
+
+        try:
+            # Xóa vector cũ cùng tên file (nếu re-upload)
+            try:
+                bot.collection.delete(where={"source_title": filename})
+            except Exception as del_err:
+                print(f"⚠️ Cảnh báo khi dọn dẹp conversation cũ: {del_err}")
+
+            batch_size = 100
+            for i in range(0, len(documents), batch_size):
+                bot.collection.add(
+                    documents=documents[i:i + batch_size],
+                    metadatas=metadatas[i:i + batch_size],
+                    ids=ids[i:i + batch_size],
+                )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Lỗi khi nạp conversation vào ChromaDB: {e}")
+
+        threading.Thread(target=generate_dynamic_suggestions, daemon=True).start()
+        print(f"[CONVERSATION] ✅ Nạp thành công {len(documents)} cặp Q&A từ '{filename}'")
+        return {
+            "status": "success",
+            "message": f"Đã nạp thành công {len(documents)} cặp hỏi-đáp từ file chat mẫu '{filename}'",
+            "chunks_count": len(documents),
+            "size": f"{size_bytes / 1024:.1f} KB",
+            "type": "CONVERSATION",
+            "packages": [],
+        }
+
+    # ─────────────────────────────────────────────────────
+    # Nhánh RAG thông thường (ingest_type == "rag")
+    # ─────────────────────────────────────────────────────
     # 3. Chia nhỏ văn bản (Chunking) & Nạp vào ChromaDB
     documents = []
     metadatas = []
     ids = []
-    upload_date = time.strftime("%d %b %Y")
-    
+
     if is_pptx:
         if not pptx_chunks:
             raise HTTPException(status_code=400, detail="Không thể trích xuất nội dung từ file PPTX.")

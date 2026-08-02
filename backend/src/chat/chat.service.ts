@@ -320,8 +320,62 @@ export class ChatService {
     }
   }
 
+  // Proxy: Crawl URL MobiFone và nạp nội dung vào ChromaDB
+  async ingestFromUrl(url: string) {
+    const aiServiceUrl = this.getAiServiceUrl('/ingest-url');
+
+    // Phát trạng thái bắt đầu
+    try {
+      this.notificationsService.emitNotification('doc-status', {
+        name: url,
+        status: 'processing',
+        progress: 20,
+        message: 'Đang crawl và trích xuất nội dung trang web...',
+      });
+    } catch (err) {
+      console.error('Lỗi khi phát sự kiện bắt đầu ingest URL:', err.message);
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('url', url);
+
+      const response = await firstValueFrom(
+        this.httpService.post(aiServiceUrl, formData, { timeout: 60000 })
+      );
+      const resultData = response.data;
+
+      // Phát trạng thái hoàn thành
+      try {
+        this.notificationsService.emitNotification('doc-status', {
+          name: resultData.source_title || url,
+          status: 'synced',
+          progress: 100,
+          message: 'Đã nạp thành công nội dung từ trang web!',
+        });
+      } catch (err) {
+        console.error('Lỗi khi phát sự kiện hoàn thành ingest URL:', err.message);
+      }
+
+      return resultData;
+    } catch (error) {
+      // Phát trạng thái lỗi
+      try {
+        this.notificationsService.emitNotification('doc-status', {
+          name: url,
+          status: 'error',
+          progress: 0,
+          message: `Lỗi crawl URL: ${error.message || 'Lỗi kết nối AI Service'}`,
+        });
+      } catch (err) {
+        console.error('Lỗi khi phát sự kiện thất bại ingest URL:', err.message);
+      }
+      this.handleAiServiceError(error, 'Lỗi khi gửi URL lên AI Service để crawl');
+    }
+  }
+
   // Proxy: Tải file tài liệu lên AI Service để nạp vector
-  async uploadDocument(file: any) {
+  async uploadDocument(file: any, ingestType: 'rag' | 'conversation' = 'rag') {
     const aiServiceUrl = this.getAiServiceUrl('/upload');
     
     // Giải mã tên file từ latin1 sang utf8 để tránh lỗi hiển thị tiếng Việt của Multer
@@ -333,7 +387,9 @@ export class ChatService {
         name: originalname,
         status: 'processing',
         progress: 30,
-        message: 'Đang tải file và trích xuất dữ liệu...',
+        message: ingestType === 'conversation'
+          ? 'Đang phân tích đoạn chat mẫu và trích xuất cặp hỏi-đáp...'
+          : 'Đang tải file và trích xuất dữ liệu...',
       });
     } catch (err) {
       console.error('Lỗi khi phát sự kiện bắt đầu nạp tài liệu:', err.message);
@@ -343,6 +399,7 @@ export class ChatService {
     const formData = new FormData();
     const blob = new Blob([file.buffer], { type: file.mimetype });
     formData.append('file', blob, originalname);
+    formData.append('ingest_type', ingestType); // Truyền loại ingest xuống AI Service
 
     try {
       // Đặt timeout 10 phút cho tác vụ xử lý trích xuất & nạp vector tài liệu
