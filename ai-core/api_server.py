@@ -55,9 +55,11 @@ bot = MobiFoneRAG()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ─────────────────────────────────────────────────────
-# Whitelist domain được phép crawl (chống SSRF)
+# Whitelist domain được phép crawl (để chống SSRF)
 # ─────────────────────────────────────────────────────
-MOBIFONE_ALLOWED_DOMAINS = [
+# Domain cố định:
+MOBIFONE_BASE_DOMAINS = [
+    # --- mobifone.vn và tất cả subdomain ---
     "mobifone.vn",
     "www.mobifone.vn",
     "shop.mobifone.vn",
@@ -65,10 +67,26 @@ MOBIFONE_ALLOWED_DOMAINS = [
     "sso.mobifone.vn",
     "my.mobifone.vn",
     "id.mobifone.vn",
+    "eshop.mobifone.vn",
+    "cskh.mobifone.vn",
+    "hoidap.mobifone.vn",
+    # --- Trang thông tin gói cước MobiFone (bên thứ 3 nhưng chính thức) ---
+    "mobifone.online",
+    "www.mobifone.online",
+    # --- Phụ kiện & điện thoại MobiFone ---
+    "phukienmobifone.vn",
+    "www.phukienmobifone.vn",
 ]
 
+# Đọc thêm domain tự tùy chỉnh từ biến môi trường (cách nhau bằng dấu phẩy)
+# Ví dụ: EXTRA_CRAWL_DOMAINS=example.com,another.com
+_extra_domains_raw = os.getenv("EXTRA_CRAWL_DOMAINS", "").strip()
+_extra_domains = [d.strip() for d in _extra_domains_raw.split(",") if d.strip()] if _extra_domains_raw else []
+MOBIFONE_ALLOWED_DOMAINS = MOBIFONE_BASE_DOMAINS + _extra_domains
+print(f"[CRAWL] Whitelist domains ({len(MOBIFONE_ALLOWED_DOMAINS)}): {MOBIFONE_ALLOWED_DOMAINS}")
+
 def _validate_mobifone_url(url: str) -> str:
-    """Kiểm tra URL có thuộc whitelist domain MobiFone không.
+    """Kiểm tra URL có thuộc whitelist domain không.
     Trả về URL đã chuẩn hoá, raise HTTPException nếu không hợp lệ."""
     url = url.strip()
     if not url.startswith(("http://", "https://")):
@@ -76,15 +94,26 @@ def _validate_mobifone_url(url: str) -> str:
     try:
         parsed = urlparse(url)
         hostname = parsed.hostname or ""
-        # Cho phép hostname chính xác hoặc dạng *.mobifone.vn
+        # Cho phép hostname chính xác hoặc dạng *.mobifone.vn / *.mobifone.online
         is_allowed = (
             hostname in MOBIFONE_ALLOWED_DOMAINS
             or hostname.endswith(".mobifone.vn")
+            or hostname.endswith(".mobifone.online")
         )
+        # Kiểm tra thêm từ EXTRA_CRAWL_DOMAINS
+        if not is_allowed and _extra_domains:
+            is_allowed = any(
+                hostname == d or hostname.endswith(f".{d}")
+                for d in _extra_domains
+            )
         if not is_allowed:
             raise HTTPException(
                 status_code=403,
-                detail=f"Domain '{hostname}' không nằm trong whitelist. Chỉ cho phép crawl domain mobifone.vn và các subdomain liên quan."
+                detail=(
+                    f"Domain '{hostname}' không nằm trong whitelist. "
+                    f"Domain được phép: mobifone.vn, *.mobifone.vn, mobifone.online, *.mobifone.online. "
+                    f"Để thêm domain khác, đặt EXTRA_CRAWL_DOMAINS=<domain> vào ai-core/.env"
+                ),
             )
         return url
     except HTTPException:
@@ -95,68 +124,142 @@ def _validate_mobifone_url(url: str) -> str:
 
 def _crawl_url(url: str) -> tuple[str, str]:
     """Crawl nội dung từ URL, trả về (title, text_content).
-    Thử trafilatura trước, fallback sang BeautifulSoup nếu kết quả trống."""
+    Chiến lược 3 lớp:
+      1. requests + trafilatura  (nhanh, không render JS)
+      2. requests + BeautifulSoup (fallback nếu trafilatura trống)
+      3. Playwright headless Chromium (fallback nếu trang yêu cầu JS)
+    """
     import requests as req
     HEADERS = {
-        "User-Agent": "MobiFone-KnowledgeBot/1.0 (+https://mobifone.vn)",
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/125.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
     }
     TIMEOUT = 30
-    MAX_CONTENT_BYTES = 500_000  # 500 KB
+    MAX_CONTENT_BYTES = 1_000_000  # tăng lên 1MB để trang lớn không bị cắt
 
-    # Bước 1: Tải HTML thô
+    title = ""
+    text_content = ""
+    html_text = ""
+
+    # ── Bước 1: Tải HTML bằng requests ──────────────────────────────────────
     try:
         resp = req.get(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
         resp.raise_for_status()
         html_bytes = resp.content[:MAX_CONTENT_BYTES]
         html_text = html_bytes.decode("utf-8", errors="ignore")
+        print(f"[CRAWL] requests OK — {len(html_text)} ký tự HTML từ '{url}'")
     except req.exceptions.Timeout:
-        raise HTTPException(status_code=504, detail=f"Không thể kết nối tới '{url}': timeout sau {TIMEOUT}s.")
+        print(f"[CRAWL] requests timeout, thử Playwright...")
     except req.exceptions.HTTPError as e:
         raise HTTPException(status_code=502, detail=f"Lỗi HTTP khi crawl '{url}': {e}")
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Lỗi khi tải trang '{url}': {str(e)}")
+        print(f"[CRAWL] requests lỗi ({e}), thử Playwright...")
 
-    # Bước 2: Trích xuất bằng trafilatura
-    title = ""
-    text_content = ""
-    try:
-        import trafilatura
-        text_content = trafilatura.extract(
-            html_text,
-            include_tables=True,
-            include_links=False,
-            include_images=False,
-            favor_recall=True,
-        ) or ""
-        # Lấy tiêu đề trang
-        meta = trafilatura.extract_metadata(html_text)
-        if meta:
-            title = meta.title or ""
-    except Exception as e:
-        print(f"⚠️ trafilatura lỗi, fallback BeautifulSoup: {e}")
-
-    # Bước 3: Fallback sang BeautifulSoup nếu trafilatura trả về trống
-    if len(text_content.strip()) < 100:
+    # ── Bước 2: Trích xuất bằng trafilatura ─────────────────────────────────
+    if html_text:
         try:
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(html_text, "lxml")
-            # Xoá script, style, nav, footer, header
-            for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):
-                tag.decompose()
-            # Lấy title
-            if not title and soup.title:
-                title = soup.title.get_text(strip=True)
-            # Lấy text từ body
-            body = soup.find("body")
-            text_content = body.get_text(separator="\n", strip=True) if body else soup.get_text(separator="\n", strip=True)
+            import trafilatura
+            text_content = trafilatura.extract(
+                html_text,
+                include_tables=True,
+                include_links=False,
+                include_images=False,
+                favor_recall=True,
+            ) or ""
+            meta = trafilatura.extract_metadata(html_text)
+            if meta:
+                title = meta.title or ""
         except Exception as e:
-            print(f"⚠️ BeautifulSoup lỗi: {e}")
+            print(f"⚠️ trafilatura lỗi: {e}")
+
+        # ── Bước 2b: Fallback BeautifulSoup ──────────────────────────────
+        if len(text_content.strip()) < 100:
+            try:
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(html_text, "lxml")
+                for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form", "noscript"]):
+                    tag.decompose()
+                if not title and soup.title:
+                    title = soup.title.get_text(strip=True)
+                body = soup.find("body")
+                text_content = body.get_text(separator="\n", strip=True) if body else soup.get_text(separator="\n", strip=True)
+                print(f"[CRAWL] BeautifulSoup fallback — {len(text_content)} ký tự")
+            except Exception as e:
+                print(f"⚠️ BeautifulSoup lỗi: {e}")
+
+    # ── Bước 3: Playwright headless — nếu vẫn < 100 ký tự ──────────────────
+    if len(text_content.strip()) < 100:
+        print(f"[CRAWL] Nội dung quá ít ({len(text_content.strip())} ký tự), thử Playwright JS rendering...")
+        try:
+            from playwright.sync_api import sync_playwright
+            import concurrent.futures
+
+            def _playwright_crawl(target_url: str) -> tuple[str, str]:
+                """Chạy Playwright trong thread riêng để không block event loop."""
+                with sync_playwright() as pw:
+                    browser = pw.chromium.launch(
+                        headless=True,
+                        args=[
+                            "--no-sandbox",
+                            "--disable-dev-shm-usage",
+                            "--disable-blink-features=AutomationControlled",
+                        ],
+                    )
+                    page = browser.new_page(
+                        extra_http_headers={"Accept-Language": "vi-VN,vi;q=0.9"},
+                        user_agent=(
+                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                            "AppleWebKit/537.36 (KHTML, like Gecko) "
+                            "Chrome/125.0.0.0 Safari/537.36"
+                        ),
+                    )
+                    # Chặn resource thừa để tăng tốc
+                    page.route("**/*.{png,jpg,jpeg,gif,svg,woff,woff2,ttf,css}", lambda r: r.abort())
+                    try:
+                        page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
+                        # Chờ thêm 2s để JS render xong
+                        page.wait_for_timeout(2000)
+                        pw_title = page.title()
+                        pw_html = page.content()
+                    finally:
+                        browser.close()
+
+                # Parse HTML Playwright trả về bằng BeautifulSoup
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(pw_html, "lxml")
+                for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form", "noscript"]):
+                    tag.decompose()
+                body = soup.find("body")
+                pw_text = body.get_text(separator="\n", strip=True) if body else soup.get_text(separator="\n", strip=True)
+                return pw_title, pw_text
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_playwright_crawl, url)
+                pw_title, pw_text = future.result(timeout=60)
+
+            if len(pw_text.strip()) > len(text_content.strip()):
+                text_content = pw_text
+                if pw_title:
+                    title = pw_title
+                print(f"[CRAWL] ✅ Playwright OK — {len(text_content)} ký tự từ '{title}'")
+            else:
+                print(f"[CRAWL] Playwright cũng không lấy được nội dung.")
+
+        except ImportError:
+            print("⚠️ Playwright chưa cài. Chạy: python -m playwright install chromium")
+        except Exception as e:
+            print(f"⚠️ Playwright lỗi: {e}")
 
     if not title:
         title = url
 
     text_content = re.sub(r"\n{3,}", "\n\n", text_content).strip()
+    print(f"[CRAWL] Kết quả cuối: title='{title[:60]}', {len(text_content)} ký tự")
     return title, text_content
 
 

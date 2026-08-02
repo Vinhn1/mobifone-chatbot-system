@@ -208,7 +208,7 @@ function DropZone({
 function IngestUrlPanel({ onIngest, loading }: { onIngest: (url: string) => Promise<void>; loading: boolean }) {
   const [url, setUrl] = useState("");
   const [focused, setFocused] = useState(false);
-  const isValidUrl = url.trim().length > 5 && (url.includes("mobifone") || url.startsWith("http"));
+  const isValidUrl = url.trim().length > 8 && (url.startsWith("http://") || url.startsWith("https://") || url.includes("."));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -224,8 +224,8 @@ function IngestUrlPanel({ onIngest, loading }: { onIngest: (url: string) => Prom
           <Globe size={14} className="text-teal-600" />
         </div>
         <div>
-          <div className="text-sm font-extrabold text-slate-800">Nap tu URL trang web</div>
-          <div className="text-[10px] text-slate-400 font-semibold">Chi ho tro domain mobifone.vn va subdomain</div>
+          <div className="text-sm font-extrabold text-slate-800">Định nghĩa URL trang web</div>
+          <div className="text-[10px] text-slate-400 font-semibold">Hỗ trợ: mobifone.vn, mobifone.online và các subdomain</div>
         </div>
       </div>
       <form onSubmit={handleSubmit} className="flex gap-2 items-center">
@@ -237,7 +237,7 @@ function IngestUrlPanel({ onIngest, loading }: { onIngest: (url: string) => Prom
             onChange={e => setUrl(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            placeholder="https://www.mobifone.vn/goi-cuoc/..."
+            placeholder="https://mobifone.online/goi-cuoc-4g-cua-mobifone"
             disabled={loading}
             className="flex-1 bg-transparent border-none outline-none text-xs font-bold text-slate-700 placeholder:text-slate-300 disabled:opacity-60"
           />
@@ -255,7 +255,7 @@ function IngestUrlPanel({ onIngest, loading }: { onIngest: (url: string) => Prom
         </motion.button>
       </form>
       <div className="flex flex-wrap gap-1.5">
-        {["www.mobifone.vn","shop.mobifone.vn","my.mobifone.vn"].map(d => (
+        {["www.mobifone.vn","mobifone.online","shop.mobifone.vn","my.mobifone.vn"].map(d => (
           <button key={d} type="button" onClick={() => setUrl(`https://${d}/`)}
             className="text-[10px] font-bold text-teal-600 bg-teal-50 border border-teal-100 rounded-lg px-2 py-0.5 hover:bg-teal-100 transition-colors">
             {d}
