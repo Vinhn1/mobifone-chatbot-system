@@ -224,8 +224,8 @@ function IngestUrlPanel({ onIngest, loading }: { onIngest: (url: string) => Prom
           <Globe size={14} className="text-teal-600" />
         </div>
         <div>
-          <div className="text-sm font-extrabold text-slate-800">Định nghĩa URL trang web</div>
-          <div className="text-[10px] text-slate-400 font-semibold">Hỗ trợ: mobifone.vn, mobifone.online và các subdomain</div>
+          <div className="text-sm font-extrabold text-slate-800">Nạp từ URL trang web</div>
+          <div className="text-[10px] text-slate-400 font-semibold">Hỗ trợ mọi website công khai (không giới hạn tên miền)</div>
         </div>
       </div>
       <form onSubmit={handleSubmit} className="flex gap-2 items-center">
@@ -255,7 +255,7 @@ function IngestUrlPanel({ onIngest, loading }: { onIngest: (url: string) => Prom
         </motion.button>
       </form>
       <div className="flex flex-wrap gap-1.5">
-        {["www.mobifone.vn","mobifone.online","shop.mobifone.vn","my.mobifone.vn"].map(d => (
+        {["www.mobifone.vn","mobifone.online","shop.mobifone.vn","dichvumobile.vn"].map(d => (
           <button key={d} type="button" onClick={() => setUrl(`https://${d}/`)}
             className="text-[10px] font-bold text-teal-600 bg-teal-50 border border-teal-100 rounded-lg px-2 py-0.5 hover:bg-teal-100 transition-colors">
             {d}

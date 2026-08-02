@@ -55,66 +55,42 @@ bot = MobiFoneRAG()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ─────────────────────────────────────────────────────
-# Whitelist domain được phép crawl (để chống SSRF)
+# Crawl URL validation — không giới hạn domain
+# Chỉ chặn IP private/loopback để ngăn SSRF tấn công mạng nội bộ
 # ─────────────────────────────────────────────────────
-# Domain cố định:
-MOBIFONE_BASE_DOMAINS = [
-    # --- mobifone.vn và tất cả subdomain ---
-    "mobifone.vn",
-    "www.mobifone.vn",
-    "shop.mobifone.vn",
-    "services.mobifone.vn",
-    "sso.mobifone.vn",
-    "my.mobifone.vn",
-    "id.mobifone.vn",
-    "eshop.mobifone.vn",
-    "cskh.mobifone.vn",
-    "hoidap.mobifone.vn",
-    # --- Trang thông tin gói cước MobiFone (bên thứ 3 nhưng chính thức) ---
-    "mobifone.online",
-    "www.mobifone.online",
-    # --- Phụ kiện & điện thoại MobiFone ---
-    "phukienmobifone.vn",
-    "www.phukienmobifone.vn",
+import ipaddress
+
+_PRIVATE_NETWORKS = [
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),
 ]
 
-# Đọc thêm domain tự tùy chỉnh từ biến môi trường (cách nhau bằng dấu phẩy)
-# Ví dụ: EXTRA_CRAWL_DOMAINS=example.com,another.com
-_extra_domains_raw = os.getenv("EXTRA_CRAWL_DOMAINS", "").strip()
-_extra_domains = [d.strip() for d in _extra_domains_raw.split(",") if d.strip()] if _extra_domains_raw else []
-MOBIFONE_ALLOWED_DOMAINS = MOBIFONE_BASE_DOMAINS + _extra_domains
-print(f"[CRAWL] Whitelist domains ({len(MOBIFONE_ALLOWED_DOMAINS)}): {MOBIFONE_ALLOWED_DOMAINS}")
-
 def _validate_mobifone_url(url: str) -> str:
-    """Kiểm tra URL có thuộc whitelist domain không.
-    Trả về URL đã chuẩn hoá, raise HTTPException nếu không hợp lệ."""
+    """Chuẩn hoá và kiểm tra URL hợp lệ.
+    Chặn IP private/loopback (SSRF). Không giới hạn domain công khai."""
     url = url.strip()
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
     try:
         parsed = urlparse(url)
         hostname = parsed.hostname or ""
-        # Cho phép hostname chính xác hoặc dạng *.mobifone.vn / *.mobifone.online
-        is_allowed = (
-            hostname in MOBIFONE_ALLOWED_DOMAINS
-            or hostname.endswith(".mobifone.vn")
-            or hostname.endswith(".mobifone.online")
-        )
-        # Kiểm tra thêm từ EXTRA_CRAWL_DOMAINS
-        if not is_allowed and _extra_domains:
-            is_allowed = any(
-                hostname == d or hostname.endswith(f".{d}")
-                for d in _extra_domains
-            )
-        if not is_allowed:
-            raise HTTPException(
-                status_code=403,
-                detail=(
-                    f"Domain '{hostname}' không nằm trong whitelist. "
-                    f"Domain được phép: mobifone.vn, *.mobifone.vn, mobifone.online, *.mobifone.online. "
-                    f"Để thêm domain khác, đặt EXTRA_CRAWL_DOMAINS=<domain> vào ai-core/.env"
-                ),
-            )
+        if not hostname:
+            raise HTTPException(status_code=400, detail="URL không hợp lệ: thiếu hostname.")
+        # Chặn IP private để tránh SSRF
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if any(ip in net for net in _PRIVATE_NETWORKS):
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Không thể crawl địa chỉ IP nội bộ '{hostname}'."
+                )
+        except ValueError:
+            pass  # hostname là tên miền, không phải IP — cho phép
         return url
     except HTTPException:
         raise
