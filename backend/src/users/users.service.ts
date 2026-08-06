@@ -366,5 +366,95 @@ export class UsersService implements OnModuleInit {
   async saveUser(user: User): Promise<User> {
     return await this.userRepository.save(user);
   }
+
+  // 17. Tạo tài khoản nhân sự hàng loạt (Bulk Import từ CSV)
+  async bulkImportUsers(usersData: any[]): Promise<{
+    total: number;
+    successCount: number;
+    failedCount: number;
+    results: Array<{ row: number; username: string; status: 'success' | 'failed'; message: string }>;
+  }> {
+    if (!Array.isArray(usersData) || usersData.length === 0) {
+      throw new BadRequestException('Danh sách dữ liệu import trống hoặc không hợp lệ.');
+    }
+
+    const results: Array<{ row: number; username: string; status: 'success' | 'failed'; message: string }> = [];
+    let successCount = 0;
+    let failedCount = 0;
+
+    // Lấy trước tất cả username trong DB để tránh query trùng lặp
+    const existingUsers = await this.userRepository.find({ select: { username: true } });
+    const existingUsernamesSet = new Set(existingUsers.map(u => u.username.toLowerCase()));
+
+    for (let index = 0; index < usersData.length; index++) {
+      const rowNum = index + 1;
+      const item = usersData[index];
+      const username = item.username ? String(item.username).trim() : '';
+      const password = item.password ? String(item.password).trim() : '';
+
+      if (!username || !password) {
+        failedCount++;
+        results.push({
+          row: rowNum,
+          username: username || `Dòng ${rowNum}`,
+          status: 'failed',
+          message: 'Thiếu tên đăng nhập hoặc mật khẩu.',
+        });
+        continue;
+      }
+
+      if (existingUsernamesSet.has(username.toLowerCase())) {
+        failedCount++;
+        results.push({
+          row: rowNum,
+          username,
+          status: 'failed',
+          message: 'Tên đăng nhập đã tồn tại trong hệ thống.',
+        });
+        continue;
+      }
+
+      try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = this.userRepository.create({
+          username,
+          password: hashedPassword,
+          role: item.role === 'admin' ? 'admin' : 'sales',
+          name: item.name ? String(item.name).trim() : 'Nhân viên CSKH',
+          phone: item.phone ? String(item.phone).trim() : null,
+          email: item.email ? String(item.email).trim() : null,
+          dob: item.dob ? String(item.dob).trim() : null,
+          address: item.address ? String(item.address).trim() : null,
+          avatar: item.avatar ? String(item.avatar).trim() : null,
+        });
+
+        await this.userRepository.save(newUser);
+        existingUsernamesSet.add(username.toLowerCase());
+        successCount++;
+        results.push({
+          row: rowNum,
+          username,
+          status: 'success',
+          message: 'Tạo tài khoản thành công.',
+        });
+      } catch (err: any) {
+        failedCount++;
+        results.push({
+          row: rowNum,
+          username,
+          status: 'failed',
+          message: err.message || 'Lỗi khi lưu tài khoản vào cơ sở dữ liệu.',
+        });
+      }
+    }
+
+    return {
+      total: usersData.length,
+      successCount,
+      failedCount,
+      results,
+    };
+  }
 }
+
 

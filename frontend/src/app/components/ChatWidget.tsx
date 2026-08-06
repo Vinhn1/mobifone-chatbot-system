@@ -212,9 +212,6 @@ function renderText(text: string) {
   );
 }
 
-const DEFAULT_FACEBOOK_PAGE_ID = "1215670604956653";
-const DEFAULT_ZALO_OA_ID = "1192122707863776201";
-
 export function ChatWidget() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
@@ -237,8 +234,8 @@ export function ChatWidget() {
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const [zaloOaId, setZaloOaId] = useState(DEFAULT_ZALO_OA_ID);
-  const [fbPageId, setFbPageId] = useState(DEFAULT_FACEBOOK_PAGE_ID);
+  const [zaloOaId, setZaloOaId] = useState("mobifone");
+  const [fbPageId, setFbPageId] = useState("mobifone");
 
   // Trạng thái hiển thị bong bóng thông báo (tooltip)
   const [showTooltip, setShowTooltip] = useState(true);
@@ -255,8 +252,8 @@ export function ChatWidget() {
     try {
       const response = await axios.get(`${API_BASE}/chat/public-config?t=${Date.now()}`);
       if (response.data) {
-        if (response.data.zalo_oa_id) setZaloOaId(response.data.zalo_oa_id);
-        if (response.data.fb_page_id) setFbPageId(response.data.fb_page_id);
+        setZaloOaId(response.data.zalo_oa_id || "");
+        setFbPageId(response.data.fb_page_id || "");
       }
     } catch (err) {
       console.warn("Không thể tải cấu hình kênh liên hệ động:", err);
@@ -649,106 +646,106 @@ export function ChatWidget() {
 
               {/* Zalo OA Channel */}
               <motion.div
-                variants={{
-                  hidden: { y: 20, opacity: 0, scale: 0.8 },
-                  visible: { y: 0, opacity: 1, scale: 1 }
-                }}
-                style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}
-              >
-                <div style={{
-                  background: "rgba(9,21,44,0.96)",
-                  backdropFilter: "blur(12px)",
-                  border: "1px solid rgba(48,176,235,0.3)",
-                  borderRadius: 10,
-                  padding: "6px 12px",
-                  color: "white",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  whiteSpace: "nowrap",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-                  pointerEvents: "none",
-                }}>
-                  Kết nối qua Zalo
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.1, y: -2 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.open(`https://zalo.me/${zaloOaId || DEFAULT_ZALO_OA_ID}`, "_blank");
+                  variants={{
+                    hidden: { y: 20, opacity: 0, scale: 0.8 },
+                    visible: { y: 0, opacity: 1, scale: 1 }
                   }}
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: "50%",
-                    border: "none",
-                    background: "#0068FF",
-                    color: "white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    boxShadow: "0 8px 20px rgba(0, 104, 255, 0.4)",
-                  }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}
                 >
-                  <svg viewBox="0 0 24 24" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C6.477 2 2 5.92 2 10.77c0 2.82 1.54 5.31 3.93 6.91-.23.96-.83 2.87-.83 2.87a.4.4 0 00.56.44c.06-.03 2.65-1.58 3.66-2.18.86.22 1.76.33 2.68.33 5.523 0 10-3.92 10-8.77C22 5.92 17.523 2 12 2z" fill="white" />
-                    <g transform="translate(4.8, 4.3) scale(0.6)" fill="#0068FF">
-                      <path d="M12.49 10.2722v-.4496h1.3467v6.3218h-.7704a.576.576 0 01-.5763-.5729l-.0006.0005a3.273 3.273 0 01-1.9372.6321c-1.8138 0-3.2844-1.4697-3.2844-3.2823 0-1.8125 1.4706-3.2822 3.2844-3.2822a3.273 3.273 0 011.9372.6321l.0006.0005zM6.9188 7.7896v.205c0 .3823-.051.6944-.2995 1.0605l-.03.0343c-.0542.0615-.1815.206-.2421.2843L2.024 14.8h4.8948v.7682a.5764.5764 0 01-.5767.5761H0v-.3622c0-.4436.1102-.6414.2495-.8476L4.8582 9.23H.1922V7.7896h6.7266zm8.5513 8.3548a.4805.4805 0 01-.4803-.4798v-7.875h1.4416v8.3548H15.47zM20.6934 9.6C22.52 9.6 24 11.0807 24 12.9044c0 1.8252-1.4801 3.306-3.3066 3.306-1.8264 0-3.3066-1.4808-3.3066-3.306 0-1.8237 1.4802-3.3044 3.3066-3.3044zm-10.1412 5.253c1.0675 0 1.9324-.8645 1.9324-1.9312 0-1.065-.865-1.9295-1.9324-1.9295s-1.9324.8644-1.9324 1.9295c0 1.0667.865 1.9312 1.9324 1.9312zm10.1412-.0033c1.0737 0 1.945-.8707 1.945-1.9453 0-1.073-.8713-1.9436-1.945-1.9436-1.0753 0-1.945.8706-1.945 1.9436 0 1.0746.8697 1.9453 1.945 1.9453z" />
-                    </g>
-                  </svg>
-                </motion.button>
-              </motion.div>
+                  <div style={{
+                    background: "rgba(9,21,44,0.96)",
+                    backdropFilter: "blur(12px)",
+                    border: "1px solid rgba(48,176,235,0.3)",
+                    borderRadius: 10,
+                    padding: "6px 12px",
+                    color: "white",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    whiteSpace: "nowrap",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                    pointerEvents: "none",
+                  }}>
+                    Kết nối qua Zalo
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.1, y: -2 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(`https://zalo.me/${zaloOaId}`, "_blank");
+                    }}
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: "50%",
+                      border: "none",
+                      background: "#0068FF",
+                      color: "white",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      boxShadow: "0 8px 20px rgba(0, 104, 255, 0.4)",
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M12 2C6.477 2 2 5.92 2 10.77c0 2.82 1.54 5.31 3.93 6.91-.23.96-.83 2.87-.83 2.87a.4.4 0 00.56.44c.06-.03 2.65-1.58 3.66-2.18.86.22 1.76.33 2.68.33 5.523 0 10-3.92 10-8.77C22 5.92 17.523 2 12 2z" fill="white" />
+                      <g transform="translate(4.8, 4.3) scale(0.6)" fill="#0068FF">
+                        <path d="M12.49 10.2722v-.4496h1.3467v6.3218h-.7704a.576.576 0 01-.5763-.5729l-.0006.0005a3.273 3.273 0 01-1.9372.6321c-1.8138 0-3.2844-1.4697-3.2844-3.2823 0-1.8125 1.4706-3.2822 3.2844-3.2822a3.273 3.273 0 011.9372.6321l.0006.0005zM6.9188 7.7896v.205c0 .3823-.051.6944-.2995 1.0605l-.03.0343c-.0542.0615-.1815.206-.2421.2843L2.024 14.8h4.8948v.7682a.5764.5764 0 01-.5767.5761H0v-.3622c0-.4436.1102-.6414.2495-.8476L4.8582 9.23H.1922V7.7896h6.7266zm8.5513 8.3548a.4805.4805 0 01-.4803-.4798v-7.875h1.4416v8.3548H15.47zM20.6934 9.6C22.52 9.6 24 11.0807 24 12.9044c0 1.8252-1.4801 3.306-3.3066 3.306-1.8264 0-3.3066-1.4808-3.3066-3.306 0-1.8237 1.4802-3.3044 3.3066-3.3044zm-10.1412 5.253c1.0675 0 1.9324-.8645 1.9324-1.9312 0-1.065-.865-1.9295-1.9324-1.9295s-1.9324.8644-1.9324 1.9295c0 1.0667.865 1.9312 1.9324 1.9312zm10.1412-.0033c1.0737 0 1.945-.8707 1.945-1.9453 0-1.073-.8713-1.9436-1.945-1.9436-1.0753 0-1.945.8706-1.945 1.9436 0 1.0746.8697 1.9453 1.945 1.9453z" />
+                      </g>
+                    </svg>
+                  </motion.button>
+                </motion.div>
 
               {/* Facebook Messenger Channel */}
               <motion.div
-                variants={{
-                  hidden: { y: 20, opacity: 0, scale: 0.8 },
-                  visible: { y: 0, opacity: 1, scale: 1 }
-                }}
-                style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}
-              >
-                <div style={{
-                  background: "rgba(9,21,44,0.96)",
-                  backdropFilter: "blur(12px)",
-                  border: "1px solid rgba(48,176,235,0.3)",
-                  borderRadius: 10,
-                  padding: "6px 12px",
-                  color: "white",
-                  fontSize: 12,
-                  fontWeight: 800,
-                  whiteSpace: "nowrap",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
-                  pointerEvents: "none",
-                }}>
-                  Nhắn tin qua Messenger
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.1, y: -2 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.open(`https://m.me/${fbPageId || DEFAULT_FACEBOOK_PAGE_ID}`, "_blank");
+                  variants={{
+                    hidden: { y: 20, opacity: 0, scale: 0.8 },
+                    visible: { y: 0, opacity: 1, scale: 1 }
                   }}
-                  style={{
-                    width: 52,
-                    height: 52,
-                    borderRadius: "50%",
-                    border: "none",
-                    background: "linear-gradient(135deg, #00C6FF 0%, #0072FF 50%, #F355DA 100%)",
-                    color: "white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer",
-                    boxShadow: "0 8px 20px rgba(0, 114, 255, 0.4)",
-                  }}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}
                 >
-                  <svg viewBox="0 0 24 24" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.36 2 2 6.13 2 11.5C2 14.54 3.4 17.21 5.6 18.97V22L8.5 20.41C9.6 20.72 10.78 20.9 12 20.9C17.64 20.9 22 16.77 22 11.5C22 6.13 17.64 2 12 2ZM12.93 14.52L10.36 11.77L5.36 14.52L10.86 8.68L13.5 11.43L18.43 8.68L12.93 14.52Z" fill="white"/>
-                  </svg>
-                </motion.button>
-              </motion.div>
+                  <div style={{
+                    background: "rgba(9,21,44,0.96)",
+                    backdropFilter: "blur(12px)",
+                    border: "1px solid rgba(48,176,235,0.3)",
+                    borderRadius: 10,
+                    padding: "6px 12px",
+                    color: "white",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    whiteSpace: "nowrap",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+                    pointerEvents: "none",
+                  }}>
+                    Nhắn tin qua Messenger
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.1, y: -2 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(`https://m.me/${fbPageId}`, "_blank");
+                    }}
+                    style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: "50%",
+                      border: "none",
+                      background: "linear-gradient(135deg, #00C6FF 0%, #0072FF 50%, #F355DA 100%)",
+                      color: "white",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: "pointer",
+                      boxShadow: "0 8px 20px rgba(0, 114, 255, 0.4)",
+                    }}
+                  >
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.36 2 2 6.13 2 11.5C2 14.54 3.4 17.21 5.6 18.97V22L8.5 20.41C9.6 20.72 10.78 20.9 12 20.9C17.64 20.9 22 16.77 22 11.5C22 6.13 17.64 2 12 2ZM12.93 14.52L10.36 11.77L5.36 14.52L10.86 8.68L13.5 11.43L18.43 8.68L12.93 14.52Z" fill="white"/>
+                    </svg>
+                  </motion.button>
+                </motion.div>
             </motion.div>
           )}
         </AnimatePresence>

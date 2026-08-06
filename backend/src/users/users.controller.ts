@@ -91,7 +91,15 @@ export class UsersController {
     });
   }
 
-  // 9. Tạo tài khoản quản lý/sales mới (chỉ dành cho Admin)
+  // 9. Tạo hàng loạt tài khoản từ CSV (chỉ dành cho Admin)
+  @Post('bulk-import')
+  @Roles('admin')
+  async bulkImportUsers(@Body() body: any) {
+    const usersData = Array.isArray(body) ? body : (body.users || []);
+    return await this.usersService.bulkImportUsers(usersData);
+  }
+
+  // 10. Tạo tài khoản quản lý/sales mới (chỉ dành cho Admin)
   @Post()
   @Roles('admin')
   async createUser(@Body() createUserDto: any) {

@@ -4,13 +4,14 @@ import {
   Search, FileText, File,
   CheckCircle2, Loader2, AlertCircle, Trash2,
   RefreshCw, CloudUpload, Activity, Globe, MessageSquareText,
-  ChevronDown, Link2
+  ChevronDown, Link2, Eye, X, Square, CheckSquare, Copy
 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
 import { API_BASE } from "../../../config";
 
+// KnowledgeBasePage - Updated with Cookie & DOM Ingestion support
 type DocStatus = "Synced" | "vectorizing" | "chunking" | "error";
 type IngestType = "rag" | "conversation";
 
@@ -66,138 +67,65 @@ function ProgressBar({ pct, colorClass }: { pct: number; colorClass: string }) {
   );
 }
 
-function IngestTypeSelector({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: IngestType;
-  onChange: (v: IngestType) => void;
-  disabled: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const options: { value: IngestType; label: string; desc: string; icon: React.ElementType; color: string }[] = [
-    { value: "rag", label: "Tai lieu RAG", desc: "PDF, DOCX, XLSX, TXT, PPTX, JSON", icon: FileText, color: "text-[#0055A5]" },
-    { value: "conversation", label: "Chat mau CSKH", desc: "Doan hoi thoai nhan vien tu van", icon: MessageSquareText, color: "text-violet-600" },
-  ];
-  const selected = options.find((o) => o.value === value)!;
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 shadow-xs hover:border-[#0055A5]/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[180px]"
-      >
-        <selected.icon size={13} className={selected.color} />
-        <span className="flex-1 text-left">{selected.label}</span>
-        <ChevronDown size={12} className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -6, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.97 }}
-            transition={{ duration: 0.15 }}
-            className="absolute z-50 top-full mt-1 left-0 w-64 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden"
-          >
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => { onChange(opt.value); setOpen(false); }}
-                className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-slate-50 transition-colors ${value === opt.value ? "bg-slate-50" : ""}`}
-              >
-                <div className={`mt-0.5 p-1.5 rounded-lg border ${value === opt.value ? "bg-white border-slate-200" : "bg-slate-100/60 border-transparent"}`}>
-                  <opt.icon size={13} className={opt.color} />
-                </div>
-                <div>
-                  <div className="text-xs font-bold text-slate-800">{opt.label}</div>
-                  <div className="text-[10px] text-slate-400 font-semibold mt-0.5">{opt.desc}</div>
-                </div>
-                {value === opt.value && <CheckCircle2 size={13} className="ml-auto mt-1 text-emerald-500 shrink-0" />}
-              </button>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
 function DropZone({
   onUpload,
   uploading,
-  ingestType,
-  onIngestTypeChange,
 }: {
-  onUpload: (file: globalThis.File) => void;
+  onUpload: (files: globalThis.File[]) => void;
   uploading: boolean;
-  ingestType: IngestType;
-  onIngestTypeChange: (v: IngestType) => void;
 }) {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const isConversation = ingestType === "conversation";
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) onUpload(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      onUpload(Array.from(e.target.files));
+      e.target.value = "";
+    }
   };
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Loai tai lieu</span>
-        <IngestTypeSelector value={ingestType} onChange={onIngestTypeChange} disabled={uploading} />
-      </div>
       <div
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
-        onDrop={e => { e.preventDefault(); setDragging(false); if (e.dataTransfer.files?.length > 0) onUpload(e.dataTransfer.files[0]); }}
+        onDrop={e => {
+          e.preventDefault();
+          setDragging(false);
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            onUpload(Array.from(e.dataTransfer.files));
+          }
+        }}
         onClick={() => !uploading && inputRef.current?.click()}
         className={`rounded-3xl border-2 border-dashed p-12 text-center cursor-pointer transition-all duration-300 ${
           dragging
-            ? isConversation ? "border-violet-400 bg-violet-50/50 shadow-inner" : "border-[#0055A5] bg-[#0055A5]/5 shadow-inner"
+            ? "border-[#0055A5] bg-[#0055A5]/5 shadow-inner"
             : "border-slate-200 bg-white/40 hover:border-slate-300 hover:bg-white/60"
         } ${uploading ? "opacity-60 cursor-not-allowed" : "opacity-100"}`}
       >
-        <input ref={inputRef} type="file" accept=".pdf,.json,.txt,.docx,.doc,.pptx,.ppt,.xlsx,.xls" className="hidden" onChange={handleFileChange} disabled={uploading} />
+        <input ref={inputRef} type="file" multiple accept=".pdf,.json,.txt,.docx,.doc,.pptx,.ppt,.xlsx,.xls" className="hidden" onChange={handleFileChange} disabled={uploading} />
         <motion.div animate={{ y: dragging ? -4 : 0 }}>
           <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4 border transition-all duration-200 ${
             dragging
-              ? isConversation ? "bg-violet-50 border-violet-400 text-violet-600" : "bg-[#0055A5]/10 border-[#0055A5] text-[#0055A5]"
+              ? "bg-[#0055A5]/10 border-[#0055A5] text-[#0055A5]"
               : "bg-slate-100 border-slate-200 text-slate-400"
           }`}>
             {uploading
-              ? <Activity size={24} className={isConversation ? "animate-spin text-violet-600" : "animate-spin text-[#0055A5]"} />
-              : isConversation
-                ? <MessageSquareText size={24} className={dragging ? "text-violet-600" : "text-slate-400"} />
-                : <CloudUpload size={24} className={dragging ? "text-[#0055A5]" : "text-slate-400"} />
+              ? <Activity size={24} className="animate-spin text-[#0055A5]" />
+              : <CloudUpload size={24} className={dragging ? "text-[#0055A5]" : "text-slate-400"} />
             }
           </div>
-          <div className={`font-extrabold text-sm sm:text-base mb-1 ${dragging ? (isConversation ? "text-violet-600" : "text-[#0055A5]") : "text-slate-700"}`}>
-            {uploading
-              ? (isConversation ? "AI dang phan tich doan chat mau..." : "Dang xu ly tai lieu tri thuc...")
-              : dragging ? "Tha file de bat dau tai len"
-              : (isConversation ? "Keo & tha file chat mau CSKH tai day" : "Keo & tha file tai lieu tri thuc tai day")
-            }
+          <div className={`font-extrabold text-sm sm:text-base mb-1 ${dragging ? "text-[#0055A5]" : "text-slate-700"}`}>
+            {uploading ? "Đang xử lý các tài liệu tri thức..." : dragging ? "Thả (các) file để bắt đầu tải lên" : "Kéo & thả một hoặc nhiều file tài liệu tri thức tại đây"}
           </div>
           <div className="text-slate-400 text-xs font-semibold mb-5">
-            {uploading
-              ? (isConversation ? "Gemini dang trich xuat cap hoi-dap chuyen nghiep" : "AI dang lap chi muc vector va trich xuat du lieu")
-              : (isConversation ? "File TXT/DOCX chua hoi thoai nhan vien tu van" : "hoac nhan de duyet tep tu may tinh")
-            }
+            {uploading ? "AI đang lập chỉ mục vector và trích xuất dữ liệu" : "hoặc nhấn để duyệt các tệp từ máy tính (hỗ trợ chọn nhiều file)"}
           </div>
           <div className="flex gap-2 justify-center flex-wrap">
-            {(isConversation ? ["TXT","DOCX","PDF"] : ["PDF","JSON","TXT","DOCX","PPTX","XLSX"]).map(t => {
+            {["PDF","JSON","TXT","DOCX","PPTX","XLSX"].map(t => {
               const style = getFileTypeStyle(t);
               return <span key={t} className={`border rounded-lg px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider ${style.bg} ${style.text} ${style.border}`}>.{t}</span>;
             })}
-            {isConversation && (
-              <span className="border rounded-lg px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider bg-violet-50/80 text-violet-600 border-violet-200">CONVERSATION</span>
-            )}
           </div>
         </motion.div>
       </div>
@@ -205,15 +133,22 @@ function DropZone({
   );
 }
 
-function IngestUrlPanel({ onIngest, loading }: { onIngest: (url: string) => Promise<void>; loading: boolean }) {
+function IngestUrlPanel({
+  onIngest,
+  loading
+}: {
+  onIngest: (url: string, cookies?: string, deepCrawl?: boolean) => Promise<void>;
+  loading: boolean;
+}) {
   const [url, setUrl] = useState("");
+  const [deepCrawl, setDeepCrawl] = useState(true);
   const [focused, setFocused] = useState(false);
   const isValidUrl = url.trim().length > 8 && (url.startsWith("http://") || url.startsWith("https://") || url.includes("."));
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmitUrl = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim() || loading) return;
-    await onIngest(url.trim());
+    await onIngest(url.trim(), undefined, deepCrawl);
     setUrl("");
   };
 
@@ -224,11 +159,12 @@ function IngestUrlPanel({ onIngest, loading }: { onIngest: (url: string) => Prom
           <Globe size={14} className="text-teal-600" />
         </div>
         <div>
-          <div className="text-sm font-extrabold text-slate-800">Nạp từ URL trang web</div>
-          <div className="text-[10px] text-slate-400 font-semibold">Hỗ trợ mọi website công khai (không giới hạn tên miền)</div>
+          <div className="text-sm font-extrabold text-slate-800">Nạp dữ liệu từ URL trang web</div>
+          <div className="text-[10px] text-slate-400 font-semibold">Tự động cào dữ liệu công khai & tự động qua rào cản đăng nhập</div>
         </div>
       </div>
-      <form onSubmit={handleSubmit} className="flex gap-2 items-center">
+
+      <form onSubmit={handleSubmitUrl} className="flex gap-2 items-center">
         <div className={`flex-1 flex items-center gap-2 bg-white border rounded-xl px-3.5 py-2.5 transition-all duration-200 ${focused ? "border-teal-400 shadow-[0_0_0_3px_rgba(20,184,166,0.08)]" : "border-slate-200"}`}>
           <Link2 size={13} className={`shrink-0 transition-colors ${focused ? "text-teal-500" : "text-slate-300"}`} />
           <input
@@ -237,7 +173,7 @@ function IngestUrlPanel({ onIngest, loading }: { onIngest: (url: string) => Prom
             onChange={e => setUrl(e.target.value)}
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
-            placeholder="https://mobifone.online/goi-cuoc-4g-cua-mobifone"
+            placeholder="https://noidungsohanoi.mobifone.vn/..."
             disabled={loading}
             className="flex-1 bg-transparent border-none outline-none text-xs font-bold text-slate-700 placeholder:text-slate-300 disabled:opacity-60"
           />
@@ -251,9 +187,22 @@ function IngestUrlPanel({ onIngest, loading }: { onIngest: (url: string) => Prom
           whileTap={{ scale: 0.96 }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
         >
-          {loading ? <><Loader2 size={13} className="animate-spin" /><span>Dang crawl...</span></> : <><Globe size={13} /><span>Crawl & Nap</span></>}
+          {loading ? <><Loader2 size={13} className="animate-spin" /><span>Đang crawl...</span></> : <><Globe size={13} /><span>Crawl & Nạp</span></>}
         </motion.button>
       </form>
+
+      <div className="flex items-center justify-between px-1">
+        <label className="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={deepCrawl}
+            onChange={e => setDeepCrawl(e.target.checked)}
+            className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+          />
+          <span>Cào sâu các trang con (Deep Crawl — Thu thập toàn bộ bài viết & gói cước chi tiết trên domain)</span>
+        </label>
+      </div>
+
       <div className="flex flex-wrap gap-1.5">
         {["www.mobifone.vn","mobifone.online","shop.mobifone.vn","dichvumobile.vn"].map(d => (
           <button key={d} type="button" onClick={() => setUrl(`https://${d}/`)}
@@ -277,6 +226,153 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+type WebChunk = {
+  chunk_index: number;
+  text: string;
+  metadata: any;
+};
+
+function WebPreviewModal({
+  docName,
+  onClose,
+  token
+}: {
+  docName: string;
+  onClose: () => void;
+  token: string;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [title, setTitle] = useState("");
+  const [url, setUrl] = useState("");
+  const [chunks, setChunks] = useState<WebChunk[]>([]);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const fetchChunks = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await axios.get(`${API_BASE}/chat/documents/web-chunks`, {
+          params: { name: docName },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setTitle(res.data.source_title || docName);
+        setUrl(res.data.source_url || docName);
+        setChunks(res.data.chunks || []);
+      } catch (err: any) {
+        const msg = err.response?.data?.detail || err.response?.data?.message || err.message;
+        setError(msg);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchChunks();
+  }, [docName, token]);
+
+  const filteredChunks = chunks.filter(c =>
+    c.text.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden"
+      >
+        {/* Header */}
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-600 shrink-0">
+              <Globe size={18} />
+            </div>
+            <div>
+              <div className="text-xs font-black text-teal-600 uppercase tracking-wider">Chi Tiết Tri Thức Website Đã Cào</div>
+              <h3 className="text-slate-800 font-extrabold text-sm line-clamp-1" title={title}>{title}</h3>
+              {url && <div className="text-[11px] text-slate-400 font-bold truncate max-w-md">{url}</div>}
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        {/* Content Body */}
+        <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-4">
+          {loading ? (
+            <div className="py-16 text-center text-slate-400 flex flex-col items-center gap-2 font-bold">
+              <Loader2 size={24} className="animate-spin text-teal-600" />
+              <span>Đang đọc dữ liệu Vector Chunks từ CSDL...</span>
+            </div>
+          ) : error ? (
+            <div className="p-6 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-xs font-bold flex items-center gap-2">
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                  <span>Tổng số Vector Chunks:</span>
+                  <span className="bg-teal-50 border border-teal-200 text-teal-700 px-2 py-0.5 rounded-lg font-extrabold">
+                    {chunks.length} đoạn
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-xl px-3 py-1.5 w-64">
+                  <Search size={12} className="text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm trong nội dung..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    className="bg-transparent text-xs font-bold text-slate-700 outline-none w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                {filteredChunks.map(chunk => (
+                  <div
+                    key={chunk.chunk_index}
+                    className="p-4.5 rounded-2xl bg-slate-50/90 border border-slate-200/90 flex flex-col gap-2.5 hover:border-teal-300 hover:shadow-xs transition-all"
+                  >
+                    <div className="flex items-center justify-between text-[11px] font-extrabold text-slate-500 border-b border-slate-200/60 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-teal-500" />
+                        <span>Đoạn Vector #{chunk.chunk_index}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="bg-slate-200/70 text-slate-600 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                          {chunk.text.length} ký tự
+                        </span>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(chunk.text)}
+                          title="Sao chép đoạn text này"
+                          className="text-slate-400 hover:text-teal-600 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                        >
+                          <Copy size={11} /> Sao chép
+                        </button>
+                      </div>
+                    </div>
+                    <div className="text-xs text-slate-700 font-medium leading-relaxed whitespace-pre-wrap font-sans bg-white p-3 rounded-xl border border-slate-100 shadow-2xs">
+                      {chunk.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 export function KnowledgeBasePage() {
   const { token, logout, user } = useAuth();
   const navigate = useNavigate();
@@ -284,14 +380,18 @@ export function KnowledgeBasePage() {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | DocStatus>("all");
+  const [sourceTab, setSourceTab] = useState<"rag" | "conversation">("rag");
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [ingestType, setIngestType] = useState<IngestType>("rag");
   const [crawling, setCrawling] = useState(false);
+  const [previewWebDocName, setPreviewWebDocName] = useState<string | null>(null);
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [deletingMultiple, setDeletingMultiple] = useState(false);
 
   useEffect(() => {
     if (!user) navigate("/login");
-    else if (user.role !== "admin") navigate("/admin");
+    else if (user.role !== "admin" && user.role !== "sales") navigate("/admin");
   }, [user, navigate]);
 
   const loadDocs = async () => {
@@ -301,7 +401,7 @@ export function KnowledgeBasePage() {
       const res = await axios.get(`${API_BASE}/chat/documents`, { headers: { Authorization: `Bearer ${token}` } });
       setDocs(res.data || []);
     } catch (error) {
-      if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
         logout(); navigate("/login");
       }
     } finally {
@@ -328,64 +428,165 @@ export function KnowledgeBasePage() {
     return () => window.removeEventListener("app-notification", handler);
   }, []);
 
-  const handleUpload = async (file: globalThis.File) => {
-    if (!token) return;
+  const handleUpload = async (files: globalThis.File[]) => {
+    if (!token || !files || files.length === 0) return;
     setUploading(true);
-    const ext = file.name.split(".").pop()?.toUpperCase() || "TXT";
-    const tempDoc: Doc = {
-      name: file.name,
-      type: ingestType === "conversation" ? "CONVERSATION" : ext,
-      size: file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(1)} KB`,
-      status: "chunking", progress: 40, upload_date: "Hom nay", vectors: 0, chunks: 0, timestamp: Date.now(),
-    };
-    setDocs(prev => [tempDoc, ...prev]);
+
+    const tempDocs: Doc[] = files.map(file => {
+      const ext = file.name.split(".").pop()?.toUpperCase() || "TXT";
+      return {
+        name: file.name,
+        type: ingestType === "conversation" ? "CONVERSATION" : ext,
+        size: file.size > 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(1)} KB`,
+        status: "chunking", progress: 40, upload_date: "Hôm nay", vectors: 0, chunks: 0, timestamp: Date.now(),
+      };
+    });
+
+    setDocs(prev => [...tempDocs, ...prev]);
+
+    const errorMessages: string[] = [];
+
+    const uploadPromises = files.map(async (file) => {
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("ingest_type", ingestType);
+        await axios.post(`${API_BASE}/chat/upload`, formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (error: any) {
+        let msg = `Lỗi tải lên file '${file.name}'.`;
+        if (axios.isAxiosError(error)) {
+          if (error.response?.status === 413) msg = `File '${file.name}': Dung lượng vượt quá giới hạn 100MB.`;
+          else if (error.response?.status === 504) msg = `File '${file.name}': Quá thời gian xử lý server.`;
+          else {
+            const d = error.response?.data;
+            const detail = typeof d === "string" ? d : (d?.message || d?.detail || error.message);
+            msg = `File '${file.name}': ${detail}`;
+          }
+        }
+        errorMessages.push(msg);
+        setDocs(prev => prev.filter(d => d.name !== file.name));
+      }
+    });
+
+    await Promise.allSettled(uploadPromises);
+
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("ingest_type", ingestType);
-      await axios.post(`${API_BASE}/chat/upload`, formData, { headers: { Authorization: `Bearer ${token}` } });
       const res = await axios.get(`${API_BASE}/chat/documents`, { headers: { Authorization: `Bearer ${token}` } });
       setDocs(res.data || []);
-    } catch (error: any) {
-      let msg = "Vui long kiem tra lai cau hinh he thong.";
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 413) msg = "Dung luong file qua lon (vuot qua gioi han 100MB).";
-        else if (error.response?.status === 504) msg = "Qua thoi gian xu ly. File dang duoc he thong tiep tuc.";
-        else { const d = error.response?.data; msg = typeof d === "string" ? d : (d?.message || d?.detail || error.message); }
-      }
-      alert(`Loi upload tai lieu: ${msg}`);
-      setDocs(prev => prev.filter(d => d.name !== file.name));
+      setSourceTab(ingestType === "conversation" ? "conversation" : "rag");
+    } catch {
+      // Retain existing docs list if reload fails
     } finally {
       setUploading(false);
+      if (errorMessages.length > 0) {
+        alert(errorMessages.join("\n"));
+      }
     }
   };
 
-  const handleIngestUrl = async (url: string) => {
+  const handleIngestUrl = async (url: string, cookies?: string, deepCrawl: boolean = false) => {
     if (!token) return;
     setCrawling(true);
     const tempName = url.length > 60 ? url.substring(0, 57) + "..." : url;
-    setDocs(prev => [{ name: tempName, type: "WEB", size: "Dang crawl...", status: "vectorizing", progress: 20, upload_date: "Vua xong", vectors: 0, chunks: 0, timestamp: Date.now(), source_url: url }, ...prev]);
+    setDocs(prev => [{ name: tempName, type: "WEB", size: deepCrawl ? "Đang cào sâu..." : "Đang crawl...", status: "vectorizing", progress: 20, upload_date: "Vừa xong", vectors: 0, chunks: 0, timestamp: Date.now(), source_url: url }, ...prev]);
     try {
-      const res = await axios.post(`${API_BASE}/chat/ingest-url`, { url }, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } });
+      const res = await axios.post(`${API_BASE}/chat/ingest-url`, { url, cookies, deep_crawl: deepCrawl }, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+      });
       const data = res.data;
-      setDocs(prev => prev.map(d => d.name === tempName ? { ...d, name: data.source_title || tempName, status: "Synced", progress: 100, size: `${data.chunks_count} doan` } : d));
+      setDocs(prev => prev.map(d => d.name === tempName ? { ...d, name: data.source_title || tempName, status: "Synced", progress: 100, size: `${data.chunks_count} đoạn` } : d));
+      setSourceTab("rag");
       setTimeout(() => loadDocs(), 1500);
     } catch (error: any) {
       const detail = error.response?.data?.detail || error.response?.data?.message || error.message;
-      alert(`Loi crawl URL: ${detail}`);
+      alert(`Lỗi crawl URL: ${detail}`);
       setDocs(prev => prev.filter(d => d.name !== tempName));
     } finally {
       setCrawling(false);
     }
   };
 
-  const handleDelete = async (docName: string) => {
-    if (!token || !window.confirm(`Ban co chac chan muon xoa '${docName}'?`)) return;
+  const handleIngestHtml = async (title: string, htmlContent: string, sourceUrl?: string) => {
+    if (!token) return;
+    setCrawling(true);
+    const tempName = title || "Nội dung DOM HTML";
+    setDocs(prev => [{ name: tempName, type: "WEB", size: "Đang nạp DOM...", status: "vectorizing", progress: 40, upload_date: "Vừa xong", vectors: 0, chunks: 0, timestamp: Date.now() }, ...prev]);
     try {
-      await axios.delete(`${API_BASE}/chat/documents/${encodeURIComponent(docName)}`, { headers: { Authorization: `Bearer ${token}` } });
-      setDocs(prev => prev.filter(d => d.name !== docName));
-    } catch { alert("Khong the xoa tai lieu. Vui long thu lai!"); }
+      const res = await axios.post(`${API_BASE}/chat/ingest-html`, { source_title: title, html_content: htmlContent, source_url: sourceUrl }, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } });
+      const data = res.data;
+      setDocs(prev => prev.map(d => d.name === tempName ? { ...d, name: data.source_title || tempName, status: "Synced", progress: 100, size: `${data.chunks_count} đoạn` } : d));
+      setSourceTab("rag");
+      setTimeout(() => loadDocs(), 1500);
+    } catch (error: any) {
+      const detail = error.response?.data?.detail || error.response?.data?.message || error.message;
+      alert(`Lỗi nạp HTML DOM: ${detail}`);
+      setDocs(prev => prev.filter(d => d.name !== tempName));
+    } finally {
+      setCrawling(false);
+    }
   };
+
+  const handleDelete = async (docItem: Doc) => {
+    if (!token || !window.confirm(`Bạn có chắc chắn muốn xóa '${docItem.name}'?`)) return;
+    const targetName = docItem.source_url || docItem.name;
+    try {
+      await axios.delete(`${API_BASE}/chat/documents`, {
+        params: { name: targetName },
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (err) {
+      console.warn("Delete API returned error, attempting fallback:", err);
+      try {
+        await axios.delete(`${API_BASE}/chat/documents/${encodeURIComponent(targetName)}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch {
+        // Suppress alert for items that weren't persisted in DB
+      }
+    } finally {
+      setDocs(prev => prev.filter(d => d.name !== docItem.name && d.source_url !== docItem.source_url));
+      setSelectedDocs(prev => { const next = new Set(prev); next.delete(docItem.name); return next; });
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedDocs.size === 0) return;
+    if (!window.confirm(`Bạn có chắc chắn muốn xóa ${selectedDocs.size} tài liệu đã chọn?`)) return;
+    setDeletingMultiple(true);
+    const toDelete = filtered.filter(d => selectedDocs.has(d.name));
+    for (const docItem of toDelete) {
+      const targetName = docItem.source_url || docItem.name;
+      try {
+        await axios.delete(`${API_BASE}/chat/documents`, {
+          params: { name: targetName },
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch {
+        try {
+          await axios.delete(`${API_BASE}/chat/documents/${encodeURIComponent(targetName)}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch { /* suppress */ }
+      }
+    }
+    setDocs(prev => prev.filter(d => !selectedDocs.has(d.name)));
+    setSelectedDocs(new Set());
+    setDeletingMultiple(false);
+  };
+
+
+  const toggleSelectDoc = (docName: string) => {
+    setSelectedDocs(prev => {
+      const next = new Set(prev);
+      if (next.has(docName)) next.delete(docName);
+      else next.add(docName);
+      return next;
+    });
+  };
+
+
 
   const totalVectors = docs.filter(d => d.status === "Synced").reduce((a, d) => a + d.vectors, 0);
   const totalDocs = docs.filter(d => d.status === "Synced").length;
@@ -403,30 +604,55 @@ export function KnowledgeBasePage() {
   };
 
   const filtered = docs
-    .filter(d => d.name.toLowerCase().includes(search.toLowerCase()) && (filter === "all" || d.status === filter))
+    .filter(d => {
+      const matchSearch = d.name.toLowerCase().includes(search.toLowerCase());
+      const matchStatus = filter === "all" || d.status === filter;
+      const isConv = d.type?.toUpperCase() === "CONVERSATION";
+      const matchSource = sourceTab === "conversation" ? isConv : !isConv;
+      return matchSearch && matchStatus && matchSource;
+    })
     .sort((a, b) => { const diff = parseDocDate(b) - parseDocDate(a); return diff !== 0 ? diff : a.name.localeCompare(b.name); });
+
+  const isAllSelected = filtered.length > 0 && filtered.every(d => selectedDocs.has(d.name));
+  const isSomeSelected = filtered.some(d => selectedDocs.has(d.name));
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedDocs(prev => {
+        const next = new Set(prev);
+        filtered.forEach(d => next.delete(d.name));
+        return next;
+      });
+    } else {
+      setSelectedDocs(prev => {
+        const next = new Set(prev);
+        filtered.forEach(d => next.add(d.name));
+        return next;
+      });
+    }
+  };
 
   return (
     <div className="font-outfit flex flex-col gap-5 pb-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200/60 pb-5 gap-4">
         <div>
-          <h1 className="text-[#0F172A] font-black text-2xl tracking-tight">Co so tri thuc (Knowledge Base)</h1>
+          <h1 className="text-[#0F172A] font-black text-2xl tracking-tight">Cơ sở tri thức</h1>
           <p className="text-slate-400 text-xs font-semibold mt-1">
-            Da lap chi muc <span className="text-[#0055A5] font-extrabold">{totalVectors.toLocaleString()}</span> vectors tu <span className="text-[#0055A5] font-extrabold">{totalDocs}</span> tai lieu.
+            Đã lập chỉ mục <span className="text-[#0055A5] font-extrabold">{totalVectors.toLocaleString()}</span> vectors từ <span className="text-[#0055A5] font-extrabold">{totalDocs}</span> tài liệu.
           </p>
         </div>
         <button onClick={loadDocs} className="flex items-center gap-1.5 px-4.5 py-2.5 rounded-xl bg-gradient-to-r from-[#0055A5] to-[#003B75] text-white border-none font-bold text-xs cursor-pointer shadow-md hover:shadow-lg transition-all active:scale-95 shrink-0">
-          <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Tai lai danh sach
+          <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Tải lại danh sách
         </button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
-          { label: "Tong tai lieu", value: docs.length, color: "border-l-[#0055A5] text-[#0055A5]" },
-          { label: "Da dong bo",    value: docs.filter(d => d.status === "Synced").length, color: "border-l-emerald-500 text-emerald-500" },
-          { label: "Dang xu ly",   value: docs.filter(d => ["chunking","vectorizing"].includes(d.status)).length, color: "border-l-amber-500 text-amber-500" },
+          { label: "Tổng tài liệu", value: docs.length, color: "border-l-[#0055A5] text-[#0055A5]" },
+          { label: "Đã đồng bộ",    value: docs.filter(d => d.status === "Synced").length, color: "border-l-emerald-500 text-emerald-500" },
+          { label: "Đang xử lý",   value: docs.filter(d => ["chunking","vectorizing"].includes(d.status)).length, color: "border-l-amber-500 text-amber-500" },
           { label: "Trang web (WEB)", value: docs.filter(d => d.type?.toUpperCase() === "WEB").length, color: "border-l-teal-500 text-teal-500" },
-          { label: "Chat mau (CONV)", value: docs.filter(d => d.type?.toUpperCase() === "CONVERSATION").length, color: "border-l-violet-500 text-violet-500" },
+          { label: "Chat mẫu (CONV)", value: docs.filter(d => d.type?.toUpperCase() === "CONVERSATION").length, color: "border-l-violet-500 text-violet-500" },
         ].map(s => (
           <div key={s.label} className={`bg-white rounded-2xl p-4 border border-slate-200/50 border-l-4 ${s.color.split(" ")[0]} shadow-xs`}>
             <div className="text-slate-400 text-[9px] font-bold tracking-wider uppercase mb-1">{s.label}</div>
@@ -437,35 +663,125 @@ export function KnowledgeBasePage() {
 
       <IngestUrlPanel onIngest={handleIngestUrl} loading={crawling} />
 
-      <DropZone onUpload={handleUpload} uploading={uploading} ingestType={ingestType} onIngestTypeChange={setIngestType} />
+      <DropZone onUpload={handleUpload} uploading={uploading} />
+
+      {/* Primary Source Tabs Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2 rounded-2xl border border-slate-200/60 shadow-xs">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          {[
+            { id: "rag", label: "Tài liệu RAG (Files & Web)", count: docs.filter(d => d.type?.toUpperCase() !== "CONVERSATION").length, icon: FileText, color: "text-emerald-600" },
+            { id: "conversation", label: "Tri thức Chat CSKH (CONVERSATION)", count: docs.filter(d => d.type?.toUpperCase() === "CONVERSATION").length, icon: MessageSquareText, color: "text-violet-600" },
+          ].map(tab => {
+            const active = sourceTab === tab.id;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setSourceTab(tab.id as any)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-extrabold text-xs transition-all cursor-pointer whitespace-nowrap ${
+                  active
+                    ? "bg-[#0055A5] text-white shadow-sm"
+                    : "bg-slate-50/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200/50"
+                }`}
+              >
+                <Icon size={14} className={active ? "text-white" : tab.color} />
+                <span>{tab.label}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  active ? "bg-white/20 text-white" : "bg-slate-200/70 text-slate-700"
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {sourceTab === "conversation" && (
+          <button
+            onClick={() => navigate("/admin/chat-mining")}
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 text-xs font-bold transition-all cursor-pointer shrink-0"
+          >
+            <MessageSquareText size={13} />
+            <span>Học từ Chat CSKH mới</span>
+          </button>
+        )}
+      </div>
 
       <div className="flex gap-4 flex-wrap items-center justify-between">
         <div className="flex items-center gap-2 bg-white border border-slate-200/60 rounded-xl px-3.5 py-2 w-full sm:max-w-xs shadow-xs focus-within:border-[#0055A5]/60 transition-colors">
           <Search size={14} className="text-slate-400 shrink-0" />
-          <input placeholder="Tim kiem tai lieu..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1 bg-transparent border-none outline-none text-xs font-bold text-slate-600" />
+          <input placeholder="Tìm kiếm tài liệu..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1 bg-transparent border-none outline-none text-xs font-bold text-slate-600" />
         </div>
         <div className="flex gap-1 bg-slate-100 border border-slate-200/40 rounded-xl p-1 shrink-0">
           {(["all", "Synced", "vectorizing", "chunking", "error"] as const).map(s => (
             <button key={s} onClick={() => setFilter(s)}
               className={`px-3 py-1.5 rounded-lg border-none font-bold text-xs cursor-pointer transition-all ${filter === s ? "bg-[#0055A5] text-white shadow-xs" : "bg-transparent text-slate-500 hover:text-slate-700"}`}>
-              {s === "all" ? "Tat ca" : s === "Synced" ? "Da dong bo" : STATUS_CONFIG[s].label}
+              {s === "all" ? "Tất cả" : s === "Synced" ? "Đã đồng bộ" : STATUS_CONFIG[s].label}
             </button>
           ))}
         </div>
       </div>
 
+      {/* Bulk Delete Toolbar */}
+      <AnimatePresence>
+        {isSomeSelected && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="flex items-center justify-between bg-[#0055A5] text-white rounded-2xl px-5 py-3 shadow-lg"
+          >
+            <span className="text-sm font-extrabold flex items-center gap-2">
+              <CheckSquare size={16} />
+              Đã chọn <span className="bg-white/20 px-2 py-0.5 rounded-lg font-black">{selectedDocs.size}</span> tài liệu
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedDocs(new Set())}
+                className="px-3.5 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                Bỏ chọn tất cả
+              </button>
+              <button
+                onClick={handleDeleteSelected}
+                disabled={deletingMultiple}
+                className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-60 shadow-md"
+              >
+                {deletingMultiple
+                  ? <Loader2 size={13} className="animate-spin" />
+                  : <Trash2 size={13} />}
+                {deletingMultiple ? "Đang xóa..." : `Xóa ${selectedDocs.size} tài liệu`}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="bg-white rounded-3xl border border-slate-200/60 shadow-xs overflow-hidden">
         {filtered.length === 0 ? (
           <div className="p-16 text-center text-slate-400 font-bold flex flex-col items-center gap-3">
             <File size={36} className="opacity-45" />
-            <p className="text-sm">Khong tim thay tai lieu nao trong co so tri thuc</p>
+            <p className="text-sm">Không tìm thấy tài liệu nào trong cơ sở tri thức</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left min-w-[800px]">
               <thead>
                 <tr className="bg-slate-50/50 border-b border-slate-100">
-                  {["Tai lieu","Loai","Kich thuoc","Trang thai","Tien do","Vectors","Ngay tai",""].map(h => (
+                  <th className="px-4 py-3.5 w-10">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="flex items-center justify-center text-slate-400 hover:text-[#0055A5] transition-colors cursor-pointer"
+                      title={isAllSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                    >
+                      {isAllSelected
+                        ? <CheckSquare size={15} className="text-[#0055A5]" />
+                        : isSomeSelected
+                          ? <CheckSquare size={15} className="text-[#0055A5] opacity-50" />
+                          : <Square size={15} />}
+                    </button>
+                  </th>
+                  {["Tài liệu","Loại","Kích thước","Trạng thái","Tiến độ","Vectors","Ngày tải",""].map(h => (
                     <th key={h} className="px-5 py-3.5 text-slate-400 font-extrabold text-[10px] tracking-wider uppercase">{h}</th>
                   ))}
                 </tr>
@@ -478,6 +794,7 @@ export function KnowledgeBasePage() {
                     const style = getFileTypeStyle(doc.type);
                     const isWeb = doc.type?.toUpperCase() === "WEB";
                     const isConv = doc.type?.toUpperCase() === "CONVERSATION";
+                    const isSelected = selectedDocs.has(doc.name);
                     const progressColor = doc.status === "Synced" ? "bg-emerald-500"
                       : doc.status === "error" ? "bg-red-500"
                       : doc.status === "chunking" ? "bg-amber-500"
@@ -490,8 +807,20 @@ export function KnowledgeBasePage() {
                         initial={{ opacity: 0, y: -5 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, x: -10 }}
-                        className="border-b border-slate-100/80 hover:bg-slate-50/20 transition-colors duration-150"
+                        className={`border-b border-slate-100/80 transition-colors duration-150 ${
+                          isSelected ? "bg-blue-50/40" : "hover:bg-slate-50/20"
+                        }`}
                       >
+                        <td className="px-4 py-3.5 w-10">
+                          <button
+                            onClick={() => toggleSelectDoc(doc.name)}
+                            className="flex items-center justify-center text-slate-400 hover:text-[#0055A5] transition-colors cursor-pointer"
+                          >
+                            {isSelected
+                              ? <CheckSquare size={15} className="text-[#0055A5]" />
+                              : <Square size={15} />}
+                          </button>
+                        </td>
                         <td className="px-5 py-3.5 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center border shrink-0 ${style.bg} ${style.border}`}>
@@ -500,7 +829,7 @@ export function KnowledgeBasePage() {
                             <div>
                               <div className="text-slate-800 font-bold text-xs max-w-xs truncate" title={doc.source_url || doc.name}>{doc.name}</div>
                               <div className="text-slate-400 text-[10px] font-bold mt-0.5">
-                                {isConv ? "Cap hoi-dap CSKH" : isWeb ? "Noi dung trang web" : doc.chunks > 0 ? `${doc.chunks} doan` : "Dang xu ly..."}
+                                {isConv ? "Cặp hỏi-đáp CSKH" : isWeb ? "Nội dung trang web" : doc.chunks > 0 ? `${doc.chunks} đoạn` : "Đang xử lý..."}
                               </div>
                             </div>
                           </div>
@@ -516,16 +845,32 @@ export function KnowledgeBasePage() {
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2">
                             <ProgressBar pct={doc.progress} colorClass={progressColor} />
-                            <span className="text-slate-400 text-[10px] font-bold min-w-7">{doc.progress}%</span>
+                            <span className="text-[10px] font-extrabold text-slate-500">{doc.progress}%</span>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-slate-800 font-extrabold text-xs">{doc.vectors > 0 ? doc.vectors.toLocaleString() : "—"}</td>
-                        <td className="px-5 py-3.5 text-slate-400 text-xs font-semibold">{doc.upload_date}</td>
-                        <td className="px-5 py-3.5 text-right">
-                          <button onClick={() => handleDelete(doc.name)}
-                            className="bg-transparent border border-red-100 hover:bg-red-500 hover:text-white text-red-500 rounded-lg w-8 h-8 flex items-center justify-center cursor-pointer transition-colors">
-                            <Trash2 size={12} />
-                          </button>
+                        <td className="px-5 py-3.5 font-extrabold text-xs text-slate-700">{doc.vectors > 0 ? doc.vectors.toLocaleString() : "—"}</td>
+                        <td className="px-5 py-3.5 text-slate-400 font-semibold text-xs whitespace-nowrap">
+                          {doc.upload_date || "Hôm nay"}
+                        </td>
+                        <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
+                            {isWeb && (
+                              <button
+                                onClick={() => setPreviewWebDocName(doc.source_url || doc.name)}
+                                className="w-7 h-7 rounded-lg text-teal-600 hover:bg-teal-50 hover:text-teal-700 flex items-center justify-center transition-colors cursor-pointer"
+                                title="Xem nội dung chi tiết CSDL"
+                              >
+                                <Eye size={13} />
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleDelete(doc)}
+                              className="w-7 h-7 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition-colors cursor-pointer"
+                              title="Xóa tài liệu"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </td>
                       </motion.tr>
                     );
@@ -536,6 +881,16 @@ export function KnowledgeBasePage() {
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {previewWebDocName && token && (
+          <WebPreviewModal
+            docName={previewWebDocName}
+            onClose={() => setPreviewWebDocName(null)}
+            token={token}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

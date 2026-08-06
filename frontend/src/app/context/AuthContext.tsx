@@ -2,7 +2,7 @@ import { createContext, useContext, useState, type ReactNode, useEffect } from "
 import axios from "axios";
 import { API_BASE } from "../../config";
 
-export type AuthRole = "guest" | "user" | "admin" | "sales";
+export type AuthRole = "admin" | "sales";
 
 export type AuthUser = {
   id: string;
@@ -11,17 +11,6 @@ export type AuthUser = {
   email: string;
   role: AuthRole;
   avatar?: string;
-  tier: "Silver" | "Gold" | "Diamond";
-  package: string;
-  packageCode: string;
-  packageExpiry: string;
-  dataUsedGB: number;
-  dataTotalGB: number;
-  voiceUsedMin: number;
-  voiceTotalMin: number;
-  balance: number;
-  points: number;
-  joinDate: string;
   address: string;
   dob: string;
   twoFaEnabled?: boolean;
@@ -30,37 +19,29 @@ export type AuthUser = {
 type AuthContextType = {
   user: AuthUser | null;
   token: string | null;
-  login: (identifier: string, password: string) => Promise<"user" | "admin" | "sales" | "require_2fa" | "error">;
-  register: (phone: string, password: string, name?: string) => Promise<"success" | "error">;
+  login: (identifier: string, password: string) => Promise<"admin" | "sales" | "require_2fa" | "error">;
   logout: () => void;
   updateUser: (patch: Partial<AuthUser>) => void;
-  verify2faLogin: (username: string, otpCode: string) => Promise<"admin" | "sales" | "user" | "error">;
+  verify2faLogin: (username: string, otpCode: string) => Promise<"admin" | "sales" | "error">;
 };
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   token: null,
   login: async () => "error",
-  register: async () => "error",
   logout: () => {},
   updateUser: () => {},
   verify2faLogin: async () => "error",
 });
 
-
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem("mobifone_admin_token") || localStorage.getItem("mobifone_portal_token");
+    return localStorage.getItem("mobifone_admin_token");
   });
   const [user, setUser] = useState<AuthUser | null>(() => {
-    const savedAdmin = localStorage.getItem("mobifone_admin_user");
-    if (savedAdmin) {
-      try { return JSON.parse(savedAdmin); } catch { return null; }
-    }
-    const savedUser = localStorage.getItem("mobifone_portal_user");
-    if (savedUser) {
-      try { return JSON.parse(savedUser); } catch { return null; }
+    const saved = localStorage.getItem("mobifone_admin_user");
+    if (saved) {
+      try { return JSON.parse(saved); } catch { return null; }
     }
     return null;
   });
@@ -70,12 +51,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
       (error) => {
-        const isLoginRequest = error.config?.url?.includes("/auth/login") || error.config?.url?.includes("/auth/verify-2fa");
-        if (error.response?.status === 401 && !isLoginRequest) {
-          // Token hết hạn hoặc không hợp lệ → logout
+        const isAuthRequest =
+          error.config?.url?.includes("/auth/login") ||
+          error.config?.url?.includes("/auth/verify-2fa");
+        if (error.response?.status === 401 && !isAuthRequest) {
+          // Token hết hạn hoặc không hợp lệ → logout tự động và xóa toàn bộ session
           localStorage.removeItem("mobifone_admin_token");
-          localStorage.removeItem("mobifone_portal_token");
-          localStorage.removeItem("mobifone_portal_user");
+          localStorage.removeItem("mobifone_admin_user");
           setToken(null);
           setUser(null);
           window.location.href = "/login";
@@ -90,56 +72,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const interceptor = axios.interceptors.request.use((config) => {
       const adminToken = localStorage.getItem("mobifone_admin_token");
-      const portalToken = localStorage.getItem("mobifone_portal_token");
-      const activeToken = adminToken || portalToken;
-      if (activeToken) config.headers.Authorization = `Bearer ${activeToken}`;
+      if (adminToken) config.headers.Authorization = `Bearer ${adminToken}`;
       return config;
     });
     return () => axios.interceptors.request.eject(interceptor);
   }, []);
 
-  // Đồng bộ thông tin từ backend khi ứng dụng khởi chạy nếu đã đăng nhập portal hoặc admin
+  // Đồng bộ thông tin admin/sales từ backend khi ứng dụng khởi chạy
   useEffect(() => {
-    const fetchPortalProfile = async () => {
-      const portalToken = localStorage.getItem("mobifone_portal_token");
-      if (portalToken) {
-        try {
-          const response = await axios.get(`${API_BASE}/subscribers/me`);
-          const sub = response.data;
-          if (sub && sub.id) {
-            setUser(prev => {
-              const mappedUser: AuthUser = {
-                id: sub.id,
-                name: sub.name || "",
-                phone: sub.phoneNumber,
-                email: sub.email || `${sub.phoneNumber}@mobifone.vn`,
-                role: "user",
-                tier: "Gold",
-                package: sub.currentPackage ? `${sub.currentPackage} Ultra` : "Không có gói",
-                packageCode: sub.currentPackage || "",
-                packageExpiry: sub.packageExpiry ? new Date(sub.packageExpiry).toLocaleDateString("vi-VN") : "N/A",
-                dataUsedGB: sub.dataUsedGB || 0,
-                dataTotalGB: sub.dataTotalGB || 0,
-                voiceUsedMin: 0,
-                voiceTotalMin: sub.currentPackage ? 600 : 0,
-                balance: 150000,
-                points: 1200,
-                joinDate: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN"),
-                address: sub.address || "Chưa cập nhật",
-                dob: sub.dob || "1990-01-01",
-                avatar: sub.avatar || undefined,
-                twoFaEnabled: sub.twoFaEnabled || false,
-              };
-              localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
-              return mappedUser;
-            });
-          }
-        } catch (error) {
-          console.warn("Không thể đồng bộ profile từ backend:", error);
-        }
-      }
-    };
-
     const fetchAdminProfile = async () => {
       const adminToken = localStorage.getItem("mobifone_admin_token");
       if (adminToken) {
@@ -154,17 +94,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 phone: adminData.phone || "0987654321",
                 email: adminData.email || (adminData.role === "sales" ? "sales@mobifone.vn" : "admin@mobifone.vn"),
                 role: (adminData.role || "admin") as AuthRole,
-                tier: adminData.role === "sales" ? "Gold" : "Diamond",
-                package: adminData.role === "sales" ? "CSKH" : "Staff",
-                packageCode: adminData.role === "sales" ? "SALES" : "STAFF",
-                packageExpiry: "31/12/2026",
-                dataUsedGB: 0,
-                dataTotalGB: 0,
-                voiceUsedMin: 0,
-                voiceTotalMin: 0,
-                balance: 0,
-                points: 0,
-                joinDate: "01/01/2020",
                 address: adminData.address || "MobiFone HQ, Hà Nội",
                 dob: adminData.dob || "1988-05-12",
                 avatar: adminData.avatar || undefined,
@@ -180,29 +109,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    fetchPortalProfile();
     fetchAdminProfile();
   }, []);
 
-  const login = async (identifier: string, password: string): Promise<"user" | "admin" | "sales" | "require_2fa" | "error"> => {
-    // Chỉ xóa các token phiên làm việc đang có
+  const login = async (identifier: string, password: string): Promise<"admin" | "sales" | "require_2fa" | "error"> => {
     localStorage.removeItem("mobifone_admin_token");
-    localStorage.removeItem("mobifone_portal_token");
+    localStorage.removeItem("mobifone_admin_user");
     setToken(null);
     setUser(null);
 
     const idClean = identifier.trim();
+    const idLower = idClean.toLowerCase();
     let loginUsername = idClean;
-    if (idClean.toLowerCase().endsWith("@mobifone.vn")) {
+    if (idLower.endsWith("@mobifone.vn")) {
       loginUsername = idClean.split("@")[0];
     }
-    // 1. Thử đăng nhập hệ thống Admin/Sales (qua /auth/login)
+
     try {
       const response = await axios.post(`${API_BASE}/auth/login`, {
         username: loginUsername,
         password: password,
       });
-      
+
       if (response.data?.require2fa) {
         return "require_2fa";
       }
@@ -218,17 +146,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phone: apiUser.phone || "0987654321",
           email: apiUser.email || (apiUser.role === "sales" ? "sales@mobifone.vn" : "admin@mobifone.vn"),
           role: (apiUser.role || "sales") as AuthRole,
-          tier: apiUser.role === "sales" ? "Gold" : "Diamond",
-          package: apiUser.role === "sales" ? "CSKH" : "Staff",
-          packageCode: apiUser.role === "sales" ? "SALES" : "STAFF",
-          packageExpiry: "31/12/2026",
-          dataUsedGB: 0,
-          dataTotalGB: 0,
-          voiceUsedMin: 0,
-          voiceTotalMin: 0,
-          balance: 0,
-          points: 0,
-          joinDate: "01/01/2020",
           address: apiUser.address || "MobiFone HQ, Hà Nội",
           dob: apiUser.dob || "1988-05-12",
           avatar: apiUser.avatar || undefined,
@@ -239,60 +156,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return apiUser.role === "sales" ? "sales" : "admin";
       }
     } catch (error) {
-      // Bỏ qua lỗi và tiếp tục thử đăng nhập Portal Subscriber nếu /auth/login thất bại
-    }
-
-    // Tài khoản user thường: Phải có độ dài từ 6 ký tự trở lên và không chứa chữ "admin" để tránh nhầm lẫn
-    if (idLower.length >= 6 && !idLower.includes("admin")) {
-      try {
-        const response = await axios.post(`${API_BASE}/subscribers/login-demo`, {
-          phoneNumber: identifier,
-          password: password,
-        });
-        if (response.data?.require2fa) {
-          return "require_2fa";
-        }
-        const { token: apiToken, subscriber: sub } = response.data;
-        if (apiToken && sub) {
-          localStorage.setItem("mobifone_portal_token", apiToken);
-          setToken(apiToken);
-          
-          const mappedUser: AuthUser = {
-            id: sub.id,
-            name: sub.name || "",
-            phone: sub.phoneNumber,
-            email: sub.email || `${sub.phoneNumber}@mobifone.vn`,
-            role: "user",
-            tier: "Gold",
-            package: sub.currentPackage ? `${sub.currentPackage} Ultra` : "Không có gói",
-            packageCode: sub.currentPackage || "",
-            packageExpiry: sub.packageExpiry ? new Date(sub.packageExpiry).toLocaleDateString("vi-VN") : "N/A",
-            dataUsedGB: sub.dataUsedGB || 0,
-            dataTotalGB: sub.dataTotalGB || 0,
-            voiceUsedMin: 0,
-            voiceTotalMin: sub.currentPackage ? 600 : 0,
-            balance: 150000,
-            points: 1200,
-            joinDate: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN"),
-            address: sub.address || "Chưa cập nhật",
-            dob: sub.dob || "01/01/1990",
-            avatar: sub.avatar || undefined,
-            twoFaEnabled: sub.twoFaEnabled || false,
-          };
-          localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
-          setUser(mappedUser);
-          return "user";
-        }
-      } catch (error) {
-        console.warn("Lỗi đăng nhập Subscriber:", error);
-        return "error";
-      }
+      console.error("Lỗi đăng nhập:", error);
     }
 
     return "error";
   };
 
-  const verify2faLogin = async (username: string, otpCode: string): Promise<"admin" | "sales" | "user" | "error"> => {
+  const verify2faLogin = async (username: string, otpCode: string): Promise<"admin" | "sales" | "error"> => {
     try {
       const response = await axios.post(`${API_BASE}/auth/verify-2fa`, {
         username,
@@ -300,7 +170,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       const apiToken = response.data?.access_token;
       const apiUser = response.data?.user;
-      const sub = response.data?.subscriber;
 
       if (apiToken && apiUser) {
         localStorage.setItem("mobifone_admin_token", apiToken);
@@ -311,17 +180,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phone: apiUser.phone || "0987654321",
           email: apiUser.email || (apiUser.role === "sales" ? "sales@mobifone.vn" : "admin@mobifone.vn"),
           role: (apiUser.role || "admin") as AuthRole,
-          tier: apiUser.role === "sales" ? "Gold" : "Diamond",
-          package: apiUser.role === "sales" ? "CSKH" : "Staff",
-          packageCode: apiUser.role === "sales" ? "SALES" : "STAFF",
-          packageExpiry: "31/12/2026",
-          dataUsedGB: 0,
-          dataTotalGB: 0,
-          voiceUsedMin: 0,
-          voiceTotalMin: 0,
-          balance: 0,
-          points: 0,
-          joinDate: "01/01/2020",
           address: apiUser.address || "MobiFone HQ, Hà Nội",
           dob: apiUser.dob || "1988-05-12",
           avatar: apiUser.avatar || undefined,
@@ -330,34 +188,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("mobifone_admin_user", JSON.stringify(staffUser));
         setUser(staffUser);
         return apiUser.role === "sales" ? "sales" : "admin";
-      } else if (apiToken && sub) {
-        localStorage.setItem("mobifone_portal_token", apiToken);
-        setToken(apiToken);
-        const mappedUser: AuthUser = {
-          id: sub.id,
-          name: sub.name || "",
-          phone: sub.phoneNumber,
-          email: sub.email || `${sub.phoneNumber}@mobifone.vn`,
-          role: "user",
-          tier: "Gold",
-          package: sub.currentPackage ? `${sub.currentPackage} Ultra` : "Không có gói",
-          packageCode: sub.currentPackage || "",
-          packageExpiry: sub.packageExpiry ? new Date(sub.packageExpiry).toLocaleDateString("vi-VN") : "N/A",
-          dataUsedGB: sub.dataUsedGB || 0,
-          dataTotalGB: sub.dataTotalGB || 0,
-          voiceUsedMin: 0,
-          voiceTotalMin: sub.currentPackage ? 600 : 0,
-          balance: 150000,
-          points: 1200,
-          joinDate: sub.createdAt ? new Date(sub.createdAt).toLocaleDateString("vi-VN") : new Date().toLocaleDateString("vi-VN"),
-          address: sub.address || "Chưa cập nhật",
-          dob: sub.dob || "01/01/1990",
-          avatar: sub.avatar || undefined,
-          twoFaEnabled: sub.twoFaEnabled || false,
-        };
-        localStorage.setItem("mobifone_portal_user", JSON.stringify(mappedUser));
-        setUser(mappedUser);
-        return "user";
       }
       return "error";
     } catch (error) {
@@ -366,27 +196,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (phone: string, password: string, name?: string): Promise<"success" | "error"> => {
-    try {
-      await axios.post(`${API_BASE}/auth/register`, {
-        username: phone,
-        password: password,
-        name: name || "",
-      });
-      // Đăng nhập ngay sau khi đăng ký thành công
-      await login(phone, password);
-      return "success";
-    } catch (error) {
-      console.error("Lỗi đăng ký:", error);
-      return "error";
-    }
-  };
-
   const logout = () => {
     localStorage.removeItem("mobifone_admin_token");
-    localStorage.removeItem("mobifone_portal_token");
-    // Giữ nguyên cache mobifone_admin_user và mobifone_portal_user trong localStorage
-    // Để giữ lại avatar và thông tin cá nhân đã cập nhật khi logout/login lại.
+    localStorage.removeItem("mobifone_admin_user");
     setToken(null);
     setUser(null);
   };
@@ -395,17 +207,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(prev => {
       if (!prev) return null;
       const updated = { ...prev, ...patch };
-      if (updated.role === "user") {
-        localStorage.setItem("mobifone_portal_user", JSON.stringify(updated));
-      } else if (updated.role === "admin" || updated.role === "sales") {
-        localStorage.setItem("mobifone_admin_user", JSON.stringify(updated));
-      }
+      localStorage.setItem("mobifone_admin_user", JSON.stringify(updated));
       return updated;
     });
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, updateUser, verify2faLogin }}>
+    <AuthContext.Provider value={{ user, token, login, logout, updateUser, verify2faLogin }}>
       {children}
     </AuthContext.Provider>
   );

@@ -311,7 +311,7 @@ export class ChatService {
 
   // Proxy: Xóa tài liệu khỏi ChromaDB thông qua AI Service
   async deleteDocument(name: string) {
-    const aiServiceUrl = this.getAiServiceUrl(`/documents/${encodeURIComponent(name)}`);
+    const aiServiceUrl = this.getAiServiceUrl(`/documents?name=${encodeURIComponent(name)}`);
     try {
       const response = await firstValueFrom(this.httpService.delete(aiServiceUrl, { timeout: this.aiRequestTimeoutMs }));
       return response.data;
@@ -320,8 +320,9 @@ export class ChatService {
     }
   }
 
+
   // Proxy: Crawl URL MobiFone và nạp nội dung vào ChromaDB
-  async ingestFromUrl(url: string) {
+  async ingestFromUrl(url: string, cookies?: string, deep_crawl?: boolean) {
     const aiServiceUrl = this.getAiServiceUrl('/ingest-url');
 
     // Phát trạng thái bắt đầu
@@ -330,7 +331,7 @@ export class ChatService {
         name: url,
         status: 'processing',
         progress: 20,
-        message: 'Đang crawl và trích xuất nội dung trang web...',
+        message: deep_crawl ? 'Đang cào sâu đa trang con...' : 'Đang crawl và trích xuất nội dung trang web...',
       });
     } catch (err) {
       console.error('Lỗi khi phát sự kiện bắt đầu ingest URL:', err.message);
@@ -339,9 +340,15 @@ export class ChatService {
     try {
       const formData = new FormData();
       formData.append('url', url);
+      if (cookies) {
+        formData.append('cookies', cookies);
+      }
+      if (deep_crawl) {
+        formData.append('deep_crawl', 'true');
+      }
 
       const response = await firstValueFrom(
-        this.httpService.post(aiServiceUrl, formData, { timeout: 60000 })
+        this.httpService.post(aiServiceUrl, formData, { timeout: 180000 })
       );
       const resultData = response.data;
 
@@ -359,18 +366,63 @@ export class ChatService {
 
       return resultData;
     } catch (error) {
+      const errorDetail = this.getAiErrorDetail(error, 'Lỗi kết nối AI Service');
       // Phát trạng thái lỗi
       try {
         this.notificationsService.emitNotification('doc-status', {
           name: url,
           status: 'error',
           progress: 0,
-          message: `Lỗi crawl URL: ${error.message || 'Lỗi kết nối AI Service'}`,
+          message: `Lỗi crawl URL: ${errorDetail}`,
         });
       } catch (err) {
         console.error('Lỗi khi phát sự kiện thất bại ingest URL:', err.message);
       }
       this.handleAiServiceError(error, 'Lỗi khi gửi URL lên AI Service để crawl');
+    }
+  }
+
+  // Proxy: Lấy danh sách các đoạn chunks của trang web (Bảo mật: Chỉ áp dụng tài liệu loại WEB)
+  async getWebDocumentChunks(name: string) {
+    const aiServiceUrl = this.getAiServiceUrl(`/web-document-chunks?name=${encodeURIComponent(name)}`);
+    try {
+      const response = await firstValueFrom(this.httpService.get(aiServiceUrl, { timeout: this.aiRequestTimeoutMs }));
+      return response.data;
+    } catch (error) {
+      this.handleAiServiceError(error, 'Lỗi khi lấy danh sách chunks của trang web từ AI Service');
+    }
+  }
+
+  // Proxy: Nạp trực tiếp HTML DOM từ trình duyệt vào ChromaDB
+  async ingestFromHtml(sourceTitle: string, htmlContent: string, sourceUrl?: string) {
+    const aiServiceUrl = this.getAiServiceUrl('/ingest-html');
+    try {
+      const formData = new FormData();
+      formData.append('source_title', sourceTitle);
+      formData.append('html_content', htmlContent);
+      if (sourceUrl) {
+        formData.append('source_url', sourceUrl);
+      }
+
+      const response = await firstValueFrom(
+        this.httpService.post(aiServiceUrl, formData, { timeout: 60000 })
+      );
+      const resultData = response.data;
+
+      try {
+        this.notificationsService.emitNotification('doc-status', {
+          name: resultData.source_title || sourceTitle,
+          status: 'synced',
+          progress: 100,
+          message: 'Đã nạp thành công nội dung HTML!',
+        });
+      } catch (err) {
+        console.error('Lỗi khi phát sự kiện hoàn thành ingest HTML:', err.message);
+      }
+
+      return resultData;
+    } catch (error) {
+      this.handleAiServiceError(error, 'Lỗi khi gửi HTML DOM lên AI Service để nạp');
     }
   }
 
@@ -872,6 +924,63 @@ export class ChatService {
       return response.data;
     } catch (error) {
       this.handleAiServiceError(error, `Lỗi khi lấy ảnh trích xuất ${filename}`);
+    }
+  }
+
+  // CSKH Chat Mining Services (Proxy to AI Service)
+  async parseMiningText(rawText: string) {
+    const url = this.getAiServiceUrl('/chat-mining/parse-text');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(url, { raw_text: rawText }, { timeout: this.aiRequestTimeoutMs })
+      );
+      return response.data;
+    } catch (error) {
+      this.handleAiServiceError(error, 'Lỗi khi phân tích văn bản chat');
+    }
+  }
+
+  async parseMiningFile(file: any) {
+    const url = this.getAiServiceUrl('/chat-mining/parse-file');
+    const FormData = require('form-data');
+    const formData = new FormData();
+    formData.append('file', file.buffer, { filename: file.originalname });
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(url, formData, {
+          headers: formData.getHeaders(),
+          timeout: this.aiRequestTimeoutMs,
+        })
+      );
+      return response.data;
+    } catch (error) {
+      this.handleAiServiceError(error, 'Lỗi khi upload & phân tích file chat');
+    }
+  }
+
+  async approveMiningQa(qaList: any[]) {
+    const url = this.getAiServiceUrl('/chat-mining/approve-qa');
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(url, { qa_list: qaList }, { timeout: this.aiRequestTimeoutMs })
+      );
+      return response.data;
+    } catch (error) {
+      this.handleAiServiceError(error, 'Lỗi khi duyệt & nạp tri thức CSKH');
+    }
+  }
+
+  async getMiningPlaybooks(stage?: string) {
+    const stageQuery = stage ? `?stage=${encodeURIComponent(stage)}` : '';
+    const url = this.getAiServiceUrl(`/chat-mining/playbooks${stageQuery}`);
+    try {
+      const response = await firstValueFrom(
+        this.httpService.get(url, { timeout: this.aiRequestTimeoutMs })
+      );
+      return response.data;
+    } catch (error) {
+      this.handleAiServiceError(error, 'Lỗi khi đọc danh sách Kịch bản CSKH Bán hàng');
     }
   }
 }

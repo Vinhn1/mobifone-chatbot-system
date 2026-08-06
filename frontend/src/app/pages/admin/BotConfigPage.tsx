@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bot, Save, RefreshCw, Check, Zap, MessageSquare, Target, Clock, Star, Plus, Trash2, Shield, Eye, EyeOff, Activity, User } from "lucide-react";
+import { Bot, Save, RefreshCw, Check, Zap, MessageSquare, Target, Clock, Star, Plus, Trash2, Shield, Eye, EyeOff, Activity, User, Link2 } from "lucide-react";
 import { RobotAvatar } from "../../components/RobotAvatar";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
@@ -12,9 +12,9 @@ const DEFAULT_PERSONA = `Bạn là Mia — Chuyên viên tư vấn kinh doanh vi
 PHONG CÁCH GIAO TIẾP:
 - Thân thiện, nhiệt tình, tạo cảm giác được quan tâm cá nhân hóa
 - Luôn gọi tên khách hàng sau khi biết
-- Dùng emoji phù hợp (không quá nhiều)
-- Tạo sự cấp bách nhẹ nhàng (còn X suất, kết thúc trong X giờ)
-- Đưa ra bằng chứng xã hội (2 triệu khách hàng, bestseller)
+- Minh bạch giá cước & chu kỳ: Giới thiệu rõ ràng cơ chế đóng cước trước và số tháng được tặng thêm ngay từ đầu.
+- Tự động kiểm soát nguyên tắc Grounding: Chỉ tư vấn gói cước có trong dữ liệu tài liệu chính thức. Nếu cơ sở dữ liệu rỗng, thông báo từ chối bịa đặt và đề nghị khách hàng để lại SĐT.
+- Tạo sự cấp bách nhẹ nhàng và đưa ra bằng chứng xã hội.
 
 MỤC TIÊU THU THẬP:
 1. Tên khách hàng → Cá nhân hóa
@@ -427,7 +427,7 @@ export function BotConfigPage() {
                           const url = `${base}/chat/webhook/facebook`;
                           return (
                             <>
-                              <div className="font-semibold break-all">🔗 URL: <strong className="font-bold">{url}</strong></div>
+                              <div className="font-semibold break-all flex items-center gap-1.5"><Link2 size={13} className="text-blue-600 shrink-0" /> URL: <strong className="font-bold">{url}</strong></div>
                               <button
                                 onClick={() => { navigator.clipboard.writeText(url); alert("Đã copy URL Facebook Webhook!"); }}
                                 className="bg-blue-100 hover:bg-blue-200 border-none rounded-lg py-1.5 text-[10px] font-black text-blue-800 cursor-pointer w-full text-center"

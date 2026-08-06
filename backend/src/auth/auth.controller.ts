@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UnauthorizedException, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Body, UnauthorizedException, ForbiddenException, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -36,10 +36,11 @@ export class AuthController {
   }
 
   @Post('register')
-  @HttpCode(HttpStatus.CREATED)
-  async register(@Body() body: any) {
-    const { username, password, name } = body;
-    return await this.authService.registerSubscriber(username, password, name);
+  @HttpCode(HttpStatus.FORBIDDEN)
+  async register() {
+    throw new ForbiddenException(
+      'Đăng ký tài khoản không được phép. Vui lòng liên hệ quản trị viên để được cấp quyền truy cập hệ thống.',
+    );
   }
 
   // 1. Gửi OTP khôi phục mật khẩu qua Email

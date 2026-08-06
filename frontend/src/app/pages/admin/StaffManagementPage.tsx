@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   UserPlus, Search, Edit2, Trash2, Key, Shield, User,
   Mail, Phone, Calendar, MapPin, X, Save, ShieldAlert,
-  Sparkles, CheckCircle2, UserCheck, Eye, EyeOff
+  Sparkles, CheckCircle2, UserCheck, Eye, EyeOff,
+  FileSpreadsheet, Upload, Download, AlertCircle, FileText
 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
@@ -18,6 +19,7 @@ type Staff = {
   email: string | null;
   dob: string | null;
   address: string | null;
+  avatar: string | null;
   createdAt: string;
 };
 
@@ -50,6 +52,222 @@ export function StaffManagementPage() {
   const [address, setAddress] = useState("");
 
   const [showPass, setShowPass] = useState(false);
+
+  // States cho Modal Import CSV
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [parsedRows, setParsedRows] = useState<Array<{
+    row: number;
+    username: string;
+    password: string;
+    role: string;
+    name: string;
+    phone: string;
+    email: string;
+    dob: string;
+    address: string;
+    isValid: boolean;
+    errorMsg?: string;
+  }>>([]);
+  const [importing, setImporting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [importResult, setImportResult] = useState<{
+    total: number;
+    successCount: number;
+    failedCount: number;
+    results: Array<{ row: number; username: string; status: "success" | "failed"; message: string }>;
+  } | null>(null);
+
+  // Helper tự động phát hiện dấu phân cách CSV (phẩy, chấm phẩy, tab)
+  const detectDelimiter = (line: string): string => {
+    const commaCount = (line.match(/,/g) || []).length;
+    const semiCount = (line.match(/;/g) || []).length;
+    const tabCount = (line.match(/\t/g) || []).length;
+    if (tabCount > commaCount && tabCount > semiCount) return '\t';
+    if (semiCount > commaCount) return ';';
+    return ',';
+  };
+
+  // Helper parse 1 dòng CSV chuẩn hỗ trợ dấu nháy kép
+  const parseCSVLine = (line: string, delimiter: string = ','): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === delimiter && !inQuotes) {
+        result.push(current);
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+    return result;
+  };
+
+  // Helper parse toàn bộ text CSV thông minh & linh hoạt
+  const parseCSVText = (text: string) => {
+    const cleanText = text.replace(/^\uFEFF/, "").trim();
+    if (!cleanText) return [];
+
+    // Tách dòng hỗ trợ cả \r\n (Windows), \n (Linux/macOS mới), \r (macOS cũ)
+    const rawLines = cleanText.split(/\r\n|\r|\n/).map(l => l.trim()).filter(l => l.length > 0);
+    if (rawLines.length === 0) return [];
+
+    const delimiter = detectDelimiter(rawLines[0]);
+    const parsedLines = rawLines.map(line => parseCSVLine(line, delimiter));
+
+    // Kiểm tra xem dòng đầu tiên có phải là Header hay không
+    const firstRowLower = parsedLines[0].map(c => c.trim().toLowerCase());
+    const isHeaderRow = firstRowLower.some(c => 
+      c.includes("user") || c.includes("pass") || c.includes("mật") || c.includes("đăng nhập") || 
+      c.includes("role") || c.includes("vai trò") || c.includes("tên") || c.includes("email") || 
+      c.includes("sdt") || c.includes("phone") || c.includes("acc") || c.includes("chức vụ")
+    );
+
+    let startIdx = 0;
+    const headerMap: Record<string, number> = {};
+
+    if (isHeaderRow) {
+      startIdx = 1;
+      firstRowLower.forEach((h, idx) => {
+        if (h.includes("user") || h.includes("đăng nhập") || h.includes("taikhoan") || h.includes("acc")) headerMap["username"] = idx;
+        else if (h.includes("pass") || h.includes("mật khẩu") || h.includes("matkhau")) headerMap["password"] = idx;
+        else if (h.includes("role") || h.includes("vai trò") || h.includes("vaitro") || h.includes("chức vụ")) headerMap["role"] = idx;
+        else if (h.includes("name") || h.includes("họ") || h.includes("tên") || h.includes("fullname")) headerMap["name"] = idx;
+        else if (h.includes("phone") || h.includes("sdt") || h.includes("thoại") || h.includes("mobile")) headerMap["phone"] = idx;
+        else if (h.includes("email") || h.includes("mail")) headerMap["email"] = idx;
+        else if (h.includes("dob") || h.includes("sinh") || h.includes("birth")) headerMap["dob"] = idx;
+        else if (h.includes("address") || h.includes("địa chỉ") || h.includes("diachi")) headerMap["address"] = idx;
+      });
+    }
+
+    // Fallback vị trí cột chuẩn nếu không khớp tên tiêu đề
+    if (headerMap["username"] === undefined) headerMap["username"] = 0;
+    if (headerMap["password"] === undefined) headerMap["password"] = 1;
+    if (headerMap["role"] === undefined) headerMap["role"] = 2;
+    if (headerMap["name"] === undefined) headerMap["name"] = 3;
+    if (headerMap["phone"] === undefined) headerMap["phone"] = 4;
+    if (headerMap["email"] === undefined) headerMap["email"] = 5;
+    if (headerMap["dob"] === undefined) headerMap["dob"] = 6;
+    if (headerMap["address"] === undefined) headerMap["address"] = 7;
+
+    const existingSet = new Set(staffs.map(s => s.username.toLowerCase()));
+    const seenInCsvSet = new Set<string>();
+
+    const rows = [];
+    for (let i = startIdx; i < parsedLines.length; i++) {
+      const cols = parsedLines[i];
+      if (cols.length === 0 || (cols.length === 1 && !cols[0])) continue;
+
+      const getValue = (key: string) => {
+        const idx = headerMap[key];
+        return idx !== undefined && cols[idx] ? cols[idx].trim() : "";
+      };
+
+      const username = getValue("username");
+      const password = getValue("password");
+      const roleRaw = getValue("role").toLowerCase();
+      const role = roleRaw === "admin" ? "admin" : "sales";
+      const name = getValue("name");
+      const phone = getValue("phone");
+      const email = getValue("email");
+      const dob = getValue("dob");
+      const address = getValue("address");
+
+      let isValid = true;
+      let errorMsg = "";
+      const uLower = username.toLowerCase();
+
+      if (!username) {
+        isValid = false;
+        errorMsg = "Thiếu tên đăng nhập (username)";
+      } else if (!password) {
+        isValid = false;
+        errorMsg = "Thiếu mật khẩu (password)";
+      } else if (password.length < 6) {
+        isValid = false;
+        errorMsg = "Mật khẩu quá ngắn (< 6 ký tự)";
+      } else if (existingSet.has(uLower)) {
+        isValid = false;
+        errorMsg = "Tài khoản đã tồn tại trong hệ thống";
+      } else if (seenInCsvSet.has(uLower)) {
+        isValid = false;
+        errorMsg = "Trùng username trong file CSV";
+      } else {
+        seenInCsvSet.add(uLower);
+      }
+
+      rows.push({
+        row: i + 1,
+        username,
+        password,
+        role,
+        name,
+        phone,
+        email,
+        dob,
+        address,
+        isValid,
+        errorMsg
+      });
+    }
+
+    return rows;
+  };
+
+  const handleFileChange = (file: File | null) => {
+    if (!file) return;
+    if (!file.name.endsWith(".csv") && file.type !== "text/csv") {
+      showToast("Vui lòng chọn tệp định dạng .csv", "error");
+      return;
+    }
+    setCsvFile(file);
+    setImportResult(null);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const rows = parseCSVText(text);
+      setParsedRows(rows);
+    };
+    reader.readAsText(file, "UTF-8");
+  };
+
+  const handleExecuteImport = async () => {
+    const validRows = parsedRows.filter(r => r.isValid);
+    if (validRows.length === 0) {
+      showToast("Không có dòng dữ liệu hợp lệ nào để tạo tài khoản.", "error");
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const adminToken = localStorage.getItem("mobifone_admin_token");
+      const res = await axios.post(
+        `${API_BASE}/users/bulk-import`,
+        { users: validRows },
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+
+      setImportResult(res.data);
+      showToast(`Hoàn tất! Tạo thành công ${res.data.successCount}/${res.data.total} tài khoản.`);
+      fetchStaffs();
+    } catch (err: any) {
+      console.error("Lỗi khi import tài khoản:", err);
+      showToast(err.response?.data?.message || "Đã xảy ra lỗi khi tạo tài khoản hàng loạt", "error");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   // Toast notification state
   const [toast, setToast] = useState<{ message: string; type: "success" | "error"; visible: boolean } | null>(null);
@@ -288,27 +506,56 @@ export function StaffManagementPage() {
           </p>
         </div>
 
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleOpenCreate}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            background: "linear-gradient(135deg, #0055A5, #0077D5)",
-            color: "white",
-            border: "none",
-            borderRadius: "12px",
-            padding: "10px 20px",
-            fontWeight: 700,
-            fontSize: "14px",
-            cursor: "pointer",
-            boxShadow: "0 4px 15px rgba(0, 85, 165, 0.25)"
-          }}
-        >
-          <UserPlus size={16} /> Thêm tài khoản mới
-        </motion.button>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => {
+              setShowImportModal(true);
+              setCsvFile(null);
+              setParsedRows([]);
+              setImportResult(null);
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              background: "white",
+              color: "#0055A5",
+              border: "1.5px solid #0055A5",
+              borderRadius: "12px",
+              padding: "10px 18px",
+              fontWeight: 700,
+              fontSize: "14px",
+              cursor: "pointer",
+              boxShadow: "0 2px 8px rgba(0, 85, 165, 0.08)"
+            }}
+          >
+            <FileSpreadsheet size={16} /> Nhập file CSV
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleOpenCreate}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              background: "linear-gradient(135deg, #0055A5, #0077D5)",
+              color: "white",
+              border: "none",
+              borderRadius: "12px",
+              padding: "10px 20px",
+              fontWeight: 700,
+              fontSize: "14px",
+              cursor: "pointer",
+              boxShadow: "0 4px 15px rgba(0, 85, 165, 0.25)"
+            }}
+          >
+            <UserPlus size={16} /> Thêm tài khoản mới
+          </motion.button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -524,18 +771,27 @@ export function StaffManagementPage() {
                       <td style={{ padding: "14px 20px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           <div style={{
-                            width: "36px",
-                            height: "36px",
+                            position: "relative",
+                            width: "38px",
+                            height: "38px",
                             borderRadius: "50%",
-                            background: isAdmin ? "linear-gradient(135deg, #4F46E5, #6366F1)" : "linear-gradient(135deg, #10B981, #34D399)",
-                            color: "white",
-                            fontWeight: 800,
+                            overflow: "hidden",
+                            flexShrink: 0,
+                            background: isAdmin ? "linear-gradient(135deg, #4F46E5, #6366F1)" : "linear-gradient(135deg, #0055A5, #0077D5)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: "12.5px"
+                            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.08)"
                           }}>
-                            {initials}
+                            <img
+                              src={staff.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(staff.name || staff.username)}&background=${isAdmin ? "4F46E5" : "0055A5"}&color=fff&bold=true&size=128`}
+                              alt={staff.name || staff.username}
+                              style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }}
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = "none";
+                              }}
+                            />
+                            <span style={{ color: "white", fontWeight: 800, fontSize: "12.5px" }}>{initials}</span>
                           </div>
                           <div>
                             <div style={{ fontWeight: 700, color: "#1E293B" }}>{staff.name || "Chưa cập nhật họ tên"}</div>
@@ -1176,6 +1432,412 @@ export function StaffManagementPage() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Nhập File CSV Tạo Hàng Loạt */}
+      <AnimatePresence>
+        {showImportModal && (
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px"
+          }}>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !importing && setShowImportModal(false)}
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(15, 23, 42, 0.4)",
+                backdropFilter: "blur(6px)"
+              }}
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              style={{
+                background: "rgba(255, 255, 255, 0.95)",
+                backdropFilter: "blur(30px)",
+                border: "1px solid rgba(255, 255, 255, 0.6)",
+                borderRadius: "24px",
+                width: "100%",
+                maxWidth: "780px",
+                maxHeight: "90vh",
+                boxShadow: "0 25px 60px rgba(0, 0, 0, 0.2)",
+                position: "relative",
+                zIndex: 10,
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden"
+              }}
+            >
+              {/* Modal Header */}
+              <div style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid rgba(0, 0, 0, 0.06)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                background: "linear-gradient(135deg, rgba(0,85,165,0.04), rgba(0,119,213,0.02))"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{
+                    width: "38px",
+                    height: "38px",
+                    borderRadius: "10px",
+                    background: "rgba(0, 85, 165, 0.1)",
+                    color: "#0055A5",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}>
+                    <FileSpreadsheet size={20} />
+                  </div>
+                  <div>
+                    <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#1E293B", margin: 0 }}>
+                      Nhập file CSV tạo nhiều tài khoản
+                    </h2>
+                    <p style={{ color: "#64748B", fontSize: "13px", margin: "2px 0 0 0" }}>
+                      Tải lên file danh sách nhân sự (.csv) để tạo nhiều tài khoản cùng lúc
+                    </p>
+                  </div>
+                </div>
+                <button
+                  disabled={importing}
+                  onClick={() => setShowImportModal(false)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#94A3B8",
+                    cursor: importing ? "not-allowed" : "pointer",
+                    padding: "4px",
+                    borderRadius: "8px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div style={{ padding: "24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "20px" }}>
+                
+                {/* Banner Tải file mẫu CSV */}
+                <div style={{
+                  background: "linear-gradient(135deg, rgba(0, 85, 165, 0.06), rgba(0, 119, 213, 0.03))",
+                  border: "1px dashed rgba(0, 85, 165, 0.3)",
+                  borderRadius: "14px",
+                  padding: "16px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: "16px"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                    <FileText size={24} style={{ color: "#0055A5" }} />
+                    <div>
+                      <div style={{ fontSize: "14px", fontWeight: 700, color: "#1E293B" }}>
+                        Chưa có file mẫu CSV chuẩn?
+                      </div>
+                      <div style={{ fontSize: "12.5px", color: "#64748B", marginTop: "2px" }}>
+                        Tải file mẫu có sẵn cấu trúc cột chuẩn (username, password, role, name, phone, email, dob, address)
+                      </div>
+                    </div>
+                  </div>
+
+                  <a
+                    href="/templates/mau_danh_sach_nhan_su.csv"
+                    download="mau_danh_sach_nhan_su.csv"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: "#0055A5",
+                      color: "white",
+                      padding: "8px 14px",
+                      borderRadius: "10px",
+                      fontSize: "13px",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                      whiteSpace: "nowrap",
+                      boxShadow: "0 2px 8px rgba(0, 85, 165, 0.2)"
+                    }}
+                  >
+                    <Download size={15} /> Tải file mẫu
+                  </a>
+                </div>
+
+                {/* Upload File Zone */}
+                <div>
+                  <label style={{ display: "block", fontSize: "13px", fontWeight: 700, color: "#475569", marginBottom: "8px" }}>
+                    Chọn tệp CSV từ máy tính
+                  </label>
+                  <div
+                    style={{
+                      border: isDragging ? "2px dashed #0055A5" : "2px dashed #CBD5E1",
+                      borderRadius: "16px",
+                      padding: "24px",
+                      textAlign: "center",
+                      background: isDragging ? "rgba(0, 85, 165, 0.08)" : "rgba(248, 250, 252, 0.6)",
+                      cursor: "pointer",
+                      transition: "all 0.2s ease",
+                      transform: isDragging ? "scale(1.01)" : "none"
+                    }}
+                    onClick={() => {
+                      const input = document.getElementById("csv-file-input");
+                      if (input) input.click();
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDragging(false);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setIsDragging(false);
+                      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                        handleFileChange(e.dataTransfer.files[0]);
+                      }
+                    }}
+                  >
+                    <input
+                      id="csv-file-input"
+                      type="file"
+                      accept=".csv"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleFileChange(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    <Upload size={32} style={{ color: "#0055A5", marginBottom: "8px" }} />
+                    <div style={{ fontSize: "14px", fontWeight: 700, color: "#334155" }}>
+                      {csvFile ? csvFile.name : "Nhấp để chọn tệp hoặc kéo thả file CSV vào đây"}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#94A3B8", marginTop: "4px" }}>
+                      {csvFile ? `${(csvFile.size / 1024).toFixed(1)} KB` : "Chỉ hỗ trợ tệp định dạng .csv (UTF-8)"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Thông báo nếu file CSV được tải lên nhưng không có dữ liệu đọc được */}
+                {csvFile && parsedRows.length === 0 && (
+                  <div style={{
+                    background: "rgba(245, 158, 11, 0.08)",
+                    border: "1px solid rgba(245, 158, 11, 0.3)",
+                    borderRadius: "14px",
+                    padding: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    color: "#B45309",
+                    fontSize: "13.5px"
+                  }}>
+                    <AlertCircle size={22} style={{ flexShrink: 0, color: "#D97706" }} />
+                    <div>
+                      <strong>Không đọc được dòng dữ liệu nào từ file "{csvFile.name}".</strong><br />
+                      Vui lòng kiểm tra lại file có dữ liệu không, hoặc tải file mẫu CSV bên trên để xem định dạng chuẩn.
+                    </div>
+                  </div>
+                )}
+
+                {/* Báo cáo kết quả Import nếu có */}
+                {importResult && (
+                  <div style={{
+                    background: importResult.failedCount === 0 ? "rgba(16, 185, 129, 0.08)" : "rgba(245, 158, 11, 0.08)",
+                    border: importResult.failedCount === 0 ? "1px solid rgba(16, 185, 129, 0.3)" : "1px solid rgba(245, 158, 11, 0.3)",
+                    borderRadius: "14px",
+                    padding: "16px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ fontWeight: 800, fontSize: "15px", color: "#1E293B" }}>
+                        🎉 Kết quả tạo tài khoản hàng loạt:
+                      </div>
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <span style={{ background: "#10B981", color: "white", padding: "2px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: 700 }}>
+                          Thành công: {importResult.successCount}
+                        </span>
+                        {importResult.failedCount > 0 && (
+                          <span style={{ background: "#EF4444", color: "white", padding: "2px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: 700 }}>
+                            Thất bại: {importResult.failedCount}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ maxHeight: "150px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      {importResult.results.map((res, idx) => (
+                        <div key={idx} style={{
+                          fontSize: "12.5px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "6px 10px",
+                          borderRadius: "8px",
+                          background: res.status === "success" ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.1)"
+                        }}>
+                          <span><strong>Dòng {res.row}:</strong> {res.username}</span>
+                          <span style={{ fontWeight: 600, color: res.status === "success" ? "#059669" : "#DC2626" }}>
+                            {res.message}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bảng Xem Trước Dữ Liệu CSV (CSV Preview Table) */}
+                {parsedRows.length > 0 && (
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                      <div style={{ fontSize: "14px", fontWeight: 700, color: "#334155" }}>
+                        Bảng xem trước dữ liệu ({parsedRows.length} dòng)
+                      </div>
+                      <div style={{ fontSize: "12.5px", color: "#64748B" }}>
+                        Hợp lệ: <strong style={{ color: "#10B981" }}>{parsedRows.filter(r => r.isValid).length}</strong> | 
+                        Lỗi: <strong style={{ color: "#EF4444" }}>{parsedRows.filter(r => !r.isValid).length}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      border: "1px solid rgba(0,0,0,0.08)",
+                      borderRadius: "12px",
+                      overflowX: "auto",
+                      maxHeight: "240px",
+                      overflowY: "auto"
+                    }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12.5px", textAlign: "left" }}>
+                        <thead>
+                          <tr style={{ background: "#F1F5F9", color: "#475569", fontWeight: 700 }}>
+                            <th style={{ padding: "8px 12px" }}>Dòng</th>
+                            <th style={{ padding: "8px 12px" }}>Username</th>
+                            <th style={{ padding: "8px 12px" }}>Password</th>
+                            <th style={{ padding: "8px 12px" }}>Role</th>
+                            <th style={{ padding: "8px 12px" }}>Họ tên</th>
+                            <th style={{ padding: "8px 12px" }}>SĐT</th>
+                            <th style={{ padding: "8px 12px" }}>Trạng thái</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {parsedRows.map((row, idx) => (
+                            <tr key={idx} style={{
+                              borderTop: "1px solid rgba(0,0,0,0.05)",
+                              background: row.isValid ? "transparent" : "rgba(254, 242, 242, 0.7)"
+                            }}>
+                              <td style={{ padding: "8px 12px", fontWeight: 600 }}>{row.row}</td>
+                              <td style={{ padding: "8px 12px", fontWeight: 700, color: "#1E293B" }}>{row.username || "-"}</td>
+                              <td style={{ padding: "8px 12px", color: "#64748B" }}>••••••</td>
+                              <td style={{ padding: "8px 12px" }}>
+                                <span style={{
+                                  background: row.role === "admin" ? "rgba(139, 92, 246, 0.1)" : "rgba(59, 130, 246, 0.1)",
+                                  color: row.role === "admin" ? "#7C3AED" : "#2563EB",
+                                  padding: "2px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "11px",
+                                  fontWeight: 700
+                                }}>
+                                  {row.role}
+                                </span>
+                              </td>
+                              <td style={{ padding: "8px 12px" }}>{row.name || "-"}</td>
+                              <td style={{ padding: "8px 12px" }}>{row.phone || "-"}</td>
+                              <td style={{ padding: "8px 12px" }}>
+                                {row.isValid ? (
+                                  <span style={{ color: "#10B981", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                    <CheckCircle2 size={14} /> Hợp lệ
+                                  </span>
+                                ) : (
+                                  <span style={{ color: "#EF4444", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                    <AlertCircle size={14} /> {row.errorMsg}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Modal Footer */}
+              <div style={{
+                padding: "16px 24px",
+                borderTop: "1px solid rgba(0, 0, 0, 0.06)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: "12px",
+                background: "#F8FAFC"
+              }}>
+                <button
+                  type="button"
+                  disabled={importing}
+                  onClick={() => setShowImportModal(false)}
+                  style={{
+                    padding: "9px 18px",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(0, 0, 0, 0.1)",
+                    background: "white",
+                    color: "#475569",
+                    fontWeight: 700,
+                    fontSize: "13.5px",
+                    cursor: importing ? "not-allowed" : "pointer"
+                  }}
+                >
+                  Đóng
+                </button>
+
+                {parsedRows.length > 0 && (
+                  <button
+                    type="button"
+                    disabled={importing || parsedRows.filter(r => r.isValid).length === 0}
+                    onClick={handleExecuteImport}
+                    style={{
+                      padding: "9px 22px",
+                      borderRadius: "10px",
+                      border: "none",
+                      background: "linear-gradient(135deg, #0055A5, #0077D5)",
+                      color: "white",
+                      fontWeight: 700,
+                      fontSize: "13.5px",
+                      cursor: (importing || parsedRows.filter(r => r.isValid).length === 0) ? "not-allowed" : "pointer",
+                      opacity: (importing || parsedRows.filter(r => r.isValid).length === 0) ? 0.6 : 1,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      boxShadow: "0 4px 14px rgba(0, 85, 165, 0.25)"
+                    }}
+                  >
+                    {importing ? "Đang xử lý tạo tài khoản..." : `Tạo ${parsedRows.filter(r => r.isValid).length} tài khoản hợp lệ`}
+                  </button>
+                )}
+              </div>
             </motion.div>
           </div>
         )}

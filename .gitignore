@@ -52,9 +52,11 @@ agent-skills
 # TypeScript build caches
 *.tsbuildinfo
 
-# Chroma DB
+# Chroma DB & Temporary Files
 ai-core/chroma_db/
 **/chroma_db/
+ai-core/browser_profiles/
+ai-core/temp_uploads/
 
 # Temporary suggestions/eval/out files
 ai-core/dynamic_suggestions.json

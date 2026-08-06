@@ -216,7 +216,7 @@ export function ConversationsPage() {
       });
     } catch (error) {
       console.error("Lỗi khi tải lịch sử hội thoại:", error);
-      if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
         logout();
         navigate("/login");
       }

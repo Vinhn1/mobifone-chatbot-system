@@ -78,11 +78,11 @@ export function PromptPlaygroundPage() {
     }
   };
 
-  // Redirect if not admin
+  // Redirect if not admin or sales
   useEffect(() => {
     if (!user) {
       navigate("/login");
-    } else if (user.role !== "admin") {
+    } else if (user.role !== "admin" && user.role !== "sales") {
       navigate("/admin");
     }
   }, [user, navigate]);
@@ -105,7 +105,7 @@ export function PromptPlaygroundPage() {
       }
     } catch (error) {
       console.error("Lỗi khi tải cấu hình bot playground:", error);
-      if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
         logout();
         navigate("/login");
       }
@@ -219,11 +219,6 @@ export function PromptPlaygroundPage() {
           <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-xl px-3.5 py-1.5 shadow-xs">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             <span className="text-emerald-700 text-xs font-bold">Chế độ Sandbox</span>
-          </div>
-          <div className="flex items-center gap-2 bg-white border border-slate-200/60 rounded-xl px-3.5 py-1.5 cursor-pointer hover:border-slate-300">
-            <Code2 size={13} className="text-[#0055A5]" />
-            <span className="text-xs font-bold text-slate-600">Qwen-2.5-7B</span>
-            <ChevronDown size={12} className="text-slate-400" />
           </div>
         </div>
       </div>

@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "motion/react";
 import {
   TrendingUp, TrendingDown, Users, MessageSquare, Target, DollarSign,
   Phone, Activity, Calendar, ArrowRight, Zap, Award, RefreshCw,
-  Search, Download, Bell, ChevronRight, Wifi,
+  Search, Download, Bell, ChevronRight, Wifi, Flame, Sun, Snowflake,
+  Sparkles, Bot, BarChart3, CircleDollarSign, CheckCircle2, PhoneCall,
 } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
@@ -148,24 +149,20 @@ function FunnelBar({ stage, count, maxCount, color, value, index }:
           {value !== "—" && (
             <span className="text-[10px] font-bold" style={{ color }}>{value}đ</span>
           )}
-          <span className="text-slate-800 text-sm font-black">{count}</span>
+          <span className="text-slate-800 text-xs font-black">{count}</span>
+          <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 min-w-[34px] text-center">
+            {animPct}%
+          </span>
         </div>
       </div>
-      <div className="relative h-7 w-full bg-slate-100 rounded-xl overflow-hidden">
+      <div className="h-3 rounded-full bg-slate-100/80 overflow-hidden p-0.5">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 0.9, delay: index * 0.06, ease: "easeOut" }}
-          className="h-full rounded-xl flex items-center justify-end pr-2"
-          style={{ background: `linear-gradient(90deg, ${color}99, ${color})` }}
-        >
-          {pct > 12 && (
-            <span className="text-white text-[10px] font-extrabold">{animPct}%</span>
-          )}
-        </motion.div>
-        {pct <= 12 && pct > 0 && (
-          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-[10px] font-extrabold">{animPct}%</span>
-        )}
+          transition={{ duration: 1, delay: index * 0.1, ease: "easeOut" }}
+          className="h-full rounded-full"
+          style={{ backgroundColor: color }}
+        />
       </div>
     </motion.div>
   );
@@ -203,7 +200,7 @@ function LiveTicker({ items }: { items: string[] }) {
 /* ─────────────────────────────────────────────────────────
    ACTIVITY FEED
 ───────────────────────────────────────────────────────── */
-interface ActivityEvent { icon: string; text: string; time: string; type: "lead" | "session" | "hot" | "system"; }
+interface ActivityEvent { icon: React.ComponentType<{ size?: number; className?: string }>; text: string; time: string; type: "lead" | "session" | "hot" | "system"; }
 function ActivityFeed({ events }: { events: ActivityEvent[] }) {
   const colorMap = { lead: "#0055A5", session: "#8B5CF6", hot: "#EF4444", system: "#10B981" };
   const bgMap = { lead: "#EFF6FF", session: "#F5F3FF", hot: "#FEF2F2", system: "#F0FDF4" };
@@ -213,30 +210,33 @@ function ActivityFeed({ events }: { events: ActivityEvent[] }) {
       {events.length === 0 ? (
         <div className="py-8 text-center text-slate-400 text-sm font-bold">Chưa có hoạt động nào.</div>
       ) : (
-        events.map((e, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.04 }}
-            className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors"
-          >
-            <div
-              className="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0"
-              style={{ backgroundColor: bgMap[e.type] }}
+        events.map((e, i) => {
+          const IconComp = e.icon;
+          return (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.04 }}
+              className="flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors"
             >
-              {e.icon}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-slate-700 text-xs font-semibold leading-snug">{e.text}</div>
-              <div className="text-slate-400 text-[10px] font-bold mt-0.5">{e.time}</div>
-            </div>
-            <div
-              className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
-              style={{ backgroundColor: colorMap[e.type] }}
-            />
-          </motion.div>
-        ))
+              <div
+                className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
+                style={{ backgroundColor: bgMap[e.type], color: colorMap[e.type] }}
+              >
+                <IconComp size={15} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-slate-700 text-xs font-semibold leading-snug">{e.text}</div>
+                <div className="text-slate-400 text-[10px] font-bold mt-0.5">{e.time}</div>
+              </div>
+              <div
+                className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0"
+                style={{ backgroundColor: colorMap[e.type] }}
+              />
+            </motion.div>
+          );
+        })
       )}
     </div>
   );
@@ -245,10 +245,10 @@ function ActivityFeed({ events }: { events: ActivityEvent[] }) {
 /* ─────────────────────────────────────────────────────────
    HELPERS
 ───────────────────────────────────────────────────────── */
-const SCORES: Record<string, { bg: string; color: string; label: string }> = {
-  hot: { bg: "bg-rose-50 border border-rose-200 text-rose-600", color: "#EF4444", label: "🔥 HOT" },
-  warm: { bg: "bg-amber-50 border border-amber-200 text-amber-600", color: "#F59E0B", label: "☀️ WARM" },
-  cold: { bg: "bg-blue-50 border border-blue-200 text-[#0055A5]", color: "#3B82F6", label: "❄️ COLD" },
+const SCORES: Record<string, { bg: string; color: string; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }> = {
+  hot: { bg: "bg-rose-50 border border-rose-200 text-rose-600", color: "#EF4444", label: "HOT", icon: Flame },
+  warm: { bg: "bg-amber-50 border border-amber-200 text-amber-600", color: "#F59E0B", label: "WARM", icon: Sun },
+  cold: { bg: "bg-blue-50 border border-blue-200 text-[#0055A5]", color: "#3B82F6", label: "COLD", icon: Snowflake },
 };
 
 const cleanInterestText = (text: string): string => {
@@ -450,7 +450,7 @@ export function DashboardPage() {
       setChatLogs(chatLogsRes.data || []);
     } catch (error) {
       console.error("Lỗi khi tải dữ liệu Dashboard:", error);
-      if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
         logout();
         navigate("/login");
       }
@@ -546,7 +546,7 @@ export function DashboardPage() {
   // Activity feed
   const activityEvents: ActivityEvent[] = [
     ...leads.slice(0, 3).map(l => ({
-      icon: "📝",
+      icon: Sparkles,
       text: `Lead mới: ${l.name || "Khách hàng ẩn danh"} — ${cleanInterestText(l.interest)}`,
       time: (() => {
         const d = Math.max(1, Math.round((new Date().getTime() - new Date(l.createdAt).getTime()) / 60000));
@@ -554,10 +554,10 @@ export function DashboardPage() {
       })(),
       type: "lead" as const,
     })),
-    { icon: "🤖", text: "Mia AI đang hoạt động — phản hồi trung bình 1.2 giây", time: "Liên tục", type: "system" as const },
-    { icon: "💬", text: `${chatLogs.length} tin nhắn được xử lý hôm nay`, time: "Cập nhật liên tục", type: "session" as const },
+    { icon: Bot, text: "Mia AI đang hoạt động — phản hồi trung bình 1.2 giây", time: "Liên tục", type: "system" as const },
+    { icon: MessageSquare, text: `${chatLogs.length} tin nhắn được xử lý hôm nay`, time: "Cập nhật liên tục", type: "session" as const },
     ...allProcessedLeads.filter(l => l.status === "hot").slice(0, 2).map(l => ({
-      icon: "🔥",
+      icon: Flame,
       text: `Lead HOT: ${l.name || "Khách hàng ẩn danh"} — Score ${l.score}`,
       time: `${l.time} trước`,
       type: "hot" as const,
@@ -565,12 +565,12 @@ export function DashboardPage() {
   ];
 
   const tickerItems = [
-    `📊 Leads hôm nay: ${todayLeads}`,
-    `💰 Doanh thu ước tính: ${potentialRevenueMillion}M đ`,
-    `🟢 Mia AI Active — phản hồi 1.2s`,
-    `📞 ${allProcessedLeads.filter(l => l.status === "hot").length} leads HOT cần liên hệ`,
-    `💬 ${totalSessions} phiên tương tác`,
-    `🎯 Tỷ lệ chuyển đổi: ${conversionRate.toFixed(1)}%`,
+    `Leads hôm nay: ${todayLeads}`,
+    `Doanh thu ước tính: ${potentialRevenueMillion}M đ`,
+    `Mia AI Active — phản hồi 1.2s`,
+    `${allProcessedLeads.filter(l => l.status === "hot").length} leads HOT cần liên hệ`,
+    `${totalSessions} phiên tương tác`,
+    `Tỷ lệ chuyển đổi: ${conversionRate.toFixed(1)}%`,
   ];
 
 
@@ -826,7 +826,7 @@ export function DashboardPage() {
                 <button
                   key={f}
                   onClick={() => setLeadFilter(f)}
-                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all"
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1"
                   style={{
                     background: leadFilter === f ? "white" : "transparent",
                     color: leadFilter === f
@@ -835,7 +835,10 @@ export function DashboardPage() {
                     boxShadow: leadFilter === f ? "0 1px 4px 0 rgba(0,0,0,0.08)" : "none",
                   }}
                 >
-                  {f === "all" ? "Tất cả" : f === "hot" ? "🔥 HOT" : f === "warm" ? "☀️ WARM" : "❄️ COLD"}
+                  {f === "all" && "Tất cả"}
+                  {f === "hot" && <><Flame size={11} /> HOT</>}
+                  {f === "warm" && <><Sun size={11} /> WARM</>}
+                  {f === "cold" && <><Snowflake size={11} /> COLD</>}
                 </button>
               ))}
             </div>
@@ -850,6 +853,7 @@ export function DashboardPage() {
             ) : (
               filteredLeads.map((l, i) => {
                 const s = SCORES[l.status] || SCORES.cold;
+                const StatusIcon = s.icon;
                 return (
                   <motion.div
                     key={l.id}
@@ -876,6 +880,7 @@ export function DashboardPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-slate-800 font-bold text-sm truncate">{l.name || "Khách hàng ẩn danh"}</span>
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider border ${s.bg}`}>
+                          <StatusIcon size={10} />
                           {s.label}
                         </span>
                       </div>

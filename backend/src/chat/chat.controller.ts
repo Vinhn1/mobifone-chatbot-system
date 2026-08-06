@@ -107,7 +107,7 @@ export class ChatController {
 
   @Get('config') // Lấy cấu hình RAG (Prompt + Params)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'sales')
   async getConfig() {
     try {
       return await this.chatService.getRagConfig();
@@ -121,7 +121,7 @@ export class ChatController {
 
   @Post('config') // Cập nhật cấu hình RAG
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'sales')
   async updateConfig(@Body() cfg: any) {
     try {
       return await this.chatService.updateRagConfig(cfg);
@@ -135,7 +135,7 @@ export class ChatController {
 
   @Get('documents') // Lấy danh sách tài liệu tri thức
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'sales')
   async getDocuments() {
     try {
       return await this.chatService.getDocuments();
@@ -149,7 +149,7 @@ export class ChatController {
 
   @Delete('documents') // Xóa tài liệu qua Query parameter
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'sales')
   async deleteDocumentByQuery(@Query('name') name: string) {
     try {
       return await this.chatService.deleteDocument(name);
@@ -163,7 +163,7 @@ export class ChatController {
 
   @Delete('documents/*name') // Xóa tài liệu (wildcard match cho URL có dấu /)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'sales')
   async deleteDocument(@Param('name') name: string) {
     try {
       return await this.chatService.deleteDocument(name);
@@ -178,8 +178,12 @@ export class ChatController {
 
   @Post('ingest-url') // Crawl một trang web MobiFone và nạp nội dung vào Knowledge Base
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  async ingestFromUrl(@Body('url') url: string) {
+  @Roles('admin', 'sales')
+  async ingestFromUrl(
+    @Body('url') url: string,
+    @Body('cookies') cookies?: string,
+    @Body('deep_crawl') deep_crawl?: boolean,
+  ) {
     if (!url || !url.trim()) {
       throw new HttpException('URL không được để trống', HttpStatus.BAD_REQUEST);
     }
@@ -192,7 +196,45 @@ export class ChatController {
       throw new HttpException('URL không hợp lệ', HttpStatus.BAD_REQUEST);
     }
     try {
-      return await this.chatService.ingestFromUrl(trimmedUrl);
+      return await this.chatService.ingestFromUrl(trimmedUrl, cookies, deep_crawl);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Get('documents/web-chunks') // Lấy danh sách các đoạn chunks từ trang web (Bảo mật: Chỉ WEB)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'sales')
+  async getWebDocumentChunks(@Query('name') name: string) {
+    if (!name || !name.trim()) {
+      throw new HttpException('Tên tài liệu / URL không được để trống', HttpStatus.BAD_REQUEST);
+    }
+    try {
+      return await this.chatService.getWebDocumentChunks(name.trim());
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  @Post('ingest-html') // Nạp trực tiếp nội dung HTML/DOM từ trình duyệt
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'sales')
+  async ingestFromHtml(
+    @Body('source_title') sourceTitle: string,
+    @Body('html_content') htmlContent: string,
+    @Body('source_url') sourceUrl?: string,
+  ) {
+    if (!htmlContent || !htmlContent.trim()) {
+      throw new HttpException('Nội dung HTML không được để trống', HttpStatus.BAD_REQUEST);
+    }
+    try {
+      return await this.chatService.ingestFromHtml(sourceTitle || 'Trang web DOM', htmlContent, sourceUrl);
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -203,7 +245,7 @@ export class ChatController {
 
   @Post('upload') // Tải lên tài liệu mới (PDF, TXT, WORD, EXCEL) hoặc file chat mẫu
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'sales')
   @UseInterceptors(FileInterceptor('file', {
     limits: { fileSize: 100 * 1024 * 1024 } // Giới hạn 100MB
   }))
@@ -272,5 +314,43 @@ export class ChatController {
       }
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
     }
+  }
+
+  @Post('mining/parse-text')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'sales')
+  async parseMiningText(@Body('raw_text') rawText: string) {
+    if (!rawText) {
+      throw new HttpException('Nội dung văn bản chat không được trống', HttpStatus.BAD_REQUEST);
+    }
+    return await this.chatService.parseMiningText(rawText);
+  }
+
+  @Post('mining/parse-file')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'sales')
+  @UseInterceptors(FileInterceptor('file'))
+  async parseMiningFile(@UploadedFile() file: any) {
+    if (!file) {
+      throw new HttpException('Vui lòng chọn file chat', HttpStatus.BAD_REQUEST);
+    }
+    return await this.chatService.parseMiningFile(file);
+  }
+
+  @Post('mining/approve-qa')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'sales')
+  async approveMiningQa(@Body('qa_list') qaList: any[]) {
+    if (!qaList || !Array.isArray(qaList)) {
+      throw new HttpException('Danh sách Q&A không hợp lệ', HttpStatus.BAD_REQUEST);
+    }
+    return await this.chatService.approveMiningQa(qaList);
+  }
+
+  @Get('mining/playbooks')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin', 'sales')
+  async getMiningPlaybooks(@Query('stage') stage?: string) {
+    return await this.chatService.getMiningPlaybooks(stage);
   }
 }

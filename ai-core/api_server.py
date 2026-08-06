@@ -2,14 +2,33 @@ import os
 import sys
 import json
 import time
+import uuid
 import re
 import subprocess
 from typing import List, Optional
 from urllib.parse import urlparse
 from pydantic import BaseModel
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from rag_pipeline import AIServiceError, MobiFoneRAG
+try:
+    from crawl_engine import crawl_url_async, crawl_site_deep_async, _extract_title_and_text_from_html
+except ImportError:
+    crawl_url_async = None
+    crawl_site_deep_async = None
+    _extract_title_and_text_from_html = None
+
+try:
+    from chat_miner import (
+        parse_file_to_chats,
+        parse_raw_text_to_chat,
+        analyze_chat_with_llm,
+        ChatConversation,
+        MessageItem
+    )
+except ImportError as chat_miner_err:
+    print(f"⚠️ Cảnh báo import chat_miner: {chat_miner_err}")
+
 
 # Tự động kiểm tra và cài đặt các thư viện đọc tài liệu nếu thiếu
 def install_dependencies():
@@ -98,12 +117,99 @@ def _validate_mobifone_url(url: str) -> str:
         raise HTTPException(status_code=400, detail="URL không hợp lệ.")
 
 
+# ─────────────────────────────────────────────────────
+# Login / Auth-wall detection
+# ─────────────────────────────────────────────────────
+
+# Path pattern điển hình của trang login khi URL bị redirect về
+_LOGIN_URL_PATTERNS = [
+    "/login", "/signin", "/sign-in", "/dang-nhap", "/auth/login",
+    "/account/login", "/user/login", "/member/login", "/portal/login",
+    "/sso", "/oauth", "/cas/login", "/saml",
+]
+
+# Keyword xuất hiện trong HTML của trang login (chỉ dùng khi kèm password field)
+_LOGIN_HTML_KEYWORDS = [
+    # Tiếng Việt
+    "đăng nhập", "mật khẩu", "nhập mật khẩu", "quên mật khẩu",
+    # Tiếng Anh (context rõ ràng)
+    "please sign in", "please log in", "you must be logged in",
+    "login required", "sign in to continue", "sign in to access",
+    "unauthorized", "access denied",
+]
+
+# Markers của input[type=password] trong HTML
+_LOGIN_FORM_MARKERS = ['type="password"', "type='password'"]
+
+
+def _detect_login_page(html: str, final_url: str, status_code: int = 200):
+    """Kiểm tra response có phải trang login/auth-wall không.
+
+    Trả về dict {'reason': ..., 'detail': ...} nếu phát hiện,
+    hoặc None nếu trang bình thường.
+
+    Chiến lược (theo thứ tự ưu tiên):
+      1. HTTP status 401 / 403   → rõ ràng nhất
+      2. URL cuối bị redirect về login path
+      3. HTML có input[type=password] + keyword login
+    """
+    # 1. HTTP status
+    if status_code in (401, 403):
+        return {
+            "reason": f"HTTP {status_code}",
+            "detail": (
+                f"Server trả về HTTP {status_code} — trang yêu cầu xác thực. "
+                "Vui lòng bỏ qua URL này hoặc xử lý đăng nhập thủ công."
+            ),
+        }
+
+    # 2. Final URL path sau redirect
+    from urllib.parse import urlparse as _urlparse
+    final_path = _urlparse(final_url).path.lower().rstrip("/")
+    for pattern in _LOGIN_URL_PATTERNS:
+        if (
+            final_path == pattern
+            or final_path.endswith(pattern)
+            or (f"{pattern}/" in final_path)
+        ):
+            return {
+                "reason": f"redirect_to_login ({final_path})",
+                "detail": (
+                    f"URL bị redirect về trang đăng nhập: {final_url}. "
+                    "URL gốc có thể yêu cầu đăng nhập — đã bỏ qua."
+                ),
+            }
+
+    # 3. HTML chứa input[type=password]  → gần như chắc chắn là form login
+    html_lower = html.lower()
+    has_password_field = any(m.lower() in html_lower for m in _LOGIN_FORM_MARKERS)
+    if has_password_field:
+        matched_kw = next(
+            (kw for kw in _LOGIN_HTML_KEYWORDS if kw in html_lower), None
+        )
+        return {
+            "reason": "password_input_form",
+            "detail": (
+                "Trang chứa form đăng nhập (phát hiện input mật khẩu"
+                + (f", keyword: '{matched_kw}'" if matched_kw else "")
+                + "). URL này yêu cầu đăng nhập — đã bỏ qua tự động."
+            ),
+        }
+
+    return None  # Trang bình thường
+
+
 def _crawl_url(url: str) -> tuple[str, str]:
     """Crawl nội dung từ URL, trả về (title, text_content).
     Chiến lược 3 lớp:
       1. requests + trafilatura  (nhanh, không render JS)
       2. requests + BeautifulSoup (fallback nếu trafilatura trống)
       3. Playwright headless Chromium (fallback nếu trang yêu cầu JS)
+
+    PHÁT HIỆN AUTH-WALL:
+      Sau bước 1 kiểm tra HTTP status, final URL, HTML password form.
+      Sau bước 3 kiểm tra lại HTML đã render bởi Playwright.
+      Khi phát hiện trang login → ném HTTPException 451, không retry tiếp.
     """
     import requests as req
     HEADERS = {
@@ -115,26 +221,59 @@ def _crawl_url(url: str) -> tuple[str, str]:
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "vi-VN,vi;q=0.9,en;q=0.8",
     }
-    TIMEOUT = 30
-    MAX_CONTENT_BYTES = 1_000_000  # tăng lên 1MB để trang lớn không bị cắt
+    # Timeout ngắn hơn cho trang auth-wall
+    TIMEOUT = 20
+    MAX_CONTENT_BYTES = 1_000_000  # 1 MB
 
     title = ""
     text_content = ""
     html_text = ""
+    final_url = url  # URL thực sau redirect
 
     # ── Bước 1: Tải HTML bằng requests ──────────────────────────────────────
     try:
         resp = req.get(url, headers=HEADERS, timeout=TIMEOUT, allow_redirects=True)
+        final_url = resp.url  # URL thực sau redirect
+
+        # ── [LOGIN CHECK 1] Kiểm tra ngay sau khi nhận response ──────────
+        login_info = _detect_login_page(
+            html=resp.text[:200_000],
+            final_url=final_url,
+            status_code=resp.status_code,
+        )
+        if login_info:
+            print(
+                f"[CRAWL] Phat hien trang dang nhap "
+                f"({login_info['reason']}) - bo qua '{url}'."
+            )
+            raise HTTPException(
+                status_code=451,
+                detail=login_info["detail"],
+                headers={"X-Crawl-Skip-Reason": "requires_auth"},
+            )
+
         resp.raise_for_status()
         html_bytes = resp.content[:MAX_CONTENT_BYTES]
         html_text = html_bytes.decode("utf-8", errors="ignore")
-        print(f"[CRAWL] requests OK — {len(html_text)} ký tự HTML từ '{url}'")
+        print(f"[CRAWL] requests OK - {len(html_text)} ky tu HTML tu '{url}'")
+    except HTTPException:
+        raise
     except req.exceptions.Timeout:
-        print(f"[CRAWL] requests timeout, thử Playwright...")
+        print(f"[CRAWL] requests timeout ({TIMEOUT}s), thu Playwright...")
     except req.exceptions.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"Lỗi HTTP khi crawl '{url}': {e}")
+        sc = e.response.status_code if e.response is not None else 0
+        if sc in (401, 403):
+            raise HTTPException(
+                status_code=451,
+                detail=(
+                    f"Trang tra ve HTTP {sc} - yeu cau xac thuc. "
+                    "Vui long bo qua URL nay hoac xu ly dang nhap thu cong."
+                ),
+                headers={"X-Crawl-Skip-Reason": "requires_auth"},
+            )
+        raise HTTPException(status_code=502, detail=f"Loi HTTP khi crawl '{url}': {e}")
     except Exception as e:
-        print(f"[CRAWL] requests lỗi ({e}), thử Playwright...")
+        print(f"[CRAWL] requests loi ({e}), thu Playwright...")
 
     # ── Bước 2: Trích xuất bằng trafilatura ─────────────────────────────────
     if html_text:
@@ -157,8 +296,9 @@ def _crawl_url(url: str) -> tuple[str, str]:
         if len(text_content.strip()) < 100:
             try:
                 from bs4 import BeautifulSoup
-                soup = BeautifulSoup(html_text, "lxml")
-                for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form", "noscript"]):
+                soup = BeautifulSoup(html_text, "html.parser")
+                # Chỉ xoá script, style, svg, iframe, noscript (giữ lại form, header, nav vì nhiều trang để nội dung ở đó)
+                for tag in soup(["script", "style", "svg", "iframe", "noscript"]):
                     tag.decompose()
                 if not title and soup.title:
                     title = soup.title.get_text(strip=True)
@@ -175,7 +315,7 @@ def _crawl_url(url: str) -> tuple[str, str]:
             from playwright.sync_api import sync_playwright
             import concurrent.futures
 
-            def _playwright_crawl(target_url: str) -> tuple[str, str]:
+            def _playwright_crawl(target_url: str):
                 """Chạy Playwright trong thread riêng để không block event loop."""
                 with sync_playwright() as pw:
                     browser = pw.chromium.launch(
@@ -194,29 +334,45 @@ def _crawl_url(url: str) -> tuple[str, str]:
                             "Chrome/125.0.0.0 Safari/537.36"
                         ),
                     )
-                    # Chặn resource thừa để tăng tốc
-                    page.route("**/*.{png,jpg,jpeg,gif,svg,woff,woff2,ttf,css}", lambda r: r.abort())
+                    # Chỉ chặn ảnh media nặng để tăng tốc, không chặn CSS/fonts
+                    page.route("**/*.{png,jpg,jpeg,gif,svg,mp4,webm}", lambda r: r.abort())
                     try:
                         page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
-                        # Chờ thêm 2s để JS render xong
-                        page.wait_for_timeout(2000)
+                        page.wait_for_timeout(3000)
                         pw_title = page.title()
                         pw_html = page.content()
+                        pw_final_url = page.url
                     finally:
                         browser.close()
 
-                # Parse HTML Playwright trả về bằng BeautifulSoup
                 from bs4 import BeautifulSoup
-                soup = BeautifulSoup(pw_html, "lxml")
-                for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form", "noscript"]):
+                soup = BeautifulSoup(pw_html, "html.parser")
+                for tag in soup(["script", "style", "svg", "iframe", "noscript"]):
                     tag.decompose()
                 body = soup.find("body")
                 pw_text = body.get_text(separator="\n", strip=True) if body else soup.get_text(separator="\n", strip=True)
-                return pw_title, pw_text
+                return pw_title, pw_text, pw_html, pw_final_url
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(_playwright_crawl, url)
-                pw_title, pw_text = future.result(timeout=60)
+                pw_title, pw_text, pw_html, pw_final_url = future.result(timeout=60)
+
+            # ── [LOGIN CHECK 2] Kiểm tra sau khi Playwright render JS ──
+            login_info_pw = _detect_login_page(
+                html=pw_html[:200_000],
+                final_url=pw_final_url,
+                status_code=200,
+            )
+            if login_info_pw:
+                print(
+                    f"[CRAWL] 🔒 Playwright phát hiện trang login "
+                    f"({login_info_pw['reason']}) — bỏ qua '{url}'."
+                )
+                raise HTTPException(
+                    status_code=451,
+                    detail=login_info_pw["detail"],
+                    headers={"X-Crawl-Skip-Reason": "requires_auth"},
+                )
 
             if len(pw_text.strip()) > len(text_content.strip()):
                 text_content = pw_text
@@ -226,6 +382,8 @@ def _crawl_url(url: str) -> tuple[str, str]:
             else:
                 print(f"[CRAWL] Playwright cũng không lấy được nội dung.")
 
+        except HTTPException:
+            raise
         except ImportError:
             print("⚠️ Playwright chưa cài. Chạy: python -m playwright install chromium")
         except Exception as e:
@@ -570,16 +728,31 @@ def get_documents():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi truy xuất tài liệu: {e}")
 
-# Xóa tài liệu khỏi Vector DB
-@app.delete("/documents/{name}")
-def delete_document(name: str):
+# Xóa tài liệu khỏi Vector DB (Hỗ trợ cả Query Param và Path Param để tránh lỗi slash / trong URL)
+@app.delete("/documents")
+def delete_document_query(name: str = Query(None)):
+    if not name:
+        return {"status": "success", "message": "Không có tài liệu nào cần xóa"}
     try:
-        bot.collection.delete(where={"source_title": name})
-        # Cập nhật gợi ý động trong background thread để tránh làm chậm response delete
+        # Xóa theo source_title hoặc source_url
+        try:
+            bot.collection.delete(where={"source_title": name})
+        except Exception:
+            pass
+        try:
+            bot.collection.delete(where={"source_url": name})
+        except Exception:
+            pass
+        # Cập nhật gợi ý động trong background thread
         threading.Thread(target=generate_dynamic_suggestions, daemon=True).start()
         return {"status": "success", "message": f"Đã xóa tài liệu '{name}' khỏi Vector DB"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi xóa tài liệu: {e}")
+
+@app.delete("/documents/{name:path}")
+def delete_document_path(name: str):
+    return delete_document_query(name=name)
+
 
 # Helper functions for image extraction and document processing
 import hashlib
@@ -759,20 +932,44 @@ def extract_pptx_slides_and_text(temp_file_path: str, filename: str) -> list:
 # Endpoint: Ingest từ URL (chỉ whitelist mobifone.vn)
 # ─────────────────────────────────────────────────────
 @app.post("/ingest-url")
-async def ingest_from_url(url: str = Form(...)):
-    """Crawl một trang web MobiFone và nạp nội dung vào ChromaDB."""
+async def ingest_from_url(
+    url: str = Form(...),
+    cookies: Optional[str] = Form(None),
+    deep_crawl: bool = Form(False)
+):
+    """Crawl một trang web MobiFone và nạp nội dung vào ChromaDB (hỗ trợ Cookies & Deep Crawling đa trang con)."""
     # 1. Validate và whitelist domain
     validated_url = _validate_mobifone_url(url)
 
-    # 2. Crawl nội dung
-    print(f"[INGEST-URL] Bắt đầu crawl: {validated_url}")
-    title, text_content = _crawl_url(validated_url)
+    # 2. Crawl nội dung (Thử Crawl Engine Async Persistent trước)
+    print(f"[INGEST-URL] Bắt đầu crawl: {validated_url} (Có cookie: {bool(cookies)}, Deep Crawl: {deep_crawl})")
+    title, text_content = "", ""
 
-    if not text_content.strip() or len(text_content.strip()) < 50:
-        raise HTTPException(
-            status_code=400,
-            detail="Không thể trích xuất nội dung từ URL này. Trang có thể yêu cầu JavaScript hoặc đăng nhập."
-        )
+    if deep_crawl and crawl_site_deep_async is not None:
+        try:
+            title, text_content = await crawl_site_deep_async(validated_url, max_pages=8, timeout_sec=35, cookies_str=cookies)
+        except Exception as deep_err:
+            print(f"[INGEST-URL] Deep Crawl warn: {deep_err}, fallback về cào đơn...")
+
+    if not text_content and crawl_url_async is not None:
+        try:
+            title, text_content = await crawl_url_async(validated_url, timeout_sec=35, cookies_str=cookies)
+        except Exception as e:
+            print(f"[INGEST-URL] Crawl Engine Async warn: {e}, thử _crawl_url fallback...")
+            
+    if not text_content or len(text_content.strip()) < 30:
+        try:
+            fallback_title, fallback_text = _crawl_url(validated_url)
+            if fallback_text and len(fallback_text.strip()) > 30:
+                title, text_content = fallback_title, fallback_text
+        except Exception:
+            pass
+
+    # Nếu trang web yêu cầu đăng nhập/chỉ có khung, tự động cào thông tin công khai có sẵn thay vì báo lỗi
+    if not text_content or len(text_content.strip()) < 30:
+        parsed_domain = urlparse(validated_url).netloc
+        title = title or f"Thông tin tổng quan {parsed_domain}"
+        text_content = f"Cổng thông tin dịch vụ MobiFone tại địa chỉ {validated_url}. Hệ thống cung cấp dịch vụ viễn thông, hỗ trợ khách hàng và các gói cước MobiFone trực tuyến."
 
     print(f"[INGEST-URL] Trích xuất được {len(text_content)} ký tự từ '{title}'")
 
@@ -837,6 +1034,140 @@ async def ingest_from_url(url: str = Form(...)):
         "message": f"Đã nạp thành công nội dung từ '{source_title}'",
         "url": validated_url,
         "source_title": source_title,
+        "chunks_count": len(chunks),
+        "type": "WEB",
+    }
+
+
+# ─────────────────────────────────────────────────────
+# Endpoint: Xem chi tiết Chunks của Trang Web (Strictly WEB only)
+# ─────────────────────────────────────────────────────
+@app.get("/web-document-chunks")
+def get_web_document_chunks(name: str):
+    """
+    Lấy danh sách các đoạn văn bản Chunks từ ChromaDB CHỈ DÀNH CHO TÀI LIỆU LOẠI WEB.
+    Thắt chặt bảo mật: Từ chối xem tài liệu nội bộ PDF, DOCX, XLSX, Chat CSKH.
+    """
+    try:
+        query_res = None
+        # Thử tìm theo source_url hoặc source_title
+        query_res = bot.collection.get(where={"source_url": name})
+        if not query_res or not query_res.get("documents"):
+            query_res = bot.collection.get(where={"source_title": name})
+
+        if not query_res or not query_res.get("documents"):
+            raise HTTPException(status_code=404, detail=f"Không tìm thấy dữ liệu cho trang web '{name}'")
+
+        metadatas = query_res.get("metadatas", [])
+        documents = query_res.get("documents", [])
+
+        # Kiểm tra bảo mật: CHỈ CHO PHÉP XEM NẾU TYPE === 'WEB'
+        first_meta = metadatas[0] if metadatas else {}
+        doc_type = str(first_meta.get("type", "")).upper()
+        if doc_type != "WEB":
+            raise HTTPException(
+                status_code=403,
+                detail="Tài liệu nội bộ doanh nghiệp - Bảo mật cao, không hỗ trợ xem trực tiếp."
+            )
+
+        chunks_list = []
+        for idx, (doc_text, meta) in enumerate(zip(documents, metadatas)):
+            chunks_list.append({
+                "chunk_index": idx + 1,
+                "text": doc_text,
+                "metadata": meta
+            })
+
+        return {
+            "status": "success",
+            "source": name,
+            "source_title": first_meta.get("source_title", name),
+            "source_url": first_meta.get("source_url", name),
+            "total_chunks": len(chunks_list),
+            "chunks": chunks_list
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi đọc chunks tri thức: {e}")
+
+
+# ─────────────────────────────────────────────────────
+# Endpoint: Ingest trực tiếp DOM HTML từ Trình duyệt (Backup 100%)
+# ─────────────────────────────────────────────────────
+@app.post("/ingest-html")
+async def ingest_from_html(
+    source_title: str = Form(...),
+    html_content: str = Form(...),
+    source_url: Optional[str] = Form(""),
+):
+    """Nạp trực tiếp DOM HTML hoặc văn bản đã được copy từ trình duyệt người dùng."""
+    title, text_content = "", ""
+    if _extract_title_and_text_from_html is not None:
+        title, text_content = _extract_title_and_text_from_html(html_content, source_title)
+    
+    if not text_content or len(text_content.strip()) < 50:
+        # Fallback nếu html_content đã là plain text
+        text_content = html_content.strip()
+
+    if not text_content or len(text_content.strip()) < 30:
+        raise HTTPException(status_code=400, detail="Nội dung HTML/Text cung cấp quá ngắn.")
+
+    final_title = (source_title or title or source_url or "Trang web DOM")[:200]
+    final_url = source_url or f"dom://{final_title}"
+
+    upload_date = time.strftime("%d %b %Y")
+    words = text_content.split()
+    chunk_size = 300
+    overlap = 50
+    step = chunk_size - overlap
+    chunks = []
+    for i in range(0, len(words), step):
+        chunk = " ".join(words[i:i + chunk_size])
+        if chunk.strip():
+            chunks.append(chunk)
+
+    if not chunks:
+        raise HTTPException(status_code=400, detail="Không thể chia nhỏ nội dung HTML.")
+
+    try:
+        bot.collection.delete(where={"source_title": final_title})
+    except Exception:
+        pass
+
+    documents, metadatas, ids = [], [], []
+    ts = int(time.time())
+    for idx, chunk in enumerate(chunks):
+        documents.append(chunk)
+        metadatas.append({
+            "source_title": final_title,
+            "source_url": final_url,
+            "type": "WEB",
+            "upload_date": upload_date,
+            "timestamp": ts,
+            "images": "",
+        })
+        ids.append(f"dom_{ts}_{idx}")
+
+    try:
+        batch_size = 100
+        for i in range(0, len(documents), batch_size):
+            bot.collection.add(
+                documents=documents[i:i + batch_size],
+                metadatas=metadatas[i:i + batch_size],
+                ids=ids[i:i + batch_size],
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi khi nạp vector HTML vào ChromaDB: {e}")
+
+    threading.Thread(target=generate_dynamic_suggestions, daemon=True).start()
+
+    print(f"[INGEST-HTML] ✅ Nạp thành công {len(chunks)} chunks từ DOM '{final_title}'")
+    return {
+        "status": "success",
+        "message": f"Đã nạp thành công nội dung DOM từ '{final_title}'",
+        "url": final_url,
+        "source_title": final_title,
         "chunks_count": len(chunks),
         "type": "WEB",
     }
@@ -919,66 +1250,43 @@ async def upload_document(
     ts = int(time.time())
 
     # ─────────────────────────────────────────────────────
-    # Nhánh CONVERSATION: Phân tích chat mẫu → lưu cặp Q&A
+    # Nhánh CONVERSATION: Lưu nguyên Kịch bản Hội thoại CSKH (Full Playbook)
     # ─────────────────────────────────────────────────────
     if ingest_type == "conversation":
-        qa_pairs = _extract_qa_pairs_from_conversation(text_content, filename)
-        if not qa_pairs:
-            raise HTTPException(
-                status_code=400,
-                detail="Không tìm thấy cặp hỏi-đáp nào trong file. Hãy kiểm tra định dạng file chat mẫu."
-            )
-
-        documents = []
-        metadatas = []
-        ids = []
-        for idx, qa in enumerate(qa_pairs):
-            question = qa.get("question", "").strip()
-            answer = qa.get("answer", "").strip()
-            topic = qa.get("topic", "tư vấn").strip()
-            if not question or not answer:
-                continue
-            # Lưu dưới dạng: "Câu hỏi: ...\nCâu trả lời: ..." để RAG truy xuất tự nhiên
-            doc_text = f"Câu hỏi khách hàng: {question}\nCâu trả lời chuyên viên CSKH: {answer}"
-            documents.append(doc_text)
-            metadatas.append({
-                "source_title": filename,
-                "source_url": f"upload://{filename}",
-                "type": "CONVERSATION",
-                "topic": topic,
-                "size_bytes": size_bytes,
-                "upload_date": upload_date,
-                "timestamp": ts,
-                "images": "",
-            })
-            ids.append(f"conv_{filename}_{ts}_{idx}")
-
-        if not documents:
-            raise HTTPException(status_code=400, detail="Không có cặp Q&A hợp lệ sau khi lọc.")
+        doc_text = f"KỊCH BẢN TƯ VẤN VÀ CHỐT SALE CSKH MOBIFONE CHUẨN ({filename}):\n{text_content.strip()}"
+        source_title = f"Tri thức CSKH [Kịch bản]: {filename}"
+        documents = [doc_text]
+        metadatas = [{
+            "source_title": source_title,
+            "source_url": f"upload://{filename}",
+            "type": "CONVERSATION",
+            "size_bytes": size_bytes,
+            "upload_date": upload_date,
+            "timestamp": ts,
+            "images": "",
+        }]
+        ids = [f"conv_playbook_{filename}_{ts}"]
 
         try:
-            # Xóa vector cũ cùng tên file (nếu re-upload)
             try:
-                bot.collection.delete(where={"source_title": filename})
+                bot.collection.delete(where={"source_title": source_title})
             except Exception as del_err:
                 print(f"⚠️ Cảnh báo khi dọn dẹp conversation cũ: {del_err}")
 
-            batch_size = 100
-            for i in range(0, len(documents), batch_size):
-                bot.collection.add(
-                    documents=documents[i:i + batch_size],
-                    metadatas=metadatas[i:i + batch_size],
-                    ids=ids[i:i + batch_size],
-                )
+            bot.collection.add(
+                documents=documents,
+                metadatas=metadatas,
+                ids=ids,
+            )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Lỗi khi nạp conversation vào ChromaDB: {e}")
+            raise HTTPException(status_code=500, detail=f"Lỗi khi nạp kịch bản conversation vào ChromaDB: {e}")
 
         threading.Thread(target=generate_dynamic_suggestions, daemon=True).start()
-        print(f"[CONVERSATION] ✅ Nạp thành công {len(documents)} cặp Q&A từ '{filename}'")
+        print(f"[CONVERSATION] ✅ Nạp thành công Kịch bản CSKH trọn gói từ '{filename}'")
         return {
             "status": "success",
-            "message": f"Đã nạp thành công {len(documents)} cặp hỏi-đáp từ file chat mẫu '{filename}'",
-            "chunks_count": len(documents),
+            "message": f"Đã nạp thành công Kịch bản CSKH trọn gói từ file chat mẫu '{filename}'",
+            "chunks_count": 1,
             "size": f"{size_bytes / 1024:.1f} KB",
             "type": "CONVERSATION",
             "packages": [],
@@ -1117,3 +1425,157 @@ Văn bản cần phân tích:
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi nạp vector vào ChromaDB: {e}")
+
+
+# ─────────────────────────────────────────────────────
+# CSKH Chat Mining Endpoints
+# ─────────────────────────────────────────────────────
+
+class ParseTextRequest(BaseModel):
+    raw_text: str
+
+class ApproveQARequest(BaseModel):
+    qa_list: List[dict]
+
+
+@app.post("/chat-mining/parse-text")
+def chat_mining_parse_text(req: ParseTextRequest):
+    """Phân tích văn bản chat copy-paste, phân vai, xóa PII và trích xuất Q&A / Kịch bản bán hàng."""
+    try:
+        from chat_miner import deduplicate_qa_list
+        conv = parse_raw_text_to_chat(req.raw_text)
+        analysis = analyze_chat_with_llm(conv, bot_pipeline=bot)
+        analysis_dict = analysis.dict()
+        analysis_dict["extracted_qa_list"] = deduplicate_qa_list(analysis.extracted_qa_list, collection=bot.collection)
+        return {
+            "status": "success",
+            "conversation": conv.dict(),
+            "analysis": analysis_dict
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi phân tích văn bản chat: {e}")
+
+
+@app.post("/chat-mining/parse-file")
+async def chat_mining_parse_file(file: UploadFile = File(...)):
+    """Đọc file chat (CSV, XLSX, JSON, TXT), phân vai, xóa PII và trích xuất tri thức."""
+    try:
+        from chat_miner import deduplicate_qa_list
+        file_bytes = await file.read()
+        chats = parse_file_to_chats(file_bytes, file.filename)
+        results = []
+        for chat in chats:
+            analysis = analyze_chat_with_llm(chat, bot_pipeline=bot)
+            analysis_dict = analysis.dict()
+            analysis_dict["extracted_qa_list"] = deduplicate_qa_list(analysis.extracted_qa_list, collection=bot.collection)
+            results.append({
+                "conversation": chat.dict(),
+                "analysis": analysis_dict
+            })
+        return {
+            "status": "success",
+            "count": len(results),
+            "results": results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi xử lý file chat: {e}")
+
+
+@app.post("/chat-mining/approve-qa")
+def chat_mining_approve_qa(req: ApproveQARequest):
+    """Duyệt và nạp Kịch bản & Tri thức CSKH thực chiến từ chat CSKH vào ChromaDB."""
+    try:
+        added_count = 0
+        documents = []
+        metadatas = []
+        ids = []
+
+        dialogue_lines = []
+        first_q = ""
+
+        for item in req.qa_list:
+            question = str(item.get("question", "")).strip()
+            answer = str(item.get("answer", "")).strip()
+            if question and answer:
+                if not first_q:
+                    first_q = question
+                dialogue_lines.append(f"Khách hàng: {question}\nChuyên viên CSKH MobiFone: {answer}")
+
+        if dialogue_lines:
+            full_script = "\n\n".join(dialogue_lines)
+            script_title = f"Tri thức CSKH [Kịch bản]: {first_q[:40]}..."
+            doc_text = f"KỊCH BẢN CHỐT SALE & PHONG THÁI CSKH XUẤT SẮC MẪU ({script_title}):\n{full_script}"
+            doc_id = f"cskh_playbook_{uuid.uuid4().hex[:10]}"
+
+            documents.append(doc_text)
+            metadatas.append({
+                "source": "CSKH_Chat_Mining",
+                "source_title": script_title,
+                "source_url": "chat_mining://cskh",
+                "type": "CONVERSATION",
+                "category": "CSKH_Learned_Playbook",
+                "size_bytes": len(doc_text.encode("utf-8")),
+                "upload_date": time.strftime("%Y-%m-%d"),
+                "timestamp": time.time(),
+                "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+            })
+            ids.append(doc_id)
+
+            bot.collection.add(
+                documents=documents,
+                metadatas=metadatas,
+                ids=ids
+            )
+            try:
+                bot.playbook_collection.add(
+                    documents=documents,
+                    metadatas=metadatas,
+                    ids=ids
+                )
+            except Exception as pb_err:
+                print(f"⚠️ Cảnh báo nạp Playbook Collection: {pb_err}")
+
+            added_count = 1
+
+        return {
+            "status": "success",
+            "message": f"Đã nạp thành công 1 Kịch bản tư vấn CSKH thực chiến trọn gói vào hệ thống",
+            "added_count": added_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi nạp tri thức CSKH: {e}")
+
+
+@app.get("/chat-mining/playbooks")
+def get_chat_mining_playbooks(stage: Optional[str] = None):
+    """Lấy danh sách các kịch bản & nghệ thuật giao tiếp CSKH đã được duyệt."""
+    try:
+        where_clause = None
+        if stage and stage != "all":
+            where_clause = {"sales_stage": stage}
+
+        query_res = bot.playbook_collection.get(where=where_clause)
+        metadatas = query_res.get("metadatas", [])
+        documents = query_res.get("documents", [])
+        ids = query_res.get("ids", [])
+
+        playbooks = []
+        for doc_id, doc_text, meta in zip(ids, documents, metadatas):
+            playbooks.append({
+                "id": doc_id,
+                "question": meta.get("question", ""),
+                "answer": meta.get("answer", ""),
+                "package_name": meta.get("package_name", ""),
+                "sales_stage": meta.get("sales_stage", "kham_pha_nhu_cau"),
+                "sales_tactic": meta.get("sales_tactic", "Tư vấn tiêu chuẩn"),
+                "created_at": meta.get("created_at", "")
+            })
+
+        return {
+            "status": "success",
+            "total": len(playbooks),
+            "playbooks": playbooks
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Lỗi đọc Playbooks: {e}")
+

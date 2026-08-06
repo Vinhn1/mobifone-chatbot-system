@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Search, Phone, MessageSquare, X, Check, Clock, TrendingUp, User, Package, Activity, Sparkles, PhoneCall, Star, Presentation, CheckCircle, XCircle } from "lucide-react";
+import { Search, Phone, MessageSquare, X, Check, Clock, TrendingUp, User, Package, Activity, Sparkles, PhoneCall, Star, Presentation, CheckCircle, XCircle, Filter, ChevronDown } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router";
@@ -23,12 +23,10 @@ type Lead = {
 };
 
 const STAGES: { key: Stage; label: string; icon: any; badgeClass: string }[] = [
-  { key: "new", label: "Mới nhận", icon: Sparkles, badgeClass: "bg-slate-50 border-slate-200 text-slate-500" },
-  { key: "contacted", label: "Đã liên hệ", icon: PhoneCall, badgeClass: "bg-blue-50 border-blue-200 text-[#0055A5]" },
-  { key: "interested", label: "Quan tâm", icon: Star, badgeClass: "bg-amber-50 border-amber-200 text-amber-600" },
-  { key: "demo", label: "Demo/Tư vấn", icon: Presentation, badgeClass: "bg-purple-50 border-purple-200 text-purple-600" },
-  { key: "converted", label: "Đã ký HĐ", icon: CheckCircle, badgeClass: "bg-emerald-50 border-emerald-200 text-emerald-600" },
-  { key: "lost", label: "Thất bại", icon: XCircle, badgeClass: "bg-rose-50 border-rose-200 text-rose-600" },
+  { key: "new", label: "Mới nhận", icon: Sparkles, badgeClass: "bg-slate-100/80 border-slate-200 text-slate-600 font-extrabold" },
+  { key: "contacted", label: "Đã liên hệ", icon: PhoneCall, badgeClass: "bg-blue-50/90 border-blue-200/80 text-[#0055A5] font-extrabold" },
+  { key: "interested", label: "Quan tâm", icon: Star, badgeClass: "bg-amber-50/90 border-amber-200/80 text-amber-700 font-extrabold" },
+  { key: "converted", label: "Đã chốt", icon: CheckCircle, badgeClass: "bg-emerald-50/90 border-emerald-200/80 text-emerald-700 font-extrabold" },
 ];
 
 const TEMP_STYLE: Record<Temp, { icon: string; label: string; badgeClass: string }> = {
@@ -124,35 +122,10 @@ function LeadDetail({ lead, onClose, onUpdateStatus }: { lead: Lead; onClose: ()
       </div>
 
       <div className="flex gap-2 font-extrabold text-[10px] uppercase tracking-wider">
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${temp.badgeClass}`}>
-          {temp.icon} {temp.label}
-        </span>
-        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border ${stage.badgeClass}`}>
+        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border shadow-2xs ${stage.badgeClass}`}>
           {stage.icon && <stage.icon size={11} className="shrink-0" />}
           {stage.label}
         </span>
-      </div>
-
-      {/* Score */}
-      <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100/60">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-slate-400 text-[10px] font-black tracking-widest uppercase">Lead Score</span>
-          <span className={`font-black text-xl ${
-            lead.score > 80 ? "text-emerald-500" : lead.score > 60 ? "text-amber-500" : "text-blue-500"
-          }`}>
-            {lead.score}
-          </span>
-        </div>
-        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-          <motion.div
-            initial={{ width: 0 }}
-            animate={{ width: `${lead.score}%` }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-            className={`h-full rounded-full ${
-              lead.score > 80 ? "bg-emerald-500" : lead.score > 60 ? "bg-amber-500" : "bg-blue-500"
-            }`}
-          />
-        </div>
       </div>
 
       {/* Info grid */}
@@ -516,7 +489,7 @@ export function LeadsPage() {
       }
     } catch (error) {
       console.error("Lỗi khi tải danh sách leads:", error);
-      if (axios.isAxiosError(error) && (error.response?.status === 401 || error.response?.status === 403)) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
         logout();
         navigate("/login");
       }
@@ -585,7 +558,6 @@ export function LeadsPage() {
 
   const filtered = leads.filter(l =>
     (stageFilter === "all" || l.stage === stageFilter) &&
-    (tempFilter === "all" || l.temp === tempFilter) &&
     (l.name.toLowerCase().includes(search.toLowerCase()) || l.phone.includes(search) || l.interest.toLowerCase().includes(search.toLowerCase()))
   );
 
@@ -593,7 +565,7 @@ export function LeadsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[75vh] gap-3 text-slate-400 font-outfit">
         <Activity size={32} className="animate-spin text-[#0055A5]" />
-        <span className="font-bold text-sm">Đang tải danh sách Leads...</span>
+        <span className="font-bold text-sm">Đang tải danh sách Khách hàng...</span>
       </div>
     );
   }
@@ -603,45 +575,40 @@ export function LeadsPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center border-b border-slate-200/60 pb-5 gap-4">
         <div>
-          <h1 className="text-[#0F172A] font-black text-xl tracking-tight">Quản lý Khách hàng (Leads)</h1>
+          <h1 className="text-[#0F172A] font-black text-xl tracking-tight">Quản lý Khách hàng</h1>
           <p className="text-slate-400 text-xs font-semibold mt-0.5">Danh sách khách hàng tiềm năng thu được tự động từ hệ thống RAG Chatbot</p>
         </div>
         <div className="flex gap-2.5 flex-wrap items-center w-full lg:w-auto">
-          <div className="flex items-center gap-2 bg-white border border-slate-200/60 rounded-xl px-4 h-10 flex-1 lg:flex-initial">
-            <Search size={14} className="text-slate-400" />
+          <div className="flex items-center gap-2 bg-white border border-slate-200/80 rounded-2xl px-4 h-10 flex-1 lg:flex-initial shadow-2xs focus-within:border-[#0055A5] transition-all">
+            <Search size={14} className="text-slate-400 shrink-0" />
             <input
               placeholder="Tìm theo tên, SĐT, gói cước..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="background-transparent border-none outline-none text-xs font-semibold text-slate-600 w-full lg:w-48 font-outfit"
+              className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 w-full lg:w-56 font-outfit placeholder:text-slate-300"
             />
           </div>
-          <select
-            value={stageFilter}
-            onChange={e => setStageFilter(e.target.value as Stage | "all")}
-            className="border border-slate-200 rounded-xl px-3 h-10 text-xs font-bold text-slate-600 bg-white cursor-pointer outline-none hover:border-slate-300 transition-colors"
-          >
-            <option value="all">Tất cả giai đoạn</option>
-            {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-          </select>
-          <select
-            value={tempFilter}
-            onChange={e => setTempFilter(e.target.value as Temp | "all")}
-            className="border border-slate-200 rounded-xl px-3 h-10 text-xs font-bold text-slate-600 bg-white cursor-pointer outline-none hover:border-slate-300 transition-colors"
-          >
-            <option value="all">Tất cả mức độ</option>
-            <option value="hot">🔥 Tiềm năng cao</option>
-            <option value="warm">☀ Đang cân nhắc</option>
-            <option value="cold">❄ Mới tiếp cận</option>
-          </select>
+          <div className="relative flex items-center shrink-0">
+            <Filter size={13} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
+            <select
+              value={stageFilter}
+              onChange={e => setStageFilter(e.target.value as Stage | "all")}
+              className="pl-9 pr-9 h-10 border border-slate-200/80 rounded-2xl text-xs font-extrabold text-slate-700 bg-white cursor-pointer outline-none hover:border-[#0055A5]/40 transition-all shadow-2xs appearance-none font-outfit min-w-[170px]"
+            >
+              <option value="all">Tất cả giai đoạn</option>
+              {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+            </select>
+            <ChevronDown size={13} className="absolute right-3.5 text-slate-400 pointer-events-none z-10" />
+          </div>
         </div>
       </div>
 
       {/* Stats strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+      {/* Stats strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
         {[
-          { label: "Tổng Leads nhận", value: leads.length, color: "border-[#0055A5] text-[#0055A5]" },
-          ...STAGES.slice(0, 4).map(s => {
+          { label: "Tổng khách nhận", value: leads.length, color: "border-[#0055A5] text-[#0055A5]" },
+          ...STAGES.slice(0, 3).map(s => {
             const colorMapping: Record<Stage, string> = {
               new: "border-slate-400 text-slate-500",
               contacted: "border-[#0055A5] text-[#0055A5]",
@@ -670,13 +637,13 @@ export function LeadsPage() {
         <div className="flex-1 bg-white rounded-3xl border border-slate-200/60 shadow-xs overflow-auto">
           {filtered.length === 0 ? (
             <div className="py-16 text-center text-slate-400 text-xs font-semibold">
-              Không tìm thấy lead nào phù hợp với bộ lọc.
+              Không tìm thấy khách hàng nào phù hợp với bộ lọc.
             </div>
           ) : (
-            <table className="w-full border-collapse min-w-[750px]">
+            <table className="w-full border-collapse min-w-[650px]">
               <thead className="sticky top-0 bg-slate-50/90 backdrop-blur-xs border-b border-slate-100 z-10">
                 <tr>
-                  {["Khách hàng", "Nội dung quan tâm", "Số tin nhắn", "Lead Score", "Độ tiềm năng", "Giai đoạn", "Ngày tạo", ""].map(h => (
+                  {["Khách hàng", "Nội dung quan tâm", "Số tin nhắn", "Giai đoạn", "Ngày tạo", ""].map(h => (
                     <th key={h} className="px-5 py-3.5 text-left text-slate-400 text-[9px] font-black tracking-wider uppercase">
                       {h}
                     </th>
@@ -687,7 +654,6 @@ export function LeadsPage() {
                 <AnimatePresence>
                   {filtered.map((lead) => {
                     const stage = STAGES.find(s => s.key === lead.stage) || STAGES[0];
-                    const temp = TEMP_STYLE[lead.temp] || TEMP_STYLE.cold;
                     return (
                       <motion.tr
                         key={lead.id}
@@ -698,7 +664,7 @@ export function LeadsPage() {
                       >
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0055A5] to-[#00B4FF] flex items-center justify-center text-white text-xs font-black shrink-0">
+                            <div className="w-8.5 h-8.5 rounded-full bg-gradient-to-br from-[#0055A5] to-[#00B4FF] flex items-center justify-center text-white text-xs font-black shrink-0 shadow-xs">
                               {lead.name.charAt(0)}
                             </div>
                             <div>
@@ -708,32 +674,14 @@ export function LeadsPage() {
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className="bg-blue-50/50 border border-blue-100 text-[#0055A5] rounded-xl px-2.5 py-1 text-[10px] font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px] inline-block shadow-xs">
+                          <span className="bg-blue-50/50 border border-blue-100 text-[#0055A5] rounded-xl px-2.5 py-1 text-[10px] font-bold whitespace-nowrap overflow-hidden text-ellipsis max-w-[220px] inline-block shadow-xs">
                             {cleanInterestText(lead.interest)}
                           </span>
                         </td>
                         <td className="px-5 py-3.5 text-slate-500 font-semibold text-xs">{lead.messages} tin</td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <div className="w-11 h-1 bg-slate-100 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${
-                                  lead.score > 80 ? "bg-emerald-500" : lead.score > 60 ? "bg-amber-500" : "bg-blue-500"
-                                }`}
-                                style={{ width: `${lead.score}%` }}
-                              />
-                            </div>
-                            <span className="text-slate-700 text-[11px] font-extrabold">{lead.score}</span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shadow-xs ${temp.badgeClass}`}>
-                            {temp.icon} {temp.label}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shadow-xs ${stage.badgeClass}`}>
-                            {stage.icon && <stage.icon size={10} className="shrink-0" />}
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border shadow-2xs ${stage.badgeClass}`}>
+                            {stage.icon && <stage.icon size={11} className="shrink-0" />}
                             {stage.label}
                           </span>
                         </td>

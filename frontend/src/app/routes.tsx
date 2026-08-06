@@ -1,21 +1,14 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import { RootLayout } from "./layouts/RootLayout";
 import { AdminLayout } from "./layouts/AdminLayout";
-import { UserLayout } from "./layouts/UserLayout";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
-import { ESIMPage } from "./pages/portal/ESIMPage";
-import { PackagesPage } from "./pages/portal/PackagesPage";
-import { PromotionsPage } from "./pages/portal/PromotionsPage";
-import { SupportPage } from "./pages/portal/SupportPage";
-import { UserDashboard } from "./pages/user/UserDashboard";
-import { UserPackages } from "./pages/user/UserPackages";
-import { UserProfile } from "./pages/user/UserProfile";
 import { DashboardPage } from "./pages/admin/DashboardPage";
 import { LeadsPage } from "./pages/admin/LeadsPage";
 import { ConversationsPage } from "./pages/admin/ConversationsPage";
 import { KnowledgeBasePage } from "./pages/admin/KnowledgeBasePage";
+import { ChatMiningPage } from "./pages/admin/ChatMiningPage";
 import { PromptPlaygroundPage } from "./pages/admin/PromptPlaygroundPage";
 import { BotConfigPage } from "./pages/admin/BotConfigPage";
 import { AdminProfilePage } from "./pages/admin/AdminProfilePage";
@@ -28,10 +21,6 @@ export const router = createBrowserRouter([
     Component: RootLayout,
     children: [
       { index: true, Component: HomePage },
-      { path: "esim", Component: ESIMPage },
-      { path: "packages", Component: PackagesPage },
-      { path: "promotions", Component: PromotionsPage },
-      { path: "support", Component: SupportPage },
     ],
   },
   {
@@ -41,19 +30,6 @@ export const router = createBrowserRouter([
   {
     path: "/forgot-password",
     Component: ForgotPasswordPage,
-  },
-  {
-    path: "/dashboard",
-    element: (
-      <ProtectedRoute role="user">
-        <UserLayout />
-      </ProtectedRoute>
-    ),
-    children: [
-      { index: true, Component: UserDashboard },
-      { path: "packages", Component: UserPackages },
-      { path: "profile", Component: UserProfile },
-    ],
   },
   {
     path: "/admin",
@@ -69,15 +45,23 @@ export const router = createBrowserRouter([
       {
         path: "knowledge",
         element: (
-          <ProtectedRoute allowedRoles={["admin"]}>
+          <ProtectedRoute allowedRoles={["admin", "sales"]}>
             <KnowledgeBasePage />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: "chat-mining",
+        element: (
+          <ProtectedRoute allowedRoles={["admin", "sales"]}>
+            <ChatMiningPage />
           </ProtectedRoute>
         )
       },
       {
         path: "playground",
         element: (
-          <ProtectedRoute allowedRoles={["admin"]}>
+          <ProtectedRoute allowedRoles={["admin", "sales"]}>
             <PromptPlaygroundPage />
           </ProtectedRoute>
         )
@@ -101,6 +85,6 @@ export const router = createBrowserRouter([
       { path: "profile", Component: AdminProfilePage },
     ],
   },
-  // Fallback 404 → trang chủ
-  { path: "*", element: <Navigate to="/" replace /> },
+  // Fallback 404 → trang đăng nhập
+  { path: "*", element: <Navigate to="/login" replace /> },
 ]);

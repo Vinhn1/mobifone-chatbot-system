@@ -79,9 +79,15 @@ class MobiFoneRAG:
         # 2. Sử dụng mô hình nhúng mặc định của ChromaDB (nhẹ, chạy offline bằng onnxruntime)
         self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
         
-        # 3. Tạo hoặc lấy Collection lưu trữ vector
+        # 3. Tạo hoặc lấy Collection lưu trữ vector cho Sự thật (Facts)
         self.collection = self.chroma_client.get_or_create_collection(
             name=collection_name,
+            embedding_function=self.embedding_function
+        )
+
+        # 4. Tầng 2: Collection riêng lưu trữ Kịch bản CSKH Bán hàng & Thuyết phục (Behavior Playbook)
+        self.playbook_collection = self.chroma_client.get_or_create_collection(
+            name="mobifone_sales_playbook",
             embedding_function=self.embedding_function
         )
         
@@ -182,7 +188,7 @@ class MobiFoneRAG:
                 
         # Also check general keywords for chitchat/adversarial that do not contain service/package keywords
         chitchat_keywords = ["chào", "hello", "hi ", "hi,", "bạn tên gì", "cảm ơn", "thank", "tạm biệt", "bye", "robot", "chatbot", "ai tự do", "mật khẩu", "hack", "lừa đảo", "chế giễu", "bài thơ", "thời tiết", "chúc bạn", "chúc admin", "mạng khác", "viettel", "vinaphone", "server", "system prompt", "hack băng thông"]
-        has_rag_triggers = any(kw in query_lower for kw in ["gói", "đăng ký", "hủy", "esim", "e-sim", "5g", "khai báo", "mất sóng", "sóng", "nạp thẻ", "mypoint", "cước", "tiền", "sim", "lịch sử", "nhạc chờ", "funring", "ứng dụng", "thành lập", "là gì", "tốt không", "khách hàng"])
+        has_rag_triggers = any(kw in query_lower for kw in ["gói", "đăng ký", "hủy", "esim", "e-sim", "5g", "khai báo", "mất sóng", "sóng", "nạp thẻ", "mypoint", "cước", "tiền", "sim", "lịch sử", "nhạc chờ", "funring", "ứng dụng", "thành lập", "là gì", "tốt không", "khách hàng", "wifi", "tivi", "internet", "cáp quang", "mobifiber", "băng thông", "nhà", "thiết bị"])
         
         if (any(kw in query_lower for kw in chitchat_keywords) or len(query_lower) < 10) and not has_rag_triggers:
             is_bypass = True
@@ -312,6 +318,8 @@ class MobiFoneRAG:
             queries_to_run.extend(["chuyển vùng quốc tế MobiFone", "đăng ký roaming", "giá cước roaming"])
         elif "5g" in query_lower:
             queries_to_run.extend(["5G MobiFone", "đăng ký 5G", "gói cước 5G"])
+        elif any(kw in query_lower for kw in ["wifi", "tivi", "cáp quang", "mobifiber", "internet"]):
+            queries_to_run.extend(["gói cước wifi cáp quang MobiFiber 6WiFi 12WiFi", "gói 6WiFi 1 300 Mbps 900k", "gói 6WiFi 2 400 Mbps"])
             
         semantic_results_list = []
         for q_text in queries_to_run:
@@ -516,9 +524,11 @@ class MobiFoneRAG:
                     
                     doc_type = str(meta.get("type", "")).upper()
                     category = meta.get("category", "")
-                    is_uploaded = doc_id.startswith("upload_") or doc_type in ["DOCX", "PDF", "XLSX", "XLS"]
-                    
-                    if doc_type in ["XLSX", "XLS", "CSV"]:
+                    is_learned_qa = doc_id.startswith("wifi_playbook_") or doc_id.startswith("cskh_qa_") or category == "CSKH_Learned_QA"
+                    if is_learned_qa:
+                        dist = 0.05
+                        print(f"✨ Boosting CSKH Playbook document {doc_id}")
+                    elif doc_type in ["XLSX", "XLS", "CSV"]:
                         dist = 0.2
                         print(f"✨ Boosting document {doc_id} vì là tài liệu bảng tính ({doc_type})")
                     elif is_uploaded:
@@ -612,13 +622,101 @@ class MobiFoneRAG:
         """Gọi LLM (chỉ sử dụng Gemini)."""
         return self._call_gemini_with_retry(prompt, temperature, top_p, max_tokens, max_retries)
 
+    def _classify_sentiment_and_intent(self, question: str, chat_history: list = None) -> dict:
+        """
+        Pre-RAG Classifier:
+        Sử dụng Gemini nhận diện tâm lý khách hàng & giai đoạn hội thoại CSKH để chọn chiến lược tư vấn.
+        """
+        try:
+            prompt = f"""Bạn là Trợ lý AI Phân loại Ý định & Tâm lý Khách hàng CSKH MobiFone.
+Hãy phân tích tin nhắn của khách hàng và trả về duy nhất chuỗi JSON (không kèm markdown rác).
+
+Tin nhắn khách hàng: "{question}"
+
+Yêu cầu phân loại:
+1. "sentiment": Chọn 1 trong các giá trị: "ANGRY", "HESITANT", "READY_TO_BUY", "INFO_SEEKING".
+2. "sales_stage": Chọn 1 trong các giá trị:
+   - "xu_ly_tu_choi_gia" (nếu khách chê giá đắt, so sánh đắt rẻ)
+   - "kham_pha_nhu_cau" (nếu khách hỏi chung chung, tư vấn gói)
+   - "chot_don_closing" (nếu khách hỏi cách mua, đăng ký, dủ điều kiện)
+   - "khach_phan_nan" (nếu khách phàn nàn mạng yếu, lỗi, trừ tiền)
+   - "upsell_cross_sell" (nếu khách muốn tìm gói nhiều data hơn)
+   - "so_sanh_doi_thu" (nếu khách nhắc tới Viettel, VinaPhone)
+3. "tactic": Hướng dẫn ngắn 1 câu cho chuyên viên CSKH ứng xử với tình huống này.
+
+Cấu trúc JSON duy nhất:
+{{
+  "sentiment": "HESITANT",
+  "sales_stage": "xu_ly_tu_choi_gia",
+  "tactic": "Đồng cảm với khách -> Chia nhỏ chi phí theo ngày -> Nhấn mạnh ưu đãi 4GB/ngày"
+}}
+"""
+            resp = self._call_gemini_with_retry(prompt, temperature=0.1, max_tokens=150)
+            cleaned = resp.strip()
+            if cleaned.startswith("```"):
+                lines = cleaned.splitlines()
+                if lines[0].startswith("```"): lines = lines[1:]
+                if lines and lines[-1].startswith("```"): lines = lines[:-1]
+                cleaned = "\n".join(lines).strip()
+            return json.loads(cleaned)
+        except Exception as e:
+            print(f"[PRE-RAG] Cảnh báo Classifier: {e}")
+            return {
+                "sentiment": "INFO_SEEKING",
+                "sales_stage": "kham_pha_nhu_cau",
+                "tactic": "Xác nhận nhu cầu và tư vấn thông tin chính xác"
+            }
+
+    def _retrieve_playbook_examples(self, question: str, sales_stage: str = None, n_results: int = 2) -> list:
+        """
+        Lấy các câu ứng xử mẫu và kỹ thuật tư vấn thực chiến từ collection mobifone_sales_playbook
+        """
+        try:
+            where_clause = None
+            if sales_stage and sales_stage != "kham_pha_nhu_cau":
+                where_clause = {"sales_stage": sales_stage}
+            
+            results = self.playbook_collection.query(
+                query_texts=[question],
+                n_results=n_results,
+                where=where_clause
+            )
+            
+            playbook_list = []
+            if results and results.get("documents") and len(results["documents"]) > 0:
+                docs = results["documents"][0]
+                metas = results["metadatas"][0] if results.get("metadatas") else []
+                for doc, meta in zip(docs, metas):
+                    playbook_list.append({
+                        "text": doc,
+                        "tactic": meta.get("sales_tactic", "Kỹ thuật tư vấn CSKH"),
+                        "stage": meta.get("sales_stage", sales_stage)
+                    })
+            return playbook_list
+        except Exception as e:
+            print(f"[PLAYBOOK-RAG] Cảnh báo Playbook Retrieval: {e}")
     def answer_question(self, question, history=None, user_info=None):
+        """Alias tương thích ngược cho api_server.py gọi answer_question."""
+        return self.generate_response(question, chat_history=history, user_info=user_info)
+
+    def generate_response(self, question, chat_history=None, user_info=None):
+        import re
         """Truy xuất thông tin liên quan và gửi OpenAI sinh câu trả lời"""
         # 1. Lấy ngữ cảnh tương quan (Tăng từ 3 lên 5 để tối ưu tư vấn)
         # [P3] Tăng n_results từ 5 lên 10 để cải thiện Context Recall
         retrieved = self.retrieve(question, n_results=10)
         contexts = retrieved.get('documents', [[]])[0]
         sources = retrieved.get('metadatas', [[]])[0]
+
+        fact_contexts = []
+        playbook_contexts = []
+
+        for doc, meta in zip(contexts, sources):
+            meta_type = str(meta.get("type") or meta.get("ingest_type") or "").lower()
+            if meta_type == "conversation":
+                playbook_contexts.append(doc)
+            else:
+                fact_contexts.append(doc)
         
         # 1.5. Chặn ảo tưởng (Hallucination Block) & Programmatic context injection
         import re
@@ -825,7 +923,7 @@ class MobiFoneRAG:
             )
             
         if injected_facts:
-            contexts = injected_facts + contexts
+            fact_contexts = injected_facts + fact_contexts
 
         # ============================================================
         # [P2] REGISTRATION KNOWLEDGE BASE — Bypass Context Recall issue
@@ -848,12 +946,31 @@ class MobiFoneRAG:
             for pkg_key, reg_info in registration_kb.items():
                 pattern = r'(?<![a-z0-9])' + re.escape(pkg_key) + r'(?![a-z0-9])'
                 if re.search(pattern, question_lower):
-                    contexts = [reg_info] + contexts
+                    fact_contexts = [reg_info] + fact_contexts
 
-        if not contexts:
-            context_text = "Không tìm thấy dữ liệu liên quan trong kho tri thức."
+        if not fact_contexts:
+            fact_section = (
+                "[DỮ LIỆU SỰ THẬT CHÍNH THỨC CỦA MOBIFONE (FILES & WEB)]:\n"
+                "⚠️ KHÔNG CÓ DỮ LIỆU TÀI LIỆU CHÍNH THỨC TRONG CƠ SỞ DỮ LIỆU (RAG FILES = 0).\n"
+                "YÊU CẦU BẮT BUỘC: Bạn BẢO VỆ TUYỆT ĐỐI nguyên tắc Grounding, PHẢI phản hồi từ chối bịa đặt: "
+                "'Hiện tại Mia chưa tìm thấy thông tin chính thức về dịch vụ/gói cước này trong cơ sở dữ liệu hệ thống MobiFone. "
+                "Bạn vui lòng liên hệ tổng đài 18001090 hoặc để lại Số điện thoại để chuyên viên hỗ trợ tra cứu trực tiếp cho bạn nhé!'. "
+                "TUYỆT ĐỐI KHÔNG ĐƯỢC BỊA ĐẶT TÊN GÓI HOẶC GIÁ CƯỚC!"
+            )
         else:
-            context_text = "\n---\n".join(contexts)
+            fact_section = (
+                "[DỮ LIỆU SỰ THẬT CHÍNH THỨC CỦA MOBIFONE (FILES & WEB)]:\n" +
+                "\n---\n".join(fact_contexts)
+            )
+
+        if playbook_contexts:
+            playbook_section = (
+                "\n\n[MẪU PHONG THÁI & KỸ THUẬT GIAO TIẾP CSKH (CONVERSATION)]:\n"
+                "(CHỈ DÙNG ĐỂ THAM KHẢO VĂN PHONG VÀ KỸ THUẬT CHỐT SALE. TUYỆT ĐỐI KHÔNG TRÍCH XUẤT TÊN GÓI HOẶC GIÁ TIỀN TỪ CÁC ĐOẠN CHAT NÀY NẾU PHẦN DỮ LIỆU SỰ THẬT RỖNG)\n" +
+                "\n---\n".join(playbook_contexts)
+            )
+        else:
+            playbook_section = ""
             
         # 2. Đọc cấu hình động từ rag_config.json (nếu có)
         config_path = os.path.join(BASE_DIR, "rag_config.json")
@@ -892,6 +1009,12 @@ class MobiFoneRAG:
             "RULE 4 — CÚ PHÁP ĐĂNG KÝ [CÚ PHÁP ĐĂNG KÝ GÓI ...]: Khi ngữ cảnh có nhãn này, đây là cú pháp chính thức.\n"
             "  Trả lời ĐẦY ĐỦ TẤT CẢ các cách đăng ký được liệt kê (SMS, USSD, App, tổng đài).\n"
             "RULE 5 — TƯ VẤN & DẪN DẮT KHÁCH HÀNG: Khi không có thông tin chi tiết hoặc câu hỏi của khách chung chung (như 'wifi', 'tư vấn', 'gói cước'): TUYỆT ĐỐI KHÔNG BỊA ĐẶT thông tin/giá cước. Hãy lịch sự xác nhận nhu cầu và đặt câu hỏi gợi ý dẫn dắt phân loại nhu cầu (ví dụ hỏi khách cần gói Internet cáp quang cố định MobiFiber hay gói Data 4G/5G di động).\n"
+            "RULE 6 — QUY TẮC CHÀO HỎI (GREETING RULE): CHỈ chào hỏi và giới thiệu tên (\"Chào bạn, tôi là Mia...\") ở lượt hội thoại ĐẦU TIÊN (khi [Lịch sử hội thoại] trống). Nếu trong phần [Lịch sử hội thoại] ĐÃ CÓ tin nhắn trao đổi trước đó, TUYỆT ĐỐI KHÔNG lặp lại câu chào \"Chào bạn, tôi là Mia, chuyên viên CSKH MobiFone...\". Hãy đi thẳng vào tư vấn, trả lời mượt mà và tự nhiên như chuyên viên CSKH đang tiếp nối hội thoại!\n"
+            "RULE 7 — QUY TẮC TƯ VẤN TRƯỚC - XIN SĐT SAU (PROFESSIONAL CONSULTATION RULE):\n"
+            "  • Khi khách hàng đã cung cấp thông tin nhu cầu (như số lượng 4 điện thoại + 1 tivi, nhà nhỏ), Mia BẮT BUỘC PHẢI ĐỀ XUẤT NGAY GÓI CƯỚC CỤ THỂ CÓ TRONG THÔNG TIN NGỮ CẢNH (Ví dụ: Đề xuất gói 6WiFi 1 tốc độ 300 Mbps cước 900.000đ cho 8 tháng = 112.500đ/tháng). KHÔNG tính quy đổi chi phí theo ngày (không cần ghi x.xxxđ/ngày).\n"
+            "  • TUYỆT ĐỐI KHÔNG hoãn tư vấn để vội vã đòi xin SĐT của khách hàng trước khi đưa ra thông tin gói cước và giá cước cụ thể.\n"
+            "  • CHỈ xin SĐT khi khách hàng tỏ ý muốn đăng ký gói cước, muốn đặt lịch hẹn khảo sát hạ tầng tại địa chỉ, hoặc yêu cầu tư vấn trực tiếp qua điện thoại.\n"
+            "  • Khi khách hàng để lại SĐT, hãy xác nhận lịch sự và thông báo hệ thống đã ghi nhận thông tin đăng ký để chuyên viên liên hệ hỗ trợ trong thời gian sớm nhất.\n"
             "══════════════════════════════════════════════════════════"
         )
         temperature = 0.0  # Set to 0.0 to prevent hallucination / enforce strict factual grounding
@@ -929,21 +1052,48 @@ class MobiFoneRAG:
             if package_expiry:
                 user_context += f"- Thời hạn gói cước: {package_expiry}\n"
 
+        # 2.5. Tầng 2: Pre-RAG Classifier & Behavior Playbook Retrieval
+        class_info = self._classify_sentiment_and_intent(question, chat_history)
+        playbooks = self._retrieve_playbook_examples(question, sales_stage=class_info.get("sales_stage"))
+
+        behavior_prompt_addon = (
+            f"\n\n══════════════════════════════════════════════════════════\n"
+            f"[TẦNG 2: NGHỆ THUẬT GIAO TIẾP & TÂM LÝ BÁN HÀNG CSKH THỰC CHIẾN]\n"
+            f"══════════════════════════════════════════════════════════\n"
+            f"• Trạng thái cảm xúc khách hàng: {class_info.get('sentiment', 'BÌNH THƯỜNG')}\n"
+            f"• Tình huống/Giai đoạn bán hàng: {class_info.get('sales_stage', 'kham_pha_nhu_cau')}\n"
+            f"• CHIẾN LƯỢC PHẢN HỒI YÊU CẦU: {class_info.get('tactic', 'Tư vấn lịch sự, chuyên nghiệp')}\n\n"
+        )
+
+        if playbooks:
+            behavior_prompt_addon += "[ĐOẠN HỘI THOẠI VÀ NGHỆ THUẬT ỨNG XỬ MẪU TỪ CSKH XUẤT SẮC]:\n"
+            for idx, pb in enumerate(playbooks):
+                behavior_prompt_addon += f"Mẫu #{idx+1} (Kỹ thuật: {pb['tactic']}):\n{pb['text']}\n\n"
+
+        behavior_prompt_addon += (
+            "HƯỚNG DẪN TƯ VẤN THỰC CHIẾN:\n"
+            "1. Kết hợp CHÍNH XÁC dữ liệu sự thật gói cước (Tầng 1) với PHONG THÁI CSKH & KỸ THUẬT CHỐT ĐƠN (Tầng 2).\n"
+            "2. Nếu khách chê giá đắt: Hãy tỏ ra đồng cảm, nhấn mạnh giá trị và chia nhỏ chi phí theo ngày (ví dụ 90k/tháng = 3k/ngày) trước khi chốt.\n"
+            "3. Nếu khách bực bội: Hãy xoa dịu ngắn gọn, chia sẻ thông cảm trước khi đưa giải pháp.\n"
+            "4. Kết thúc bằng câu hỏi gợi mở leading question để dẫn dắt hành động mua hàng.\n"
+            "══════════════════════════════════════════════════════════"
+        )
+
         # 3. Xây dựng Prompt Engineering chuẩn
-        prompt = f"""{system_prompt}
+        prompt = f"""{system_prompt}{behavior_prompt_addon}
 """
         if user_context:
             prompt += user_context
 
         prompt += f"""
-[Ngữ cảnh chính thức của MobiFone]:
-{context_text}
+{fact_section}
+{playbook_section}
 """
 
         # Bổ sung lịch sử trò chuyện nếu có
-        if history:
+        if chat_history:
             prompt += "\n[Lịch sử hội thoại gần đây giữa Khách hàng và MobiFone]:\n"
-            for msg in history:
+            for msg in chat_history:
                 role_label = "Khách hàng" if msg.get("role") == "user" else "MobiFone (Bạn)"
                 prompt += f"- {role_label}: {msg.get('message')}\n"
 
