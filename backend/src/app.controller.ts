@@ -56,7 +56,7 @@ export class AppController {
   @Roles('admin')
   @UseInterceptors(FileInterceptor('file'))
   async uploadZaloVerifier(
-    @UploadedFile() file?: Express.Multer.File,
+    @UploadedFile() file?: any,
     @Body('filename') bodyFilename?: string,
     @Body('content') bodyContent?: string,
   ) {
