@@ -136,12 +136,12 @@ export class AppController {
   }
 
   // Route phục vụ Zalo Crawler khi truy cập /zalo_verifier...html
-  @Get('zalo_verifier:code')
+  @Get(['zalo_verifier*', 'api/zalo_verifier*'])
   async verifyZalo(
     @Req() req: express.Request,
     @Res() res: express.Response,
   ) {
-    const filename = req.path.substring(1);
+    const filename = path.basename(req.path);
     const codeMatch = filename.match(/zalo_verifier(.*)\.html/);
     const code = codeMatch ? codeMatch[1] : '';
 
@@ -154,11 +154,11 @@ export class AppController {
     for (const p of pathsToTry) {
       if (fs.existsSync(p)) {
         const content = fs.readFileSync(p, 'utf-8');
-        return res.status(HttpStatus.OK).header('Content-Type', 'text/html').send(content);
+        return res.status(HttpStatus.OK).header('Content-Type', 'text/html; charset=utf-8').send(content);
       }
     }
 
     // Fallback: trả về mã code nếu không tìm thấy file vật lý
-    return res.status(HttpStatus.OK).header('Content-Type', 'text/html').send(code);
+    return res.status(HttpStatus.OK).header('Content-Type', 'text/html; charset=utf-8').send(code);
   }
 }
