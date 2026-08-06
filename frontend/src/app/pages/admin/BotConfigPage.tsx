@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bot, Save, RefreshCw, Check, Zap, MessageSquare, Target, Clock, Star, Plus, Trash2, Shield, Eye, EyeOff, Activity, User, Link2 } from "lucide-react";
+import { Bot, Save, RefreshCw, Check, Zap, MessageSquare, Target, Clock, Star, Plus, Trash2, Shield, Eye, EyeOff, Activity, User, Link2, Upload, FileText, ExternalLink, FileCode } from "lucide-react";
 import { RobotAvatar } from "../../components/RobotAvatar";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
@@ -95,6 +95,14 @@ export function BotConfigPage() {
     followUpReminder: true,
   });
 
+  // Zalo Verifier states
+  const [verifierFiles, setVerifierFiles] = useState<Array<{ filename: string; size: number; updatedAt: string; content: string; url: string }>>([]);
+  const [verifierMode, setVerifierMode] = useState<"upload" | "manual">("upload");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [manualFilename, setManualFilename] = useState("");
+  const [manualContent, setManualContent] = useState("");
+  const [uploadingVerifier, setUploadingVerifier] = useState(false);
+
   // Redirect if not admin
   useEffect(() => {
     if (!user) {
@@ -177,6 +185,81 @@ export function BotConfigPage() {
     }
   };
 
+  const fetchVerifierFiles = async () => {
+    if (!token) return;
+    try {
+      const res = await axios.get(`${API_BASE}/zalo_verifier/list`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data?.success) {
+        setVerifierFiles(res.data.files || []);
+      }
+    } catch (_) {}
+  };
+
+  const handleUploadZaloVerifier = async () => {
+    if (!token) return;
+    setUploadingVerifier(true);
+    try {
+      if (verifierMode === "upload") {
+        if (!selectedFile) {
+          alert("Vui lòng chọn file .html để tải lên!");
+          setUploadingVerifier(false);
+          return;
+        }
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        const res = await axios.post(`${API_BASE}/zalo_verifier/upload`, formData, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        });
+        if (res.data?.success) {
+          alert(`Thành công: ${res.data.message || "Đã lưu file xác thực trên Server!"}`);
+          setSelectedFile(null);
+          fetchVerifierFiles();
+        }
+      } else {
+        if (!manualFilename) {
+          alert("Vui lòng nhập Tên file (ví dụ: zalo_verifier3879828502555234376.html)!");
+          setUploadingVerifier(false);
+          return;
+        }
+        const res = await axios.post(
+          `${API_BASE}/zalo_verifier/upload`,
+          { filename: manualFilename, content: manualContent },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (res.data?.success) {
+          alert(`Thành công: ${res.data.message || "Đã lưu file xác thực trên Server!"}`);
+          setManualFilename("");
+          setManualContent("");
+          fetchVerifierFiles();
+        }
+      }
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Lỗi khi lưu file xác thực Zalo!");
+    } finally {
+      setUploadingVerifier(false);
+    }
+  };
+
+  const handleDeleteZaloVerifier = async (filename: string) => {
+    if (!token || !confirm(`Bạn có chắc chắn muốn xóa file ${filename}?`)) return;
+    try {
+      const res = await axios.delete(`${API_BASE}/zalo_verifier/${filename}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data?.success) {
+        alert("Đã xóa file xác thực thành công!");
+        fetchVerifierFiles();
+      }
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Không thể xóa file!");
+    }
+  };
+
   const handleReset = () => {
     if (window.confirm("Bạn có chắc chắn muốn khôi phục Persona Prompt về mặc định không?")) {
       setPersona(DEFAULT_PERSONA);
@@ -185,6 +268,7 @@ export function BotConfigPage() {
 
   useEffect(() => {
     loadConfig();
+    fetchVerifierFiles();
   }, [token]);
 
   if (loading) {
@@ -535,6 +619,127 @@ export function BotConfigPage() {
                             </>
                           );
                         })()}
+                      </div>
+
+                      {/* Sub-card: Xác thực Domain Zalo (HTML Verification File) */}
+                      <div className="mt-4 pt-4 border-t border-slate-200/80 flex flex-col gap-3">
+                        <div className="flex justify-between items-center">
+                          <div className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                            <FileCode size={15} className="text-sky-600" />
+                            Xác thực Domain Zalo (HTML File)
+                          </div>
+                          <span className="text-[10px] bg-sky-100 text-sky-800 font-bold px-2 py-0.5 rounded-full">Web & Server</span>
+                        </div>
+
+                        <div className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                          💡 Tải file <code className="bg-slate-200/80 px-1 py-0.5 rounded text-slate-800 font-mono text-[10px]">zalo_verifier....html</code> từ Zalo Developer lên Server để Zalo quét xác thực tên miền.
+                        </div>
+
+                        {/* Chế độ chọn */}
+                        <div className="flex gap-2 text-xs">
+                          <button
+                            type="button"
+                            onClick={() => setVerifierMode("upload")}
+                            className={`px-3 py-1.5 rounded-lg border font-bold cursor-pointer transition-all ${
+                              verifierMode === "upload" ? "bg-sky-600 text-white border-sky-600" : "bg-white text-slate-600 border-slate-200"
+                            }`}
+                          >
+                            <Upload size={12} className="inline mr-1" /> Tải file .html
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setVerifierMode("manual")}
+                            className={`px-3 py-1.5 rounded-lg border font-bold cursor-pointer transition-all ${
+                              verifierMode === "manual" ? "bg-sky-600 text-white border-sky-600" : "bg-white text-slate-600 border-slate-200"
+                            }`}
+                          >
+                            <FileText size={12} className="inline mr-1" /> Nhập tên & mã
+                          </button>
+                        </div>
+
+                        {verifierMode === "upload" ? (
+                          <div className="flex flex-col gap-2">
+                            <input
+                              type="file"
+                              accept=".html"
+                              onChange={e => {
+                                if (e.target.files && e.target.files[0]) {
+                                  setSelectedFile(e.target.files[0]);
+                                }
+                              }}
+                              className="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100"
+                            />
+                            {selectedFile && (
+                              <div className="text-[11px] text-slate-500 font-mono">
+                                File chọn: <strong>{selectedFile.name}</strong> ({selectedFile.size} bytes)
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            <input
+                              type="text"
+                              value={manualFilename}
+                              onChange={e => setManualFilename(e.target.value)}
+                              placeholder="Tên file (vd: zalo_verifier3879828502555234376.html)"
+                              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono text-slate-700"
+                            />
+                            <textarea
+                              value={manualContent}
+                              onChange={e => setManualContent(e.target.value)}
+                              placeholder="Nội dung mã xác thực (nếu trống sẽ lấy mã từ tên file)"
+                              rows={2}
+                              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs font-mono text-slate-700 resize-none"
+                            />
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={handleUploadZaloVerifier}
+                          disabled={uploadingVerifier}
+                          className="bg-[#0055A5] hover:bg-[#004485] text-white border-none rounded-xl py-2 px-4 text-xs font-extrabold cursor-pointer flex items-center justify-center gap-2 shadow-xs transition-all disabled:opacity-50"
+                        >
+                          {uploadingVerifier ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+                          Lưu file xác thực lên Server
+                        </button>
+
+                        {/* Danh sách file verifier đã lưu trên Server */}
+                        {verifierFiles.length > 0 && (
+                          <div className="mt-2 flex flex-col gap-1.5">
+                            <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">File xác thực đang có trên Server:</div>
+                            {verifierFiles.map(f => {
+                              const fullUrl = `${window.location.origin}${f.url}`;
+                              return (
+                                <div key={f.filename} className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs">
+                                  <div className="flex items-center gap-2 overflow-hidden mr-2">
+                                    <FileCode size={14} className="text-sky-600 shrink-0" />
+                                    <span className="font-mono font-bold text-slate-800 truncate">{f.filename}</span>
+                                    <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded">Active</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <a
+                                      href={fullUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-sky-600 hover:text-sky-800 text-[11px] font-semibold flex items-center gap-1 no-underline"
+                                    >
+                                      Kiểm tra <ExternalLink size={12} />
+                                    </a>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteZaloVerifier(f.filename)}
+                                      className="text-rose-500 hover:text-rose-700 bg-transparent border-none cursor-pointer p-1"
+                                      title="Xóa file này"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
