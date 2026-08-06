@@ -136,7 +136,7 @@ export class AppController {
   }
 
   // Route phục vụ Zalo Crawler khi truy cập /zalo_verifier...html
-  @Get(['zalo_verifier*', 'api/zalo_verifier*'])
+  @Get(['zalo_verifier:code', 'api/zalo_verifier:code'])
   async verifyZalo(
     @Req() req: express.Request,
     @Res() res: express.Response,
