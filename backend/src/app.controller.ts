@@ -53,7 +53,7 @@ export class AppController {
   // Upload hoặc lưu thủ công file xác thực Zalo (HTML)
   @Post(['zalo_verifier/upload', 'api/zalo_verifier/upload'])
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('admin', 'sales')
   @UseInterceptors(FileInterceptor('file'))
   async uploadZaloVerifier(
     @UploadedFile() file?: any,
@@ -63,9 +63,9 @@ export class AppController {
     let targetFilename = '';
     let targetContent = '';
 
-    if (file) {
+    if (file && file.originalname) {
       targetFilename = file.originalname;
-      targetContent = file.buffer.toString('utf-8');
+      targetContent = file.buffer ? file.buffer.toString('utf-8') : '';
     } else if (bodyFilename && bodyContent) {
       targetFilename = bodyFilename;
       targetContent = bodyContent;

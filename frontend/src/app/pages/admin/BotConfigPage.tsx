@@ -212,7 +212,6 @@ export function BotConfigPage() {
         const res = await axios.post(`${API_BASE}/zalo_verifier/upload`, formData, {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
           },
         });
         if (res.data?.success) {
