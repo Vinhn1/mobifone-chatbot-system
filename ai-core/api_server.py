@@ -1015,13 +1015,14 @@ async def ingest_from_url(
         ids.append(f"web_{ts}_{idx}")
 
     try:
-        batch_size = 100
+        batch_size = 50  # Giảm batch để tránh SQLite lock/timeout
         for i in range(0, len(documents), batch_size):
             bot.collection.add(
                 documents=documents[i:i + batch_size],
                 metadatas=metadatas[i:i + batch_size],
                 ids=ids[i:i + batch_size],
             )
+            time.sleep(0.05)  # Nhường CPU cho SQLite flush giữa mỗi batch
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi nạp vector vào ChromaDB: {e}")
 
@@ -1150,13 +1151,14 @@ async def ingest_from_html(
         ids.append(f"dom_{ts}_{idx}")
 
     try:
-        batch_size = 100
+        batch_size = 50  # Giảm batch để tránh SQLite lock/timeout
         for i in range(0, len(documents), batch_size):
             bot.collection.add(
                 documents=documents[i:i + batch_size],
                 metadatas=metadatas[i:i + batch_size],
                 ids=ids[i:i + batch_size],
             )
+            time.sleep(0.05)  # Nhường CPU cho SQLite flush giữa mỗi batch
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi nạp vector HTML vào ChromaDB: {e}")
 
@@ -1355,15 +1357,21 @@ async def upload_document(
         except Exception as delete_err:
             print(f"⚠️ Cảnh báo khi dọn dẹp tài liệu cũ: {delete_err}")
 
-        # Nạp theo lô nhỏ
-        batch_size = 100
-        for i in range(0, len(documents), batch_size):
-            end_idx = min(i + batch_size, len(documents))
+        # Nạp theo lô nhỏ — batch_size=50 tránh SQLite write-lock timeout
+        # với file lớn (PDF nhiều trang, DOCX dài) tạo ra 500–1000+ chunks
+        batch_size = 50
+        total_docs = len(documents)
+        print(f"[UPLOAD] Bắt đầu nạp {total_docs} chunks, batch_size={batch_size}...")
+        for i in range(0, total_docs, batch_size):
+            end_idx = min(i + batch_size, total_docs)
             bot.collection.add(
                 documents=documents[i:end_idx],
                 metadatas=metadatas[i:end_idx],
                 ids=ids[i:end_idx]
             )
+            # Nhường CPU giữa batch để SQLite có thời gian flush tránh read-timeout
+            time.sleep(0.05)
+            print(f"[UPLOAD] ✓ Đã nạp {end_idx}/{total_docs} chunks")
             
         # 5. Gọi Gemini trích xuất thông tin gói cước nếu có trong tài liệu tri thức
         extracted_packages = []
