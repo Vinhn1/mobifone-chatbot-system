@@ -1218,12 +1218,30 @@ async def upload_document(
             else:
                 text_content = json.dumps(json_data, ensure_ascii=False)
         elif file_ext == ".pdf":
-            import pypdf
-            reader = pypdf.PdfReader(temp_file_path)
-            text_list = []
-            for page in reader.pages:
-                text_list.append(page.extract_text() or "")
-            text_content = "\n".join(text_list)
+            # Dùng pdfplumber thay vì pypdf vì pypdf không xử lý đúng layout 2 cột
+            # trong văn bản hành chính Việt Nam → số hiệu công văn bị đọc sai
+            # pdfplumber dùng layout analysis → đọc đúng thứ tự: số hiệu, ngày, nội dung
+            try:
+                import pdfplumber
+                text_list = []
+                with pdfplumber.open(temp_file_path) as pdf:
+                    for page in pdf.pages:
+                        # layout=True: đọc theo vị trí vật lý trên trang (xử lý đúng 2 cột)
+                        page_text = page.extract_text(layout=True) or ""
+                        if not page_text.strip():
+                            # Fallback: đọc không layout nếu trang trống
+                            page_text = page.extract_text() or ""
+                        text_list.append(page_text)
+                text_content = "\n".join(text_list)
+            except ImportError:
+                # Fallback sang pypdf nếu pdfplumber chưa được cài
+                import pypdf
+                reader = pypdf.PdfReader(temp_file_path)
+                text_list = []
+                for page in reader.pages:
+                    text_list.append(page.extract_text() or "")
+                text_content = "\n".join(text_list)
+
         elif file_ext in [".docx", ".doc"]:
             text_content = extract_docx_images_and_text(temp_file_path, filename)
         elif file_ext in [".xlsx", ".xls"]:
