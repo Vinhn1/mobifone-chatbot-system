@@ -546,7 +546,13 @@ export function KnowledgeBasePage() {
         // Suppress alert for items that weren't persisted in DB
       }
     } finally {
-      setDocs(prev => prev.filter(d => d.name !== docItem.name && d.source_url !== docItem.source_url));
+      setDocs(prev => prev.filter(d => {
+        // Xóa đúng doc theo tên
+        if (d.name === docItem.name) return false;
+        // Với web doc (có source_url): cũng xóa nếu source_url trùng
+        if (docItem.source_url && d.source_url === docItem.source_url) return false;
+        return true;
+      }));
       setSelectedDocs(prev => { const next = new Set(prev); next.delete(docItem.name); return next; });
     }
   };
