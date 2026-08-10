@@ -1218,18 +1218,40 @@ async def upload_document(
             else:
                 text_content = json.dumps(json_data, ensure_ascii=False)
         elif file_ext == ".pdf":
-            # Dùng pdfplumber thay vì pypdf vì pypdf không xử lý đúng layout 2 cột
-            # trong văn bản hành chính Việt Nam → số hiệu công văn bị đọc sai
-            # pdfplumber dùng layout analysis → đọc đúng thứ tự: số hiệu, ngày, nội dung
+            # Dùng pdfplumber + extract_words() thay vì layout=True
+            # layout=True chèn quá nhiều khoảng trắng → "6790" bị tách khỏi "/D01-B4-B5"
+            # extract_words() lấy tọa độ pixel của từng từ, sort theo Y rồi X
+            # → đọc đúng thứ tự vật lý: "6790/D01-B4-B5" liền mạch
             try:
                 import pdfplumber
                 text_list = []
                 with pdfplumber.open(temp_file_path) as pdf:
                     for page in pdf.pages:
-                        # layout=True: đọc theo vị trí vật lý trên trang (xử lý đúng 2 cột)
-                        page_text = page.extract_text(layout=True) or ""
-                        if not page_text.strip():
-                            # Fallback: đọc không layout nếu trang trống
+                        words = page.extract_words(
+                            x_tolerance=3,   # Gộp ký tự cách nhau ≤3px thành 1 từ
+                            y_tolerance=3,   # Gộp ký tự cùng dòng (chênh ≤3px)
+                            keep_blank_chars=False,
+                        )
+                        if words:
+                            # Gom từ cùng dòng: các từ có top gần nhau (≤6px) = cùng hàng
+                            words_sorted = sorted(words, key=lambda w: (round(w['top'] / 4) * 4, w['x0']))
+                            lines = []
+                            current_line = [words_sorted[0]]
+                            for word in words_sorted[1:]:
+                                if abs(word['top'] - current_line[0]['top']) <= 6:
+                                    current_line.append(word)
+                                else:
+                                    lines.append(current_line)
+                                    current_line = [word]
+                            lines.append(current_line)
+
+                            # Nối từng dòng (sort left→right)
+                            page_text = '\n'.join(
+                                ' '.join(w['text'] for w in sorted(line, key=lambda w: w['x0']))
+                                for line in lines
+                            )
+                        else:
+                            # Trang không có text (scan/ảnh) → fallback
                             page_text = page.extract_text() or ""
                         text_list.append(page_text)
                 text_content = "\n".join(text_list)
@@ -1241,6 +1263,7 @@ async def upload_document(
                 for page in reader.pages:
                     text_list.append(page.extract_text() or "")
                 text_content = "\n".join(text_list)
+
 
         elif file_ext in [".docx", ".doc"]:
             text_content = extract_docx_images_and_text(temp_file_path, filename)
