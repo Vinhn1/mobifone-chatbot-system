@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
-from rag_pipeline import AIServiceError, MobiFoneRAG
+from rag_pipeline import AIServiceError, MobiFoneRAG, chroma_write_lock
 try:
     from crawl_engine import crawl_url_async, crawl_site_deep_async, _extract_title_and_text_from_html
 except ImportError:
@@ -1015,14 +1015,17 @@ async def ingest_from_url(
         ids.append(f"web_{ts}_{idx}")
 
     try:
-        batch_size = 50  # Giảm batch để tránh SQLite lock/timeout
+        # batch_size=25: nhỏ hơn giúp SQLite flush nhanh hơn
+        # chroma_write_lock: serialize writes để tránh hnswlib concurrent lock timeout
+        batch_size = 25
         for i in range(0, len(documents), batch_size):
-            bot.collection.add(
-                documents=documents[i:i + batch_size],
-                metadatas=metadatas[i:i + batch_size],
-                ids=ids[i:i + batch_size],
-            )
-            time.sleep(0.05)  # Nhường CPU cho SQLite flush giữa mỗi batch
+            with chroma_write_lock:
+                bot.collection.add(
+                    documents=documents[i:i + batch_size],
+                    metadatas=metadatas[i:i + batch_size],
+                    ids=ids[i:i + batch_size],
+                )
+            time.sleep(0.1)  # Nhường CPU giữa batch
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi nạp vector vào ChromaDB: {e}")
 
@@ -1151,14 +1154,15 @@ async def ingest_from_html(
         ids.append(f"dom_{ts}_{idx}")
 
     try:
-        batch_size = 50  # Giảm batch để tránh SQLite lock/timeout
+        batch_size = 25
         for i in range(0, len(documents), batch_size):
-            bot.collection.add(
-                documents=documents[i:i + batch_size],
-                metadatas=metadatas[i:i + batch_size],
-                ids=ids[i:i + batch_size],
-            )
-            time.sleep(0.05)  # Nhường CPU cho SQLite flush giữa mỗi batch
+            with chroma_write_lock:
+                bot.collection.add(
+                    documents=documents[i:i + batch_size],
+                    metadatas=metadatas[i:i + batch_size],
+                    ids=ids[i:i + batch_size],
+                )
+            time.sleep(0.1)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi nạp vector HTML vào ChromaDB: {e}")
 
@@ -1353,24 +1357,24 @@ async def upload_document(
     try:
         # Tự động xóa các vector cũ cùng tên (nếu có) để tránh trùng lặp dữ liệu
         try:
-            bot.collection.delete(where={"source_title": filename})
+            with chroma_write_lock:
+                bot.collection.delete(where={"source_title": filename})
         except Exception as delete_err:
             print(f"⚠️ Cảnh báo khi dọn dẹp tài liệu cũ: {delete_err}")
 
-        # Nạp theo lô nhỏ — batch_size=50 tránh SQLite write-lock timeout
-        # với file lớn (PDF nhiều trang, DOCX dài) tạo ra 500–1000+ chunks
-        batch_size = 50
+        # batch_size=25, lock đảm bảo không có concurrent write vào hnswlib
+        batch_size = 25
         total_docs = len(documents)
         print(f"[UPLOAD] Bắt đầu nạp {total_docs} chunks, batch_size={batch_size}...")
         for i in range(0, total_docs, batch_size):
             end_idx = min(i + batch_size, total_docs)
-            bot.collection.add(
-                documents=documents[i:end_idx],
-                metadatas=metadatas[i:end_idx],
-                ids=ids[i:end_idx]
-            )
-            # Nhường CPU giữa batch để SQLite có thời gian flush tránh read-timeout
-            time.sleep(0.05)
+            with chroma_write_lock:
+                bot.collection.add(
+                    documents=documents[i:end_idx],
+                    metadatas=metadatas[i:end_idx],
+                    ids=ids[i:end_idx]
+                )
+            time.sleep(0.1)
             print(f"[UPLOAD] ✓ Đã nạp {end_idx}/{total_docs} chunks")
             
         # 5. Gọi Gemini trích xuất thông tin gói cước nếu có trong tài liệu tri thức

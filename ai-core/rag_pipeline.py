@@ -2,9 +2,14 @@ import os
 import sys
 import json
 import time
+import threading
 import chromadb
+from chromadb.config import Settings as ChromaSettings
 from chromadb.utils import embedding_functions
 from dotenv import load_dotenv
+
+# Global lock đảm bảo chỉ 1 thread ghi vào ChromaDB (hnswlib không thread-safe)
+chroma_write_lock = threading.Lock()
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
@@ -74,7 +79,11 @@ class MobiFoneRAG:
             db_path = os.path.join(BASE_DIR, "chroma_db")
             
         # 1. Khởi tạo ChromaDB client lưu trữ persistent
-        self.chroma_client = chromadb.PersistentClient(path=db_path)
+        # anonymized_telemetry=False tắt telemetry để tránh network call không cần thiết
+        self.chroma_client = chromadb.PersistentClient(
+            path=db_path,
+            settings=ChromaSettings(anonymized_telemetry=False)
+        )
         
         # 2. Sử dụng mô hình nhúng mặc định của ChromaDB (nhẹ, chạy offline bằng onnxruntime)
         self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
