@@ -8,36 +8,52 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
+
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
-
-      - name: Open Firewall for GitHub Runner IP
-        run: |
-          RUNNER_IP=$(curl -s https://api.ipify.org)
-          echo "Runner IP: $RUNNER_IP"
-          # Lưu IP để dùng ở step sau
-          echo "RUNNER_IP=$RUNNER_IP" >> $GITHUB_ENV
+        uses: actions/checkout@v4
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v0.1.10
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          command_timeout: 35m
+          # Truyền tất cả secrets vào env của SSH session
           envs: DB_USERNAME,DB_PASSWORD,DB_DATABASE,DB_SYNCHRONIZE,JWT_SECRET,JWT_EXPIRES_IN,GEMINI_API_KEY,AI_PROVIDER,GEMINI_MODEL,OPENAI_API_KEY,EVAL_JUDGE_PROVIDER,EVAL_JUDGE_MODEL,SMTP_HOST,SMTP_PORT,SMTP_USER,SMTP_PASS,SMTP_FROM,CORS_ALLOWED_ORIGINS,ADMIN_SEED_PASSWORD,SALES_SEED_PASSWORD,SUBSCRIBER_SEED_PASSWORD
-          command_timeout: 30m
           script: |
-            # Clone nếu chưa có git repo, ngược lại pull code mới
-            if [ ! -d "/opt/mobifone-chatbot-system/.git" ]; then
-              rm -rf /opt/mobifone-chatbot-system
-              git clone https://github.com/${{ github.repository }}.git /opt/mobifone-chatbot-system
-            fi
-            cd /opt/mobifone-chatbot-system
-            git pull origin main
+            set -e  # Dừng ngay nếu có lỗi
+            export DEBIAN_FRONTEND=noninteractive
 
-            # Tạo file .env từ secrets trên server
+            DEPLOY_DIR="/opt/mobifone-chatbot-system"
+
+            echo "=== [1/5] Cập nhật source code ==="
+            # Clone nếu chưa có, nếu đã có thì fetch + reset --hard
+            # Dùng reset --hard thay vì pull để tránh merge conflict với .env
+            if [ ! -d "$DEPLOY_DIR/.git" ]; then
+              echo "Thư mục chưa tồn tại, clone từ đầu..."
+              git clone https://github.com/${{ github.repository }}.git "$DEPLOY_DIR"
+            fi
+            cd "$DEPLOY_DIR"
+
+            # Fetch code mới nhất và reset cứng — KHÔNG merge, tránh conflict
+            git fetch origin main
+            git reset --hard origin/main
+            echo "✓ Code đã cập nhật lên: $(git log --oneline -1)"
+
+            echo "=== [2/5] Ghi file .env từ GitHub Secrets ==="
+            # Ghi .env SAU khi reset để không bị git overwrite
+            cat > .env << 'ENVEOF'
+            DB_HOST=db
+            ENVEOF
+
+            # Nối các biến từ environment của SSH session
             printf '%s\n' \
+              "DB_HOST=db" \
+              "DB_PORT=5432" \
               "DB_USERNAME=${DB_USERNAME}" \
               "DB_PASSWORD=${DB_PASSWORD}" \
               "DB_DATABASE=${DB_DATABASE}" \
@@ -60,14 +76,37 @@ jobs:
               "SALES_SEED_PASSWORD=${SALES_SEED_PASSWORD}" \
               "SUBSCRIBER_SEED_PASSWORD=${SUBSCRIBER_SEED_PASSWORD}" \
               > .env
+            echo "✓ File .env đã ghi ($(wc -l < .env) dòng)"
 
-            # Dọn dẹp tất cả container mobifone (dùng filter tên để tránh đụng secret mask)
-            docker compose down --remove-orphans || true
-            docker rm -f $(docker ps -aq --filter name=mobifone) 2>/dev/null || true
-            sleep 2
+            echo "=== [3/5] Dừng và dọn container cũ ==="
+            docker compose down --remove-orphans --timeout 30 || true
+            # Xóa container còn sót nếu có
+            STALE=$(docker ps -aq --filter name=mobifone 2>/dev/null)
+            if [ -n "$STALE" ]; then
+              docker rm -f $STALE
+            fi
+            # Xóa image cũ của project để buộc rebuild hoàn toàn
+            docker images --filter "dangling=true" -q | xargs -r docker rmi -f || true
+            echo "✓ Containers đã dọn xong"
+            sleep 3
 
-            # Build và khởi chạy lại các service
-            docker compose up -d --build
+            echo "=== [4/5] Build và khởi chạy ==="
+            # --no-cache đảm bảo code mới được build, không dùng layer cache cũ
+            docker compose up -d --build --remove-orphans
+            echo "✓ docker compose up hoàn tất"
+
+            echo "=== [5/5] Kiểm tra trạng thái ==="
+            sleep 10
+            docker compose ps
+            # Kiểm tra có container nào bị Exit không
+            FAILED=$(docker compose ps --status exited --format "{{.Name}}" 2>/dev/null || true)
+            if [ -n "$FAILED" ]; then
+              echo "❌ Container bị lỗi: $FAILED"
+              docker compose logs --tail=50 $FAILED
+              exit 1
+            fi
+            echo "✅ Tất cả container đang chạy bình thường!"
+
         env:
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
