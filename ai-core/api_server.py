@@ -1255,51 +1255,42 @@ async def upload_document(
             else:
                 text_content = json.dumps(json_data, ensure_ascii=False)
         elif file_ext == ".pdf":
-            # Dùng pdfplumber + extract_words() thay vì layout=True
-            # layout=True chèn quá nhiều khoảng trắng → "6790" bị tách khỏi "/D01-B4-B5"
-            # extract_words() lấy tọa độ pixel của từng từ, sort theo Y rồi X
-            # → đọc đúng thứ tự vật lý: "6790/D01-B4-B5" liền mạch
+            # Dùng pdfminer.six (đã có sẵn vì là dependency của pdfplumber)
+            # LAParams giúp xử lý đúng layout 2 cột của công văn nhà nước:
+            #   - boxes_flow=0.5: cân bằng giữa x và y khi sort text blocks
+            #   - char_margin=2.0: gộp ký tự cách nhau ≤2x font size thành 1 từ
+            #   - line_margin=0.5: gộp dòng cách nhau ≤0.5x font size thành 1 block
+            # → Số "6790" và "/D01-B4-B5" trong cùng text box sẽ được nối đúng
             try:
-                import pdfplumber
-                text_list = []
-                with pdfplumber.open(temp_file_path) as pdf:
-                    for page in pdf.pages:
-                        words = page.extract_words(
-                            x_tolerance=3,   # Gộp ký tự cách nhau ≤3px thành 1 từ
-                            y_tolerance=3,   # Gộp ký tự cùng dòng (chênh ≤3px)
-                            keep_blank_chars=False,
-                        )
-                        if words:
-                            # Gom từ cùng dòng: các từ có top gần nhau (≤6px) = cùng hàng
-                            words_sorted = sorted(words, key=lambda w: (round(w['top'] / 4) * 4, w['x0']))
-                            lines = []
-                            current_line = [words_sorted[0]]
-                            for word in words_sorted[1:]:
-                                if abs(word['top'] - current_line[0]['top']) <= 6:
-                                    current_line.append(word)
-                                else:
-                                    lines.append(current_line)
-                                    current_line = [word]
-                            lines.append(current_line)
-
-                            # Nối từng dòng (sort left→right)
-                            page_text = '\n'.join(
-                                ' '.join(w['text'] for w in sorted(line, key=lambda w: w['x0']))
-                                for line in lines
-                            )
-                        else:
-                            # Trang không có text (scan/ảnh) → fallback
-                            page_text = page.extract_text() or ""
-                        text_list.append(page_text)
-                text_content = "\n".join(text_list)
-            except ImportError:
-                # Fallback sang pypdf nếu pdfplumber chưa được cài
-                import pypdf
-                reader = pypdf.PdfReader(temp_file_path)
-                text_list = []
-                for page in reader.pages:
-                    text_list.append(page.extract_text() or "")
-                text_content = "\n".join(text_list)
+                from pdfminer.high_level import extract_text as pdfminer_extract
+                from pdfminer.layout import LAParams
+                laparams = LAParams(
+                    char_margin=2.0,
+                    word_margin=0.1,
+                    line_margin=0.5,
+                    boxes_flow=0.5,
+                    detect_vertical=False,
+                )
+                text_content = pdfminer_extract(temp_file_path, laparams=laparams) or ""
+                # Làm sạch khoảng trắng thừa
+                import re as _re
+                text_content = _re.sub(r'\n{3,}', '\n\n', text_content)  # Tối đa 2 dòng trắng liên tiếp
+                text_content = _re.sub(r'[ \t]{3,}', ' ', text_content)   # Tối đa 1 khoảng trắng
+                print(f"[PDF] pdfminer ok: {len(text_content)} ký tự")
+            except Exception as e_pdfminer:
+                print(f"[PDF] pdfminer lỗi ({e_pdfminer}), fallback sang pdfplumber...")
+                try:
+                    import pdfplumber
+                    text_list = []
+                    with pdfplumber.open(temp_file_path) as pdf:
+                        for page in pdf.pages:
+                            page_text = page.extract_text(layout=False) or ""
+                            text_list.append(page_text)
+                    text_content = "\n".join(text_list)
+                except Exception:
+                    import pypdf
+                    reader = pypdf.PdfReader(temp_file_path)
+                    text_content = "\n".join(p.extract_text() or "" for p in reader.pages)
 
 
         elif file_ext in [".docx", ".doc"]:
@@ -1401,6 +1392,12 @@ async def upload_document(
             })
             ids.append(f"upload_{filename}_{int(time.time())}_{idx}")
     else:
+        # Thêm tên file vào đầu text: đảm bảo số công văn trong filename luôn được index
+        # Ví dụ: "6790_D01-B4-B5_..._MobiFiber_2025_(lan_1).pdf"
+        # → Kể cả khi PDF extraction bỏ sót "6790", chunk đầu tiên vẫn chứa số đó
+        doc_id = os.path.splitext(filename)[0]  # Bỏ đuôi .pdf
+        text_content = f"[Tài liệu: {doc_id}]\n\n" + text_content
+
         words = text_content.split()
         chunk_size = 300  # số từ mỗi mảnh
         overlap = 50
