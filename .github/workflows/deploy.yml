@@ -74,21 +74,31 @@ jobs:
             echo "✓ File .env đã ghi ($(wc -l < .env) dòng)"
 
             echo "=== [3/5] Dừng và dọn container cũ ==="
+            # Bước 1: Docker Compose down bình thường
             docker compose down --remove-orphans --timeout 30 || true
-            # Xóa container còn sót nếu có
-            STALE=$(docker ps -aq --filter name=mobifone 2>/dev/null)
+
+            # Bước 2: Force xóa TẤT CẢ container còn sót theo label project
+            # (xử lý trường hợp build thủ công trước đó để lại container)
+            STALE=$(docker ps -aq --filter "label=com.docker.compose.project=mobifone-chatbot-system" 2>/dev/null)
             if [ -n "$STALE" ]; then
+              echo "Xóa container còn sót: $STALE"
               docker rm -f $STALE
             fi
-            # Xóa image cũ của project để buộc rebuild hoàn toàn
+
+            # Bước 3: Xóa network cũ nếu còn (tránh conflict "network already exists")
+            docker network rm mobifone-chatbot-system_default 2>/dev/null || true
+
+            # Bước 4: Xóa dangling images
             docker images --filter "dangling=true" -q | xargs -r docker rmi -f || true
-            echo "✓ Containers đã dọn xong"
+
+            echo "✓ Containers và network đã dọn xong"
             sleep 3
 
             echo "=== [4/5] Build và khởi chạy ==="
-            # --no-cache đảm bảo code mới được build, không dùng layer cache cũ
-            docker compose up -d --build --remove-orphans
+            # --force-recreate: buộc tạo lại container kể cả khi image không đổi
+            docker compose up -d --build --force-recreate --remove-orphans
             echo "✓ docker compose up hoàn tất"
+
 
             echo "=== [5/5] Kiểm tra trạng thái ==="
             sleep 10
