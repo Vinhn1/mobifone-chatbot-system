@@ -1,8 +1,13 @@
 # ============================================================
-# Git Ignore for Monorepo (mobifone-chatbot-system)
+# Git Ignore — MobiFone Chatbot System (Monorepo)
 # ============================================================
 
-# Python (Scraper & AI Core)
+# ─── Environment Variables (NEVER commit secrets) ───────────
+.env
+.env.*
+!.env.example
+
+# ─── Python ─────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
@@ -10,20 +15,9 @@ __pycache__/
 venv/
 ENV/
 env/
-.chroma/
-chroma.db
-faiss_index/
-*.log
+*.pyc
 
-# Dữ liệu cào (Không đẩy dữ liệu thô & processed lên Git)
-**/data/raw/
-**/data/processed/
-**/data/*.json
-**/data/*.csv
-crawl_summary.json
-logs/
-
-# NodeJS (Backend & Frontend)
+# ─── Node.js ────────────────────────────────────────────────
 node_modules/
 .npm
 dist/
@@ -32,38 +26,68 @@ out/
 build/
 *.local
 
-# IDEs & OS
+# ─── TypeScript build cache ──────────────────────────────────
+*.tsbuildinfo
+
+# ─── Databases & Vector Stores ──────────────────────────────
+.chroma/
+chroma.db
+ai-core/chroma_db/
+**/chroma_db/
+faiss_index/
+
+# ─── Log files ──────────────────────────────────────────────
+*.log
+logs/
+backend/start.log
+
+# ─── Temporary / Scratch files ───────────────────────────────
+temp_*/
+temp_*.py
+temp_*.txt
+**/temp_uploads/
+frontend/temp_*.txt
+ai-core/out.txt
+ai-core/test_output.txt
+ai-core/esim_search_results.txt
+
+# ─── Eval / Test output files ────────────────────────────────
+ai-core/eval_dataset_100.json
+ai-core/dynamic_suggestions.json
+ai-core/eval_accuracy_report.json
+ai-core/eval_accuracy_report.md
+
+# ─── Browser automation profiles ────────────────────────────
+ai-core/browser_profiles/
+
+# ─── Data pipeline raw/processed data ───────────────────────
+**/data/raw/
+**/data/processed/
+**/data/*.json
+**/data/*.csv
+crawl_summary.json
+
+# ─── Zalo verifier files (temporary, backend serves them) ────
+*zalo_verifier*.html
+
+# ─── IDEs & OS ──────────────────────────────────────────────
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-docs
 
-.env
-
-# AI Agent Configuration (AG Kit)
+# ─── AI Agent Configuration (AG Kit / Claude) ───────────────
 .agent/
-frontend-demo
-ai-agent/
-ai-agent
-.agents
-agent-skills
+.agents/
+agent-skills/
+.claude/
+.claude-plugin/
+.gemini/
+.opencode/
 
-# TypeScript build caches
-*.tsbuildinfo
+# ─── Docs directory (exclude from repo — served separately) ──
+docs/
 
-# Chroma DB & Temporary Files
-ai-core/chroma_db/
-**/chroma_db/
-ai-core/browser_profiles/
-ai-core/temp_uploads/
-
-# Temporary suggestions/eval/out files
-ai-core/dynamic_suggestions.json
-ai-core/eval_dataset_100.json
-ai-core/out.txt
-
-# Verification files and test scripts
-*zalo_verifier*.html
-backend/resolve_zalo.js
-backend/test_zalo.js
+# ─── Data pipeline runs ──────────────────────────────────────
+mobifone-rag-data-pipeline/logs/
+mobifone-rag-data-pipeline/__pycache__/
