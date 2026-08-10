@@ -45,12 +45,7 @@ jobs:
             echo "✓ Code đã cập nhật lên: $(git log --oneline -1)"
 
             echo "=== [2/5] Ghi file .env từ GitHub Secrets ==="
-            # Ghi .env SAU khi reset để không bị git overwrite
-            cat > .env << 'ENVEOF'
-            DB_HOST=db
-            ENVEOF
-
-            # Nối các biến từ environment của SSH session
+            # Ghi .env SAU khi git reset --hard (tránh bị git overwrite)
             printf '%s\n' \
               "DB_HOST=db" \
               "DB_PORT=5432" \
