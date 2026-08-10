@@ -4,6 +4,7 @@ import json
 import time
 import uuid
 import re
+import gc
 import subprocess
 from typing import List, Optional
 from urllib.parse import urlparse
@@ -57,7 +58,61 @@ def install_dependencies():
 # Chạy kiểm tra cài đặt
 install_dependencies()
 
-# Khởi tạo FastAPI app
+
+def _safe_chroma_add(collection, documents: list, metadatas: list, ids: list,
+                     batch_size: int = 10, max_retries: int = 3) -> None:
+    """
+    Nạp documents vào ChromaDB với:
+    - batch nhỏ (mặc định 10) để giảm RAM pressure
+    - retry 3 lần với exponential backoff khi gặp lỗi:
+        * [Errno 104] Connection reset by peer  (chromadb internal crash/OOM)
+        * read operation timed out              (hnswlib lock contention)
+    - gc.collect() giữa các lần retry để giải phóng RAM
+    """
+    total = len(documents)
+    for i in range(0, total, batch_size):
+        end = min(i + batch_size, total)
+        batch_docs = documents[i:end]
+        batch_meta = metadatas[i:end]
+        batch_ids  = ids[i:end]
+
+        last_err = None
+        for attempt in range(max_retries):
+            try:
+                with chroma_write_lock:
+                    collection.add(
+                        documents=batch_docs,
+                        metadatas=batch_meta,
+                        ids=batch_ids,
+                    )
+                break  # Thành công → sang batch tiếp
+            except Exception as exc:
+                last_err = exc
+                err_str = str(exc).lower()
+                # Chỉ retry với lỗi có thể phục hồi
+                recoverable = (
+                    "104" in err_str          # errno 104: connection reset
+                    or "timed out" in err_str  # hnswlib lock timeout
+                    or "reset" in err_str      # connection reset by peer
+                    or "broken pipe" in err_str
+                )
+                if recoverable and attempt < max_retries - 1:
+                    wait = (attempt + 1) * 3  # 3s → 6s → 9s
+                    print(f"[ChromaDB] Lỗi batch {i}-{end} lần {attempt+1}: {exc}. "
+                          f"Thử lại sau {wait}s...")
+                    gc.collect()   # Giải phóng RAM trước khi retry
+                    time.sleep(wait)
+                else:
+                    raise  # Lỗi không thể phục hồi hoặc hết retry
+        else:
+            # Vòng for chạy hết max_retries mà không break
+            raise last_err
+
+        # Nhường CPU cho hệ thống flush giữa batch
+        time.sleep(0.1)
+        gc.collect()  # Giải phóng RAM embedding của batch vừa xong
+
+
 app = FastAPI(title="MobiFone AI Service")
 
 # Cấu hình CORS để Frontend gọi trực tiếp được
@@ -1015,17 +1070,7 @@ async def ingest_from_url(
         ids.append(f"web_{ts}_{idx}")
 
     try:
-        # batch_size=25: nhỏ hơn giúp SQLite flush nhanh hơn
-        # chroma_write_lock: serialize writes để tránh hnswlib concurrent lock timeout
-        batch_size = 25
-        for i in range(0, len(documents), batch_size):
-            with chroma_write_lock:
-                bot.collection.add(
-                    documents=documents[i:i + batch_size],
-                    metadatas=metadatas[i:i + batch_size],
-                    ids=ids[i:i + batch_size],
-                )
-            time.sleep(0.1)  # Nhường CPU giữa batch
+        _safe_chroma_add(bot.collection, documents, metadatas, ids, batch_size=10)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi nạp vector vào ChromaDB: {e}")
 
@@ -1154,15 +1199,7 @@ async def ingest_from_html(
         ids.append(f"dom_{ts}_{idx}")
 
     try:
-        batch_size = 25
-        for i in range(0, len(documents), batch_size):
-            with chroma_write_lock:
-                bot.collection.add(
-                    documents=documents[i:i + batch_size],
-                    metadatas=metadatas[i:i + batch_size],
-                    ids=ids[i:i + batch_size],
-                )
-            time.sleep(0.1)
+        _safe_chroma_add(bot.collection, documents, metadatas, ids, batch_size=10)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi nạp vector HTML vào ChromaDB: {e}")
 
@@ -1403,20 +1440,10 @@ async def upload_document(
         except Exception as delete_err:
             print(f"⚠️ Cảnh báo khi dọn dẹp tài liệu cũ: {delete_err}")
 
-        # batch_size=25, lock đảm bảo không có concurrent write vào hnswlib
-        batch_size = 25
         total_docs = len(documents)
-        print(f"[UPLOAD] Bắt đầu nạp {total_docs} chunks, batch_size={batch_size}...")
-        for i in range(0, total_docs, batch_size):
-            end_idx = min(i + batch_size, total_docs)
-            with chroma_write_lock:
-                bot.collection.add(
-                    documents=documents[i:end_idx],
-                    metadatas=metadatas[i:end_idx],
-                    ids=ids[i:end_idx]
-                )
-            time.sleep(0.1)
-            print(f"[UPLOAD] ✓ Đã nạp {end_idx}/{total_docs} chunks")
+        print(f"[UPLOAD] Bắt đầu nạp {total_docs} chunks (batch=10, retry=3)...")
+        _safe_chroma_add(bot.collection, documents, metadatas, ids, batch_size=10)
+        print(f"[UPLOAD] ✓ Đã nạp xong {total_docs} chunks")
             
         # 5. Gọi Gemini trích xuất thông tin gói cước nếu có trong tài liệu tri thức
         extracted_packages = []
