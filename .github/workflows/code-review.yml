@@ -1,0 +1,109 @@
+name: Code Review (reviewdog)
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  # ─────────────────────────────────────────
+  # 1. ESLint cho Backend (NestJS/TypeScript)
+  # ─────────────────────────────────────────
+  eslint-backend:
+    name: 🔍 ESLint Backend (NestJS)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write  # Bắt buộc để post review comment
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Run ESLint with reviewdog
+        uses: reviewdog/action-eslint@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review        # Post comment trực tiếp vào dòng code
+          filter_mode: diff_context         # Chỉ comment vào code mới thay đổi
+          fail_on_error: false              # Không fail build, chỉ cảnh báo
+          eslint_flags: '--no-warn-ignored'
+          workdir: backend
+
+  # ─────────────────────────────────────────
+  # 2. ESLint cho Frontend (React/TypeScript/Vite)
+  # ─────────────────────────────────────────
+  eslint-frontend:
+    name: 🔍 ESLint Frontend (React + Vite)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run ESLint with reviewdog
+        uses: reviewdog/action-eslint@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
+          filter_mode: diff_context
+          fail_on_error: false
+          workdir: frontend
+
+  # ─────────────────────────────────────────
+  # 3. Flake8 cho AI Core (Python)
+  # ─────────────────────────────────────────
+  flake8-aicore:
+    name: 🐍 Flake8 AI Core (Python)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install linting tools
+        run: |
+          pip install flake8 flake8-bugbear
+
+      - name: Run Flake8 with reviewdog
+        uses: reviewdog/action-flake8@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          reporter: github-pr-review
+          filter_mode: diff_context
+          fail_on_error: false
+          flake8_args: >-
+            --max-line-length=120
+            --extend-ignore=E203,W503
+          workdir: ai-core
