@@ -708,6 +708,39 @@ Cấu trúc JSON duy nhất:
         """Alias tương thích ngược cho api_server.py gọi answer_question."""
         return self.generate_response(question, chat_history=history, user_info=user_info)
 
+    def _normalize_wifi_promo_context(self, fact_contexts: list, fact_metadatas: list) -> list:
+        """
+        Đọc pay_months/bonus_months/price_per_month từ ChromaDB metadata (được inject
+        lúc ingest bởi ingest_wifi_playbook.py) và prepend note chuẩn hóa vào mỗi doc.
+
+        Không dùng dict hardcode — khi giá thay đổi chỉ cần sửa wifi_packages.json
+        và re-ingest, không cần động vào code này.
+
+        Dùng `is not None` thay vì truthy-check để tránh bỏ qua giá trị 0 hợp lệ.
+        """
+        normalized = []
+        for doc, meta in zip(fact_contexts, fact_metadatas):
+            pay_m   = meta.get("pay_months")
+            bonus_m = meta.get("bonus_months")
+            ppm     = meta.get("price_per_month")
+            dname   = meta.get("package_name")  # field duy nhất ghi bởi ingest script
+
+            if pay_m is not None and bonus_m is not None and ppm is not None and dname:
+                total_m = int(pay_m) + int(bonus_m)
+                ppm_fmt = f"{int(ppm):,}".replace(",", ".")
+                note = (
+                    f"[GHI CHÚ HỆ THỐNG — {dname}]: "
+                    f"Đóng trước {pay_m} tháng, MobiFone tặng thêm {bonus_m} tháng miễn phí, "
+                    f"tổng sử dụng {total_m} tháng. "
+                    f"Giá quy đổi thực tế: {ppm_fmt}đ/tháng."
+                )
+                normalized.append(note + "\n\n" + doc)
+            else:
+                normalized.append(doc)  # doc không phải WiFi promo → giữ nguyên
+
+        return normalized
+
+
     def generate_response(self, question, chat_history=None, user_info=None):
         import re
         """Truy xuất thông tin liên quan và gửi OpenAI sinh câu trả lời"""
@@ -718,6 +751,7 @@ Cấu trúc JSON duy nhất:
         sources = retrieved.get('metadatas', [[]])[0]
 
         fact_contexts = []
+        fact_metadatas = []  # metadata tương ứng với từng fact doc (để normalize giá WiFi)
         playbook_contexts = []
 
         for doc, meta in zip(contexts, sources):
@@ -726,6 +760,7 @@ Cấu trúc JSON duy nhất:
                 playbook_contexts.append(doc)
             else:
                 fact_contexts.append(doc)
+                fact_metadatas.append(meta)
         
         # 1.5. Chặn ảo tưởng (Hallucination Block) & Programmatic context injection
         import re
@@ -956,6 +991,10 @@ Cấu trúc JSON duy nhất:
                 pattern = r'(?<![a-z0-9])' + re.escape(pkg_key) + r'(?![a-z0-9])'
                 if re.search(pattern, question_lower):
                     fact_contexts = [reg_info] + fact_contexts
+
+        # Chuẩn hóa giá WiFi từ metadata ChromaDB (đọc pay_months/price_per_month inject lúc ingest)
+        # Không dùng dict hardcode — giá thay đổi chỉ cần sửa wifi_packages.json + re-ingest
+        fact_contexts = self._normalize_wifi_promo_context(fact_contexts, fact_metadatas)
 
         if not fact_contexts:
             fact_section = (
