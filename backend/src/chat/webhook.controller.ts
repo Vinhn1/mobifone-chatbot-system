@@ -53,23 +53,56 @@ export class WebhookController {
 
   @Post('zalo')
   async handleZaloWebhook(@Body() body: any, @Res() res: express.Response) {
-    console.log('[ZALO-WEBHOOK] Nhận sự kiện từ Zalo OA Webhook:', body.event_name);
-    
-    // Zalo OA callback gửi tin nhắn text: user_send_text
-    if (body.event_name === 'user_send_text' && body.message && body.message.text) {
-      const senderId = body.sender.id;
-      const text = body.message.text;
-      
-      const host = res.req.headers.host || 'localhost:3000';
-      const protocol = res.req.headers['x-forwarded-proto'] || res.req.protocol || 'http';
-      const baseUrl = `${protocol}://${host}`;
+    const eventName = body?.event_name;
+    console.log('[ZALO-WEBHOOK] Nhận sự kiện từ Zalo OA Webhook:', eventName, JSON.stringify(body).substring(0, 200));
 
-      // Gọi xử lý bất đồng bộ
-      this.chatService.handleZaloMessage(senderId, text, baseUrl).catch(err => {
-        console.error('[ZALO-WEBHOOK] Lỗi bất đồng bộ xử lý tin nhắn Zalo:', err);
-      });
-    }
+    // Lấy senderId từ Zalo payload (ưu tiên body.sender.id hoặc user_id_by_app)
+    const senderId = body?.sender?.id || body?.user_id_by_app || (eventName === 'oa_send_text' ? body?.recipient?.id : null);
     
+    if (senderId) {
+      let text: string | null = null;
+
+      // Trích xuất nội dung dựa theo event_name của Zalo OA API
+      if (eventName === 'user_send_text' || eventName === 'oa_send_text') {
+        text = body?.message?.text || null;
+      } else if (eventName === 'user_send_image') {
+        text = body?.message?.text || '[Hình ảnh]';
+      } else if (eventName === 'user_send_sticker') {
+        text = '[Sticker]';
+      } else if (eventName === 'user_send_gif') {
+        text = '[GIF]';
+      } else if (eventName === 'user_send_audio') {
+        text = '[Tin nhắn thoại]';
+      } else if (eventName === 'user_send_file') {
+        text = body?.message?.text || '[Tệp đính kèm]';
+      } else if (eventName === 'user_send_link') {
+        text = body?.message?.text || '[Liên kết]';
+      } else if (eventName === 'user_send_location') {
+        text = '[Vị trí]';
+      } else if (eventName === 'user_submit_info' || eventName === 'user_send_user_is_temp') {
+        text = body?.message?.text || '[Thông tin khách hàng]';
+      } else if (body?.message?.text) {
+        // Fallback cho các loại sự kiện tin nhắn khác có chứa văn bản
+        text = body.message.text;
+      }
+
+      if (text) {
+        const host = res.req.headers.host || 'localhost:3000';
+        const protocol = res.req.headers['x-forwarded-proto'] || res.req.protocol || 'http';
+        const baseUrl = `${protocol}://${host}`;
+
+        console.log(`[ZALO-WEBHOOK] Đang chuyển tin nhắn từ Zalo (${senderId}) sang ChatService: "${text}"`);
+        // Gọi xử lý bất đồng bộ
+        this.chatService.handleZaloMessage(senderId, text, baseUrl).catch(err => {
+          console.error('[ZALO-WEBHOOK] Lỗi bất đồng bộ xử lý tin nhắn Zalo:', err);
+        });
+      } else {
+        console.warn(`[ZALO-WEBHOOK] Không trích xuất được nội dung tin nhắn từ event: ${eventName}`);
+      }
+    } else {
+      console.warn(`[ZALO-WEBHOOK] Bỏ qua sự kiện Zalo do thiếu senderId hoặc không phải tin nhắn: ${eventName}`);
+    }
+
     return res.status(HttpStatus.OK).send('EVENT_RECEIVED');
   }
 }

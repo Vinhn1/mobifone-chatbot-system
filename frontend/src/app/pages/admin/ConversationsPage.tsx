@@ -243,15 +243,19 @@ export function ConversationsPage() {
     }
   }, [selected?.id, token]);
 
-  // Auto-polling 3s: tự động tải lại tin nhắn mới khi đang xem conversation ở chế độ nhân viên CSKH
+  // Ref lưu giữ giá trị state mới nhất cho event listener
+  const selectedRef = useRef<Conversation | null>(null);
+  selectedRef.current = selected;
+
+  const conversationsRef = useRef<Conversation[]>([]);
+  conversationsRef.current = conversations;
+
+  // Auto-polling 4s: tự động làm mới tin nhắn mới khi đang xem phiên chat
   useEffect(() => {
     if (!selected?.id || !token) return;
-    // Chỉ polling khi session đang ở chế độ human hoặc status là escalated
-    if (sessionMode !== 'human' && selected.status !== 'escalated') return;
 
     const fetchLatestTranscript = async () => {
       try {
-        // Dùng endpoint lịch sử của từng session thay vì fetch toàn bộ (nhẹ hơn)
         const res = await axios.get(`${API_BASE}/chat/history/${selected.id}`);
         const sessLogs: any[] = (res.data || []).sort(
           (a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -265,17 +269,23 @@ export function ConversationsPage() {
           time: new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }));
 
-        // Chỉ cập nhật nếu có tin nhắn mới (so sánh số lượng)
+        // Chỉ cập nhật nếu số lượng tin nhắn hoặc nội dung tin cuối cùng có sự thay đổi
         setSelected(prev => {
           if (!prev || prev.id !== selected.id) return prev;
-          if (prev.transcript.length === freshTranscript.length) return prev;
+          if (prev.transcript.length === freshTranscript.length &&
+              prev.transcript[prev.transcript.length - 1]?.text === freshTranscript[freshTranscript.length - 1]?.text) {
+            return prev;
+          }
           return { ...prev, transcript: freshTranscript, messages: freshTranscript.length, lastActiveTime: Date.now() };
         });
 
         // Cập nhật luôn danh sách conversations
         setConversations(prev => prev.map(c => {
           if (c.id !== selected.id) return c;
-          if (c.transcript.length === freshTranscript.length) return c;
+          if (c.transcript.length === freshTranscript.length &&
+              c.transcript[c.transcript.length - 1]?.text === freshTranscript[freshTranscript.length - 1]?.text) {
+            return c;
+          }
           return { ...c, transcript: freshTranscript, messages: freshTranscript.length, lastActiveTime: Date.now() };
         }));
       } catch {
@@ -283,9 +293,9 @@ export function ConversationsPage() {
       }
     };
 
-    const pollInterval = setInterval(fetchLatestTranscript, 3000);
+    const pollInterval = setInterval(fetchLatestTranscript, 4000);
     return () => clearInterval(pollInterval);
-  }, [selected?.id, sessionMode, selected?.status, token]);
+  }, [selected?.id, token]);
 
   const toggleSessionMode = async (targetMode: 'bot' | 'human') => {
     if (!selected?.id || !token) return;
@@ -310,6 +320,17 @@ export function ConversationsPage() {
     }
   }, [selected?.transcript]);
 
+  // Lắng nghe sự kiện visibilitychange để làm mới ngay dữ liệu khi Admin mở lại Tab trình duyệt
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && token) {
+        loadHistory(false);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [token]);
+
   // Lắng nghe các sự kiện thông báo thời gian thực từ AdminLayout
   useEffect(() => {
     const handleNotification = (e: Event) => {
@@ -318,26 +339,31 @@ export function ConversationsPage() {
       if (data && data.type === 'new-message') {
         const payload = data.payload; // { sessionId, sender, message }
         const sessId = payload.sessionId;
+        if (!sessId) return;
         
-        setConversations(prev => {
-          const exists = prev.some(c => c.id === sessId);
-          if (!exists) {
-            // Tải lại dữ liệu phiên mới ngay lập tức
-            loadHistory(false);
-            return prev;
-          }
+        const exists = conversationsRef.current.some(c => c.id === sessId);
+        if (!exists) {
+          // Phiên hội thoại mới từ Zalo/Facebook/Web chưa có trong danh sách -> Gọi async tải lại danh sách
+          loadHistory(false);
+          return;
+        }
 
+        const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        const senderRole = payload.sender === 'user' ? 'user' : 'bot';
+
+        setConversations(prev => {
           const updated = prev.map(c => {
             if (c.id === sessId) {
-              const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
               // Ngăn ngừa tin nhắn trùng lặp
-              const alreadyExists = c.transcript.some(m => m.text === payload.message && m.role === (payload.sender === 'user' ? 'user' : 'bot'));
-              if (alreadyExists) return c;
+              const lastMsg = c.transcript[c.transcript.length - 1];
+              if (lastMsg && lastMsg.text === payload.message && lastMsg.role === senderRole) {
+                return c;
+              }
               
               const newTranscript = [
                 ...c.transcript,
                 {
-                  role: payload.sender === 'user' ? 'user' : 'bot',
+                  role: senderRole,
                   text: payload.message,
                   time: nowStr
                 }
@@ -366,17 +392,19 @@ export function ConversationsPage() {
           return [...updated].sort((a, b) => b.lastActiveTime - a.lastActiveTime);
         });
 
-        // Cập nhật cuộc hội thoại hiện tại đang được chọn
-        setSelected(prevSelected => {
-          if (prevSelected && prevSelected.id === sessId) {
-            const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-            const alreadyExists = prevSelected.transcript.some(m => m.text === payload.message && m.role === (payload.sender === 'user' ? 'user' : 'bot'));
-            if (alreadyExists) return prevSelected;
+        // Cập nhật cuộc hội thoại hiện tại đang được chọn (nếu khớp sessId)
+        if (selectedRef.current && selectedRef.current.id === sessId) {
+          setSelected(prevSelected => {
+            if (!prevSelected || prevSelected.id !== sessId) return prevSelected;
+            const lastMsg = prevSelected.transcript[prevSelected.transcript.length - 1];
+            if (lastMsg && lastMsg.text === payload.message && lastMsg.role === senderRole) {
+              return prevSelected;
+            }
             
             const newTranscript = [
               ...prevSelected.transcript,
               {
-                role: payload.sender === 'user' ? 'user' : 'bot',
+                role: senderRole,
                 text: payload.message,
                 time: nowStr
               }
@@ -398,32 +426,20 @@ export function ConversationsPage() {
               transcript: newTranscript,
               lastActiveTime: Date.now()
             };
-          }
-          return prevSelected;
-        });
+          });
+        }
       } else if (data && data.type === 'manual-intervention-required') {
         const payload = data.payload;
         const sessId = payload.sessionId;
         
-        setConversations(prev => {
-          return prev.map(c => {
-            if (c.id === sessId) {
-              return { ...c, status: "escalated" };
-            }
-            return c;
-          });
-        });
-        
-        setSelected(prevSelected => {
-          if (prevSelected && prevSelected.id === sessId) {
-            return { ...prevSelected, status: "escalated" };
-          }
-          return prevSelected;
-        });
+        setConversations(prev => prev.map(c => c.id === sessId ? { ...c, status: "escalated" } : c));
+        if (selectedRef.current && selectedRef.current.id === sessId) {
+          setSelected(prev => prev ? { ...prev, status: "escalated" } : null);
+        }
       } else if (data && data.type === 'session-mode-changed') {
         const payload = data.payload;
         const sessId = payload.sessionId;
-        if (selected && selected.id === sessId) {
+        if (selectedRef.current && selectedRef.current.id === sessId) {
           setSessionMode(payload.mode);
         }
       }
@@ -431,7 +447,7 @@ export function ConversationsPage() {
 
     window.addEventListener('app-notification', handleNotification);
     return () => window.removeEventListener('app-notification', handleNotification);
-  }, [selected]);
+  }, [token]);
 
   const handleSendReply = async () => {
     if (!selected || !replyText.trim() || !token) return;
