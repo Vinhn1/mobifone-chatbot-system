@@ -65,14 +65,26 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Run ESLint with reviewdog
-        uses: reviewdog/action-eslint@v1
+      - name: Setup reviewdog
+        uses: reviewdog/action-setup@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          reporter: github-pr-review
-          filter_mode: diff_context
-          fail_on_error: false
-          workdir: frontend
+          reviewdog_version: latest
+
+      - name: Run ESLint + reviewdog (flat config)
+        working-directory: frontend
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx eslint \
+            --format=unix \
+            --no-warn-ignored \
+            "src/**/*.{ts,tsx}" 2>&1 \
+          | reviewdog \
+              -efm="%f:%l:%c: %m" \
+              -name="ESLint Frontend" \
+              -reporter=github-pr-review \
+              -filter-mode=diff_context \
+              -fail-on-error=false
 
   # ─────────────────────────────────────────
   # 3. Flake8 cho AI Core (Python)
