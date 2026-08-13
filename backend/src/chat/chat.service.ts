@@ -262,7 +262,7 @@ export class ChatService {
     // 1. Lưu tin nhắn của nhân viên vào DB (đóng vai trò 'bot' gửi đi)
     const saved = await this.chatHistoryService.saveMessage(sessionId, 'bot', message);
 
-    // 2. Phát tin nhắn mới qua hệ thống Notification SSE
+    // 2. Phát tin nhắn mới qua hệ thống Notification SSE (cho Admin Dashboard)
     try {
       this.notificationsService.emitNotification('new-message', {
         sessionId,
@@ -273,7 +273,45 @@ export class ChatService {
       console.error('Lỗi khi phát sự kiện tin nhắn của nhân viên qua SSE:', err.message);
     }
 
+    // 3. Forward tin nhắn nhân viên đến đúng kênh của khách hàng (Zalo / Facebook / Web)
+    try {
+      await this.forwardStaffMessageToChannel(sessionId, message);
+    } catch (err) {
+      // Không throw để tránh làm hỏng response trả về Admin Dashboard
+      console.error('[STAFF-REPLY] Lỗi khi forward tin nhắn đến kênh khách hàng:', err.message);
+    }
+
     return saved;
+  }
+
+  // Phát hiện kênh nguồn của session từ sessionId (theo quy ước tiền tố)
+  private detectChannelFromSessionId(sessionId: string): {
+    channel: 'zalo' | 'facebook' | 'web';
+    senderId: string;
+  } {
+    if (sessionId?.startsWith('zalo_')) {
+      return { channel: 'zalo', senderId: sessionId.replace('zalo_', '') };
+    }
+    if (sessionId?.startsWith('facebook_')) {
+      return { channel: 'facebook', senderId: sessionId.replace('facebook_', '') };
+    }
+    return { channel: 'web', senderId: sessionId };
+  }
+
+  // Forward tin nhắn nhân viên CSKH đến đúng kênh của khách hàng
+  private async forwardStaffMessageToChannel(sessionId: string, message: string): Promise<void> {
+    const { channel, senderId } = this.detectChannelFromSessionId(sessionId);
+
+    if (channel === 'zalo') {
+      console.log(`[STAFF-REPLY] Forward tin nhắn nhân viên đến Zalo user: ${senderId}`);
+      await this.sendZaloMessageToUser(senderId, message);
+    } else if (channel === 'facebook') {
+      console.log(`[STAFF-REPLY] Forward tin nhắn nhân viên đến Facebook user: ${senderId}`);
+      await this.sendFacebookMessageToUser(senderId, message);
+    } else {
+      // Kênh Web (ChatWidget): không cần forward — widget tự polling DB để nhận tin nhắn mới
+      console.log(`[STAFF-REPLY] Kênh Web — ChatWidget tự nhận tin nhắn qua polling DB.`);
+    }
   }
 
   // Proxy: Lấy cấu hình RAG Prompt & Parameters từ AI Service
@@ -597,6 +635,59 @@ export class ChatService {
     return cleaned.trim();
   }
 
+  // Gửi tin nhắn trực tiếp đến một user Facebook Messenger qua Send API (tái sử dụng được)
+  async sendFacebookMessageToUser(
+    senderId: string,
+    message: string,
+    suggestedQuestions?: string[],
+  ): Promise<void> {
+    const config = await this.getRagConfig();
+    const fbPageToken = config?.fb_page_token;
+    if (!fbPageToken) {
+      console.error('[FB-SEND] Thiếu fb_page_token trong cấu hình!');
+      return;
+    }
+
+    const cleanedMsg = this.cleanMarkdown(message);
+    const fbSendUrl = `https://graph.facebook.com/v18.0/me/messages?access_token=${fbPageToken}`;
+    const chunks = this.splitMessage(cleanedMsg, 2000);
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const isLastChunk = i === chunks.length - 1;
+      const messagePayload: any = { text: chunk };
+
+      // Đính kèm Quick Replies ở chunk cuối cùng (nếu có)
+      if (isLastChunk && suggestedQuestions && suggestedQuestions.length > 0) {
+        messagePayload.quick_replies = suggestedQuestions.map((q: string) => ({
+          content_type: 'text',
+          title: q.length > 20 ? q.substring(0, 17) + '...' : q,
+          payload: q,
+        }));
+      }
+
+      try {
+        await firstValueFrom(
+          this.httpService.post(
+            fbSendUrl,
+            {
+              recipient: { id: senderId },
+              messaging_type: 'RESPONSE',
+              message: messagePayload,
+            },
+            { httpsAgent: new https.Agent({ rejectUnauthorized: false }) },
+          ),
+        );
+        console.log(`[FB-SEND] Đã gửi thành công một phần đến Facebook user ${senderId}`);
+      } catch (fbError) {
+        const errorDetail = fbError.response
+          ? JSON.stringify(fbError.response.data)
+          : fbError.message;
+        console.error('[FB-SEND] Lỗi khi gửi tin nhắn qua Facebook Send API:', errorDetail);
+      }
+    }
+  }
+
   // Xử lý tin nhắn đến từ Facebook Messenger Webhook
   async handleFacebookMessage(senderId: string, text: string, baseUrl?: string) {
     console.log(`[FB-WEBHOOK] Nhận tin nhắn từ ${senderId}: "${text}"`);
@@ -607,58 +698,24 @@ export class ChatService {
       console.warn('[FB-WEBHOOK] Kênh Facebook Messenger hiện đang TẮT trong cấu hình.');
       return;
     }
-    
-    const fbPageToken = config.fb_page_token;
-    if (!fbPageToken) {
+    if (!config?.fb_page_token) {
       console.error('[FB-WEBHOOK] Thiếu fb_page_token trong cấu hình!');
       return;
     }
     
     // 2. Gọi AI sinh câu trả lời (lưu lịch sử chat theo format facebook_senderId)
     const result = await this.sendMessageToAi(text, `facebook_${senderId}`);
-    let answer = result?.answer || 'Xin lỗi, tôi gặp sự cố khi xử lý câu hỏi này.';
-
-    // Làm sạch định dạng markdown/asterisks và định dạng gạch đầu dòng
-    answer = this.cleanMarkdown(answer);
-
-    // 3. Gửi tin nhắn trả lời qua Facebook Send API (chia nhỏ tin nhắn nếu dài hơn 2000 kí tự)
-    const fbSendUrl = `https://graph.facebook.com/v18.0/me/messages?access_token=${fbPageToken}`;
-    const chunks = this.splitMessage(answer, 2000);
-
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      const isLastChunk = i === chunks.length - 1;
-      const messagePayload: any = { text: chunk };
-
-      // Đính kèm các câu hỏi gợi ý dạng Quick Replies ở chunk cuối cùng
-      if (isLastChunk && result?.suggested_questions && Array.isArray(result.suggested_questions) && result.suggested_questions.length > 0) {
-        messagePayload.quick_replies = result.suggested_questions.map((q: string) => ({
-          content_type: 'text',
-          title: q.length > 20 ? q.substring(0, 17) + '...' : q,
-          payload: q
-        }));
-      }
-
-      try {
-        await firstValueFrom(
-          this.httpService.post(fbSendUrl, {
-            recipient: { id: senderId },
-            messaging_type: 'RESPONSE',
-            message: messagePayload
-          }, {
-            httpsAgent: new https.Agent({ rejectUnauthorized: false })
-          })
-        );
-        console.log(`[FB-WEBHOOK] Đã phản hồi thành công một phần cho ${senderId}`);
-      } catch (fbError) {
-        const errorDetail = fbError.response 
-          ? JSON.stringify(fbError.response.data) 
-          : fbError.message;
-        console.error('[FB-WEBHOOK] Lỗi khi gửi tin nhắn qua Facebook Send API:', errorDetail);
-      }
+    if (result?.mode === 'human' || !result?.answer) {
+      console.log(`[FB-WEBHOOK] Session facebook_${senderId} đang ở chế độ HUMAN CSKH. Tạm ngưng Bot tự động.`);
+      return;
     }
 
-
+    // 3. Gửi câu trả lời AI qua Facebook Send API
+    await this.sendFacebookMessageToUser(
+      senderId,
+      result.answer,
+      result?.suggested_questions,
+    );
   }
 
   // Hỗ trợ tự phân giải tên miền Zalo sang IP thực tế bằng DNS công cộng (Google & Cloudflare) để bỏ qua DNS bị hijack cục bộ
@@ -758,19 +815,129 @@ export class ChatService {
     }
   }
 
+  // Gửi tin nhắn trực tiếp đến một user Zalo qua OpenAPI (tái sử dụng được)
+  async sendZaloMessageToUser(senderId: string, message: string): Promise<void> {
+    let config = await this.getRagConfig();
+    let zaloAccessToken = config?.zalo_access_token;
+    if (!zaloAccessToken) {
+      console.error('[ZALO-SEND] Thiếu zalo_access_token trong cấu hình!');
+      return;
+    }
+
+    const cleanedMsg = this.cleanMarkdown(message);
+    const chunks = this.splitMessage(cleanedMsg, 2000);
+    const zaloSendUrl = 'https://openapi.zalo.me/v3.0/oa/message/cs';
+
+    for (const chunk of chunks) {
+      let currentToken = zaloAccessToken;
+
+      try {
+        const zaloAgent = await this.getZaloHttpsAgent();
+        const sendRequest = async (tokenToUse: string) => {
+          const cleanToken = (tokenToUse || '').trim();
+          console.log(`[ZALO-SEND] Đang gửi tin nhắn đến user ${senderId} với token: "${cleanToken.substring(0, 15)}..."`);
+          return await firstValueFrom(
+            this.httpService.post(
+              zaloSendUrl,
+              {
+                recipient: { user_id: senderId },
+                message: { text: chunk },
+              },
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                  'access_token': cleanToken,
+                },
+                httpsAgent: zaloAgent,
+              },
+            ),
+          );
+        };
+
+        let response = await sendRequest(currentToken);
+
+        // Zalo thỉnh thoảng trả về HTTP 200 kèm mã lỗi -216 trong body
+        if (response.data && response.data.error === -216) {
+          console.warn('[ZALO-SEND] Phát hiện token hết hạn (error -216). Đang tự động làm mới token...');
+          try {
+            const newToken = await this.refreshZaloToken(config);
+            currentToken = newToken;
+            zaloAccessToken = newToken;
+            config = await this.getRagConfig();
+
+            const retryAgent = await this.getZaloHttpsAgent();
+            response = await firstValueFrom(
+              this.httpService.post(
+                zaloSendUrl,
+                { recipient: { user_id: senderId }, message: { text: chunk } },
+                {
+                  headers: { 'Content-Type': 'application/json', 'access_token': newToken },
+                  httpsAgent: retryAgent,
+                },
+              ),
+            );
+          } catch (refreshErr) {
+            console.error('[ZALO-SEND] Không thể làm mới token Zalo OA để gửi lại:', refreshErr.message);
+          }
+        }
+
+        if (response.data && response.data.error && response.data.error !== 0) {
+          console.error('[ZALO-SEND] Phản hồi lỗi từ Zalo OpenAPI:', JSON.stringify(response.data));
+        } else {
+          console.log(`[ZALO-SEND] Đã gửi thành công một phần đến Zalo user ${senderId}`);
+        }
+      } catch (zaloError) {
+        const responseData = zaloError.response?.data;
+        if (
+          responseData &&
+          (responseData.error === -216 || (responseData.error && responseData.error.code === -216))
+        ) {
+          console.warn('[ZALO-SEND] Phát hiện token hết hạn (HTTP error -216). Đang tự động làm mới token...');
+          try {
+            const newToken = await this.refreshZaloToken(config);
+            zaloAccessToken = newToken;
+            config = await this.getRagConfig();
+
+            const retryAgent = await this.getZaloHttpsAgent();
+            const retryResponse = await firstValueFrom(
+              this.httpService.post(
+                zaloSendUrl,
+                { recipient: { user_id: senderId }, message: { text: chunk } },
+                {
+                  headers: { 'Content-Type': 'application/json', 'access_token': newToken },
+                  httpsAgent: retryAgent,
+                },
+              ),
+            );
+            if (retryResponse.data && retryResponse.data.error && retryResponse.data.error !== 0) {
+              console.error('[ZALO-SEND] Phản hồi lỗi từ Zalo OpenAPI sau khi retry:', JSON.stringify(retryResponse.data));
+            } else {
+              console.log(`[ZALO-SEND] Đã gửi thành công sau khi refresh token cho Zalo user ${senderId}`);
+            }
+          } catch (retryErr) {
+            console.error('[ZALO-SEND] Lỗi khi gửi lại tin nhắn Zalo sau khi refresh token:', retryErr.message);
+          }
+        } else {
+          const errorDetail = zaloError.response
+            ? JSON.stringify(zaloError.response.data)
+            : zaloError.message;
+          console.error('[ZALO-SEND] Lỗi khi gửi tin nhắn qua Zalo OpenAPI:', errorDetail);
+        }
+      }
+    }
+  }
+
   // Xử lý tin nhắn đến từ Zalo OA Webhook
   async handleZaloMessage(senderId: string, text: string, baseUrl?: string) {
     console.log(`[ZALO-WEBHOOK] Nhận tin nhắn từ ${senderId}: "${text}"`);
     
     // 1. Lấy cấu hình động để kiểm tra xem Zalo có được bật hay không
-    let config = await this.getRagConfig();
+    const config = await this.getRagConfig();
     if (!config?.zalo_enabled) {
       console.warn('[ZALO-WEBHOOK] Kênh Zalo OA hiện đang TẮT trong cấu hình.');
       return;
     }
-    
-    let zaloAccessToken = config.zalo_access_token;
-    if (!zaloAccessToken) {
+    if (!config?.zalo_access_token) {
       console.error('[ZALO-WEBHOOK] Thiếu zalo_access_token trong cấu hình!');
       return;
     }
@@ -782,116 +949,8 @@ export class ChatService {
       return;
     }
 
-    let answer = result.answer;
-
-    // Làm sạch định dạng markdown/asterisks và định dạng gạch đầu dòng
-    answer = this.cleanMarkdown(answer);
-
-    // 3. Gửi tin nhắn trả lời qua Zalo OpenAPI (chia nhỏ tin nhắn nếu dài hơn 2000 kí tự)
-    const chunks = this.splitMessage(answer, 2000);
-    const zaloSendUrl = 'https://openapi.zalo.me/v3.0/oa/message/cs';
-
-    for (const chunk of chunks) {
-      let currentToken = zaloAccessToken;
-      
-      try {
-        const zaloAgent = await this.getZaloHttpsAgent();
-        const sendRequest = async (tokenToUse: string) => {
-          const cleanToken = (tokenToUse || '').trim();
-          console.log(`[ZALO-WEBHOOK] Đang gửi tin nhắn Zalo với token: "${cleanToken.substring(0, 15)}..."`);
-          const targetUrl = 'https://openapi.zalo.me/v3.0/oa/message/cs';
-          return await firstValueFrom(
-            this.httpService.post(targetUrl, {
-              recipient: { user_id: senderId },
-              message: { text: chunk }
-            }, {
-              headers: {
-                'Content-Type': 'application/json',
-                'access_token': cleanToken
-              },
-              httpsAgent: zaloAgent
-            })
-          );
-        };
-
-        let response = await sendRequest(currentToken);
-        
-        // Zalo thỉnh thoảng trả về HTTP 200 kèm mã lỗi -216 trong body
-        if (response.data && response.data.error === -216) {
-          console.warn('[ZALO-WEBHOOK] Phát hiện token hết hạn (error -216) từ Zalo. Đang tự động làm mới token...');
-          try {
-            const newToken = await this.refreshZaloToken(config);
-            currentToken = newToken;
-            zaloAccessToken = newToken;
-            config = await this.getRagConfig();
-            
-            console.log('[ZALO-WEBHOOK] Đang gửi lại tin nhắn với token mới...');
-            const retryAgent = await this.getZaloHttpsAgent();
-            response = await firstValueFrom(
-              this.httpService.post(zaloSendUrl, {
-                recipient: { user_id: senderId },
-                message: { text: chunk }
-              }, {
-                headers: {
-                  'Content-Type': 'application/json',
-                  'access_token': newToken
-                },
-                httpsAgent: retryAgent
-              })
-            );
-          } catch (refreshErr) {
-            console.error('[ZALO-WEBHOOK] Không thể làm mới token Zalo OA để gửi lại:', refreshErr.message);
-          }
-        }
-
-        if (response.data && response.data.error && response.data.error !== 0) {
-          console.error('[ZALO-WEBHOOK] Phản hồi lỗi từ Zalo OpenAPI:', JSON.stringify(response.data));
-        } else {
-          console.log(`[ZALO-WEBHOOK] Đã phản hồi thành công một phần cho Zalo user ${senderId}`);
-        }
-
-      } catch (zaloError) {
-        // Bắt lỗi HTTP status khác 200 (ví dụ 400/401 do token hết hạn)
-        const responseData = zaloError.response?.data;
-        if (responseData && (responseData.error === -216 || (responseData.error && responseData.error.code === -216))) {
-          console.warn('[ZALO-WEBHOOK] Phát hiện token hết hạn (HTTP error -216) từ Zalo. Đang tự động làm mới token...');
-          try {
-            const newToken = await this.refreshZaloToken(config);
-            zaloAccessToken = newToken;
-            config = await this.getRagConfig();
-            
-            const retryAgent = await this.getZaloHttpsAgent();
-            const retryResponse = await firstValueFrom(
-              this.httpService.post(zaloSendUrl, {
-                recipient: { user_id: senderId },
-                message: { text: chunk }
-              }, {
-                headers: {
-                  'Content-Type': 'application/json',
-                  'access_token': newToken
-                },
-                httpsAgent: retryAgent
-              })
-            );
-            
-            if (retryResponse.data && retryResponse.data.error && retryResponse.data.error !== 0) {
-              console.error('[ZALO-WEBHOOK] Phản hồi lỗi từ Zalo OpenAPI sau khi retry:', JSON.stringify(retryResponse.data));
-            } else {
-              console.log(`[ZALO-WEBHOOK] Đã phản hồi thành công một phần sau khi tự động refresh token cho Zalo user ${senderId}`);
-            }
-          } catch (retryErr) {
-            console.error('[ZALO-WEBHOOK] Lỗi khi gửi lại tin nhắn Zalo sau khi refresh token:', retryErr.message);
-          }
-        } else {
-          const errorDetail = zaloError.response 
-            ? JSON.stringify(zaloError.response.data) 
-            : zaloError.message;
-          console.error('[ZALO-WEBHOOK] Lỗi khi gửi tin nhắn qua Zalo OpenAPI:', errorDetail);
-        }
-      }
-    }
-
-
+    // 3. Gửi câu trả lời AI qua Zalo OpenAPI
+    await this.sendZaloMessageToUser(senderId, result.answer);
   }
 
   // Lấy gợi ý câu hỏi động từ AI Service
