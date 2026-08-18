@@ -67,6 +67,7 @@ ai-core/browser_profiles/
 **/data/*.csv
 # Exception: config files in data/ phải được track (không phải raw/generated data)
 !ai-core/data/wifi_packages.json
+!ai-core/data/wifi_playbooks.json
 crawl_summary.json
 
 # ─── Zalo verifier files (temporary, backend serves them) ────

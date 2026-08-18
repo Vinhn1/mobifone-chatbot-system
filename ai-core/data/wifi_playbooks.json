@@ -1,0 +1,175 @@
+{
+  "_note": "Kịch bản CSKH & Bán hàng Internet/WiFi/MobiFiber. Answer dùng template để render giá tự động từ wifi_packages.json tại thời điểm ingest.",
+  "_version": "1.0",
+  "_updated": "2026-08-18",
+  "playbooks": [
+    {
+      "question": "Nhà tôi có 1 tivi và 2 điện thoại thì nên đăng ký gói cước Internet WiFi nào hợp lý?",
+      "answer_template": "Dạ với nhu cầu sử dụng 1 Tivi xem truyền hình/YouTube và 2 điện thoại lướt mạng, em khuyên anh/chị nên đăng ký gói **{display_name}** (tốc độ {speed_mbps} Mbps). Gói này cước trọn gói chỉ {base_price_fmt}đ cho {pay_months} tháng đóng trước và được MobiFone **tặng thêm {bonus_months} tháng miễn phí** (tổng **{total_months} tháng** sử dụng, tính ra chỉ **{price_per_month_fmt}đ/tháng**). Băng thông {speed_mbps} Mbps dư dả cho Tivi phát video 4K sắc nét và 2 điện thoại chơi game, lướt TikTok mượt mà không bao giờ giật lag. Đặc biệt MobiFone tặng miễn phí Modem WiFi 6 băng tần kép và miễn phí 100% công lắp đặt ạ!",
+      "sales_stage": "kham_pha_nhu_cau",
+      "sales_tactic": "Phân tích thiết bị -> Nêu mức giá trung bình tháng -> Nhấn mạnh ưu đãi WiFi 6 & Miễn phí lắp đặt",
+      "package_key": "6wifi 1",
+      "intent": "Tư vấn WiFi gia đình"
+    },
+    {
+      "question": "Gói 6WiFi 1 giá 900k cho 8 tháng là giá ưu đãi tháng đầu hay cho tất cả các tháng?",
+      "answer_template": "Dạ anh/chị hoàn toàn yên tâm ạ! Mức giá **{base_price_fmt}đ** của gói **{display_name}** thực chất là tiền cước đóng trước **{pay_months} tháng** (150.000đ/tháng x 6 = 900.000đ) và MobiFone **TẶNG THÊM {bonus_months} THÁNG MIỄN PHÍ 100%**. Vì vậy, tổng thời gian gia đình được sử dụng trọn gói là **{total_months} tháng** mà KHÔNG phát sinh thêm bất kỳ chi phí nào khác trong suốt {total_months} tháng này! Nhờ chương trình tặng {bonus_months} tháng cước miễn phí, tính trung bình mỗi tháng gia đình chỉ tốn **{price_per_month_fmt}đ/tháng**. Anh/chị cho em xin Địa chỉ lắp đặt và SĐT liên hệ để kỹ thuật viên qua khảo sát hạ tầng tận nơi trong hôm nay nhé ạ!",
+      "sales_stage": "xu_ly_tu_choi_gia",
+      "sales_tactic": "Giải thích rõ cơ chế đóng 6 tháng + tặng 2 tháng free -> Cam kết không chi phí ẩn -> Chốt hẹn khảo sát tận nơi",
+      "package_key": "6wifi 1",
+      "intent": "Giải đáp giá cước WiFi"
+    },
+    {
+      "question": "Mạng internet MobiFone có đắt hơn Viettel hay VNPT không?",
+      "answer_template": "Dạ mạng cáp quang MobiFiber của MobiFone hiện đang có mức giá cạnh tranh và ưu đãi nhất thị trường ạ! Với gói **{display_name}** ({speed_mbps} Mbps), bình quân anh/chị chỉ trả **{price_per_month_fmt}đ/tháng** (trọn gói {base_price_fmt}đ cho {total_months} tháng) - tối ưu hơn các gói cùng băng thông của nhà mạng khác từ 20.000đ - 40.000đ/tháng. Hơn nữa, MobiFone trang bị sẵn **Modem WiFi 6 chuẩn mới nhất** (bắt sóng xuyên tường cực khỏe, cân 30-50 thiết bị cùng lúc) và tặng thêm {bonus_months} tháng cước miễn phí. Anh/chị đăng ký đợt này còn được miễn phí 100% cước lắp đặt tận nhà nữa ạ!",
+      "sales_stage": "so_sanh_doi_thu",
+      "sales_tactic": "So sánh giá bình quân tháng -> Nêu bật lợi thế công nghệ WiFi 6 -> Đề xuất chốt đơn",
+      "package_key": "6wifi 1",
+      "intent": "So sánh mạng Internet"
+    },
+    {
+      "question": "Nhà tôi 3 tầng rộng 100m2 thì lắp gói WiFi nào sóng mạnh khắp nhà?",
+      "answer_template": "Dạ với nhà 3 tầng diện tích 100m2, nếu chỉ dùng 1 Modem thường thì sóng ở tầng 2 và tầng 3 sẽ bị suy hao do tường bê tông. Em khuyên anh/chị nên đăng ký gói **{display_name}** (tốc độ {speed_mbps} Mbps) hoặc trang bị thêm thiết bị **WiFi Mesh** phụ của MobiFone. Hệ thống Mesh sẽ tạo 1 mạng WiFi duy nhất phủ sóng căng đét khắp 3 tầng, di chuyển từ tầng 1 lên tầng 3 xem video mượt mà không bị ngắt quãng. Gói {display_name} cước trọn gói chỉ {base_price_fmt}đ cho {total_months} tháng (chỉ **{price_per_month_fmt}đ/tháng**). Anh/chị để lại SĐT để em cử kỹ thuật đến đo đạc góc khuất sóng và tư vấn vị trí đặt Mesh tối ưu nhất ạ!",
+      "sales_stage": "upsell_cross_sell",
+      "sales_tactic": "Đồng cảm nỗi đau sóng yếu -> Đề xuất giải pháp WiFi Mesh phủ sóng đa tầng -> Chốt hẹn kỹ thuật đo đạc",
+      "package_key": "6wifi 2",
+      "intent": "Tư vấn WiFi nhà nhiều tầng"
+    },
+    {
+      "question": "Nhà tôi ở chung cư / phòng trọ không kéo được cáp quang thì có lắp mạng MobiFone được không?",
+      "answer_template": "Dạ hoàn toàn được anh/chị nhé! MobiFone có giải pháp **Internet không dây FWA 5G** chuyên biệt cho các căn hộ chung cư, phòng trọ không cho đục tường kéo cáp. Thiết bị FWA 5G chỉ cần cắm điện nguồn là phát WiFi tốc độ cao tới vài trăm Mbps lập tức. Anh/chị cắm điện dùng ngay, khi chuyển nhà/chuyển phòng xách thiết bị đi cực kỳ tiện lợi. Tham khảo gói cước tiêu chuẩn như **{display_name}** chỉ từ **{price_per_month_fmt}đ/tháng** ({base_price_fmt}đ/{total_months} tháng). Anh/chị cho em xin SĐT để em giao thiết bị cắm thử test tốc độ miễn phí tại nhà hôm nay nhé!",
+      "sales_stage": "chot_don_closing",
+      "sales_tactic": "Giải quyết dứt điểm rào cản kéo dây -> Nêu tính linh hoạt cắm điện dùng ngay -> Mời trải nghiệm dùng thử",
+      "package_key": "6wifi 1",
+      "intent": "Internet không dây 5G"
+    },
+    {
+      "question": "Đăng ký lắp mạng cáp quang MobiFone bao lâu thì kỹ thuật đến lắp xong?",
+      "answer_template": "Dạ quy trình lắp đặt mạng cáp quang MobiFone cực kỳ nhanh chóng ạ! Ngay sau khi nhận được SĐT và địa chỉ của anh/chị, kỹ thuật viên MobiFone khu vực sẽ liên hệ hẹn giờ và đến khảo sát, kéo cáp, cài đặt Modem hoàn thiện chỉ trong vòng **2 đến 4 giờ** (bàn giao mạng chạy mượt trong ngày). Anh/chị kiểm tra mạng chạy mượt mới cần thanh toán cước ({base_price_fmt}đ cho {total_months} tháng dùng gói **{display_name}**, tương đương **{price_per_month_fmt}đ/tháng**). Anh/chị cho em xin SĐT để em lên đơn ưu tiên lắp gấp cho mình nhé ạ!",
+      "sales_stage": "chot_don_closing",
+      "sales_tactic": "Cam kết thời gian 2-4h trong ngày -> Cam kết nghiệm thu mượt mới thu tiền -> Kích thích để lại SĐT",
+      "package_key": "6wifi 1",
+      "intent": "Quy trình lắp đặt Internet"
+    },
+    {
+      "question": "Cước mạng internet đắt quá, mạng cũ tôi dùng rẻ hơn nhiều?",
+      "answer_template": "Dạ em rất hiểu tâm lý anh/chị luôn muốn tối ưu chi phí sinh hoạt cho gia đình ạ! Tuy nhiên nếu chia nhỏ ra, gói **{display_name}** ({base_price_fmt}đ cho {total_months} tháng) tính ra chỉ khoảng **{price_per_month_fmt}đ/tháng**, tức là chưa tới **4.000đ/ngày** - chỉ bằng nửa ly trà đá mà cả nhà {total_months} tháng liền dùng Internet tốc độ cao {speed_mbps} Mbps thả ga. Chưa kể đợt này MobiFone trang bị miễn phí **Modem WiFi 6 thế hệ mới** (trị giá thị trường gần 1 triệu) và miễn 100% phí lắp đặt 300.000đ. Tính tổng giá trị nhận được thì cực kỳ tiết kiệm ạ. Anh/chị cho em xin địa chỉ để kiểm tra cổng kết nối ưu đãi gần nhà mình nhé!",
+      "sales_stage": "xu_ly_tu_choi_gia",
+      "sales_tactic": "Đồng cảm -> Chia nhỏ chi phí theo ngày (<4k/ngày) -> Nêu tổng giá trị quà tặng (Modem WiFi 6 + Free công lắp) -> Kêu gọi cung cấp địa chỉ",
+      "package_key": "6wifi 1",
+      "intent": "Xử lý từ chối giá đắt"
+    },
+    {
+      "question": "Để tôi suy nghĩ thêm đã, chưa cần lắp ngay bây giờ đâu.",
+      "answer_template": "Dạ vâng, anh/chị cứ cân nhắc kỹ để chọn được phương án ưng ý nhất cho gia đình ạ! Em xin phép lưu ý nhỏ là chương trình **tặng thêm {bonus_months} tháng cước miễn phí** và **miễn phí 100% Modem WiFi 6** cho gói **{display_name}** ({price_per_month_fmt}đ/tháng) đang áp dụng trong đợt ưu đãi hạ tầng tháng này. Kỹ thuật viên khu vực nhà mình hôm nay cũng đang có lịch lắp đặt gần đó, anh/chị có thể để lại SĐT để em đăng ký giữ trước suất ưu đãi và hẹn kỹ thuật ghé đo tín hiệu thực tế hoàn toàn miễn phí trước ạ!",
+      "sales_stage": "chot_don_closing",
+      "sales_tactic": "Tôn trọng quyết định -> Tạo Urgency nhẹ về chương trình tặng tháng + Modem WiFi 6 -> Đề xuất giữ chỗ khảo sát miễn phí",
+      "package_key": "6wifi 1",
+      "intent": "Xử lý từ chối do dự"
+    },
+    {
+      "question": "Hàng xóm nhà tôi ai cũng dùng Viettel, sao tôi phải chọn MobiFone?",
+      "answer_template": "Dạ Viettel cũng là nhà mạng lớn, nhưng mạng cáp quang MobiFiber của MobiFone hiện có lợi thế công nghệ rất vượt trội ạ! Toàn bộ thuê bao MobiFone đăng ký mới đều được trang bị **Modem chuẩn WiFi 6 băng tần kép** mới nhất, giúp tốc độ nhanh hơn 3 lần và khả năng xuyên tường tốt hơn nhiều so với chuẩn WiFi 5 cũ. Về chi phí, gói **{display_name}** ({speed_mbps} Mbps) trọn gói {base_price_fmt}đ cho {total_months} tháng sử dụng (chỉ **{price_per_month_fmt}đ/tháng**), tiết kiệm hơn các gói cùng băng thông từ 20-30%. Rất nhiều hộ gia đình chuyển sang MobiFone đều đánh giá mạng rất ổn định và CSKH nhiệt tình ạ!",
+      "sales_stage": "so_sanh_doi_thu",
+      "sales_tactic": "Thừa nhận đối thủ -> Nhấn mạnh công nghệ WiFi 6 đời mới -> So sánh giá trung bình tháng -> Dẫn chứng Social Proof",
+      "package_key": "6wifi 1",
+      "intent": "So sánh đối thủ Viettel"
+    },
+    {
+      "question": "Nghe nói mạng internet MobiFone hay chập chờn và yếu lắm phải không?",
+      "answer_template": "Dạ anh/chị hoàn toàn yên tâm ạ! Trước đây hạ tầng cáp quang đang trong giai đoạn nâng cấp, nhưng hiện tại MobiFone đã phủ 100% mạng cáp quang công nghệ mới XGS-PON và trang bị Modem WiFi 6 thế hệ mới nhất cho tất cả khách hàng. Đặc biệt, MobiFone áp dụng chính sách: **Kỹ thuật viên kéo cáp, cài đặt và bàn giao mạng chạy test tốc độ ổn định đạt chuẩn {speed_mbps} Mbps thì anh/chị mới cần thanh toán tiền cước**. Gói **{display_name}** chỉ **{price_per_month_fmt}đ/tháng** ({base_price_fmt}đ/{total_months} tháng). Anh/chị cho em xin địa chỉ để kỹ thuật qua đo kiểm tín hiệu tận nhà nhé ạ!",
+      "sales_stage": "khach_phan_nan",
+      "sales_tactic": "Giải tỏa định kiến chất lượng -> Nêu công nghệ cáp quang mới -> Cam kết nghiệm thu hài lòng mới thanh toán -> Chốt hẹn kiểm tra hạ tầng",
+      "package_key": "6wifi 1",
+      "intent": "Giải tỏa lo ngại chất lượng mạng"
+    },
+    {
+      "question": "Tư vấn cho tôi gói cước mạng WiFi cho gia đình với.",
+      "answer_template": "Dạ em rất sẵn lòng hỗ trợ tư vấn cho anh/chị ạ! Để em gợi ý chính xác gói cước vừa tiết kiệm vừa đúng nhu cầu sử dụng của nhà mình, anh/chị cho em hỏi gia đình mình thường xuyên sử dụng khoảng bao nhiêu thiết bị (điện thoại, máy tính, tivi) và nhà mình là nhà 1 tầng hay nhiều tầng ạ? Hiện tại gói phổ biến và tối ưu nhất cho gia đình là **{display_name}** (tốc độ {speed_mbps} Mbps), trọn gói {base_price_fmt}đ cho {total_months} tháng (chỉ **{price_per_month_fmt}đ/tháng**), tặng kèm Modem WiFi 6 và miễn phí 100% lắp đặt ạ!",
+      "sales_stage": "kham_pha_nhu_cau",
+      "sales_tactic": "Chào hỏi lịch sự -> Đặt đúng 1 câu hỏi khám phá thiết bị/không gian -> Giới thiệu gói chuẩn 6WiFi 1 làm mỏ neo giá",
+      "package_key": "6wifi 1",
+      "intent": "Khám phá nhu cầu lắp WiFi"
+    },
+    {
+      "question": "Gói WiFi nào của MobiFone rẻ nhất hiện nay?",
+      "answer_template": "Dạ gói cước Internet cáp quang có mức giá tiết kiệm và được nhiều hộ gia đình lựa chọn nhất là gói **{display_name}** ạ! Gói có tốc độ cao {speed_mbps} Mbps, cước đóng {pay_months} tháng được **tặng thêm {bonus_months} tháng miễn phí** (tổng **{total_months} tháng** sử dụng với cước trọn gói {base_price_fmt}đ). Tính trung bình mỗi tháng chỉ **{price_per_month_fmt}đ/tháng** - mức giá rẻ nhất cho đường truyền cáp quang 300 Mbps trên thị trường hiện nay. Đặc biệt anh/chị được tặng Modem WiFi 6 và miễn phí lắp đặt hoàn toàn ạ. Anh/chị để lại SĐT để em hỗ trợ đăng ký ngay nhé!",
+      "sales_stage": "kham_pha_nhu_cau",
+      "sales_tactic": "Chỉ rõ gói rẻ nhất 6WiFi 1 -> Nhấn mạnh giá 112.5k/tháng -> Nêu bật tốc độ 300 Mbps và Modem WiFi 6 -> Kêu gọi hành động",
+      "package_key": "6wifi 1",
+      "intent": "Tìm gói WiFi rẻ nhất"
+    },
+    {
+      "question": "MobiFone có gói cước nào vừa có WiFi tốc độ cao vừa xem được Truyền hình TV không?",
+      "answer_template": "Dạ có ạ! MobiFone cung cấp dòng gói cước Combo Internet + Truyền hình **6WiFi VieON** cực kỳ tiện lợi và tiết kiệm cho gia đình. Tiêu biểu như gói **{display_name}** trọn gói chỉ {base_price_fmt}đ cho {total_months} tháng ({pay_months} tháng + tặng {bonus_months} tháng free), tính ra chỉ **{price_per_month_fmt}đ/tháng**. Gia đình vừa có đường truyền Internet cáp quang tốc độ cao, vừa xem thả ga hàng trăm kênh truyền hình đặc sắc, kho phim bom tấn và thể thao đỉnh cao trên ứng dụng VieON mà không cần lắp thêm đầu thu rườm rà. Anh/chị cho em xin SĐT để em hướng dẫn kích hoạt trọn gói trên Smart TV nhà mình nhé ạ!",
+      "sales_stage": "upsell_cross_sell",
+      "sales_tactic": "Giới thiệu dòng combo VieON -> Nêu bật tiện ích Internet + Truyền hình không đầu thu -> Báo giá 127.5k/tháng -> Chốt SĐT kích hoạt",
+      "package_key": "6wifi vieon 1",
+      "intent": "Tư vấn Combo WiFi và Truyền hình"
+    },
+    {
+      "question": "Tôi muốn đăng ký lắp đặt mạng MobiFone ngay hôm nay thì làm thế nào?",
+      "answer_template": "Dạ thủ tục đăng ký lắp mạng MobiFone cực kỳ đơn giản và nhanh gọn chỉ với 3 bước ạ:\n1. Anh/chị cung cấp **Số điện thoại** và **Địa chỉ lắp đặt cụ thể**.\n2. Kỹ thuật viên MobiFone sẽ liên hệ hẹn giờ và đến khảo sát kéo cáp hoàn thiện tận nhà trong 2 - 4 giờ.\n3. Anh/chị kiểm tra đường truyền chạy mượt mà, đúng tốc độ mới tiến hành thanh toán cước ({base_price_fmt}đ cho {total_months} tháng gói **{display_name}**, bình quân **{price_per_month_fmt}đ/tháng**).\nAnh/chị gửi em xin Số điện thoại và địa chỉ để em tạo phiếu ưu tiên lắp đặt ngay trong ngày cho gia đình mình nhé ạ!",
+      "sales_stage": "chot_don_closing",
+      "sales_tactic": "Trình bày quy trình 3 bước minh bạch -> Nhấn mạnh trải nghiệm mượt mới trả tiền -> Kêu gọi SĐT và địa chỉ ngay",
+      "package_key": "6wifi 1",
+      "intent": "Đăng ký lắp đặt Internet ngay"
+    },
+    {
+      "question": "Nhà tôi đang dùng mạng VNPT thì chuyển sang mạng MobiFone có bị mất mạng gián đoạn công việc không?",
+      "answer_template": "Dạ anh/chị hoàn toàn yên tâm, quá trình chuyển đổi không hề gây gián đoạn công việc hay học tập ạ! Quy trình chuẩn của MobiFone là: **Kỹ thuật viên sẽ kéo cáp, cài đặt Modem WiFi 6 của MobiFone hoàn thiện, anh/chị kết nối dùng thử mạng mới chạy căng đét rồi mới cần liên hệ ngắt hợp đồng mạng cũ**. Anh/chị có thể đăng ký gói **{display_name}** ({speed_mbps} Mbps, trọn gói {base_price_fmt}đ/{total_months} tháng = **{price_per_month_fmt}đ/tháng**) được miễn phí 100% công lắp đặt. Anh/chị cho em xin SĐT và địa chỉ để kỹ thuật qua khảo sát trước đường dây nhé ạ!",
+      "sales_stage": "chot_don_closing",
+      "sales_tactic": "Giải tỏa nỗi sợ mất mạng -> Cam kết lắp xong mạng mới mượt mới cắt mạng cũ -> Giới thiệu gói 6WiFi 1 -> Xin thông tin khảo sát",
+      "package_key": "6wifi 1",
+      "intent": "Chuyển đổi nhà mạng không gián đoạn"
+    },
+    {
+      "question": "Nhà tôi kinh doanh / văn phòng có trên 10-15 thiết bị truy cập thì dùng gói nào khỏe?",
+      "answer_template": "Dạ với nhu cầu từ 10-15 thiết bị cùng lúc (laptop, điện thoại, camera, máy in) và cần độ ổn định cao, em khuyên anh/chị nên đăng ký gói **{display_name}** (tốc độ vượt trội **{speed_mbps} Mbps**). Gói này cước trọn gói {base_price_fmt}đ cho {total_months} tháng sử dụng (chỉ **{price_per_month_fmt}đ/tháng**). Băng thông khủng {speed_mbps} Mbps kết hợp cùng Modem WiFi 6 chịu tải đa luồng sẽ đảm bảo tất cả các máy cùng họp online, tải file nặng hay live stream mượt mà không bị nghẽn mạng. Anh/chị cho em xin SĐT để em cử chuyên viên kỹ thuật qua đo tải và tư vấn phương án lắp đặt tối ưu nhất ạ!",
+      "sales_stage": "upsell_cross_sell",
+      "sales_tactic": "Phân tích nhu cầu tải cao -> Đề xuất gói tốc độ cao 6WiFi 3 (600 Mbps) -> Nhấn mạnh khả năng chịu tải của WiFi 6 -> Đề xuất chuyên viên kỹ thuật",
+      "package_key": "6wifi 3",
+      "intent": "Tư vấn WiFi cho văn phòng/kinh doanh"
+    },
+    {
+      "question": "Nếu tôi đóng cước trước 12 tháng thì có ưu đãi gì hơn gói 6 tháng không?",
+      "answer_template": "Dạ có ưu đãi đặc biệt lớn hơn nhiều ạ! Khi anh/chị đóng trước 12 tháng gói **{display_name}**, MobiFone sẽ **TẶNG THÊM 4 THÁNG MIỄN PHÍ** (tổng thời gian sử dụng lên tới **{total_months} tháng** liên tục với cước trọn gói {base_price_fmt}đ). Tính ra chi phí bình quân vẫn cực kỳ tiết kiệm chỉ **{price_per_month_fmt}đ/tháng**, mà gia đình yên tâm sử dụng mạng tốc độ cao {speed_mbps} Mbps suốt hơn 1 năm không lo nhớ kỳ hạn đóng cước hàng tháng. Ngoài ra anh/chị vẫn được miễn phí 100% Modem WiFi 6 và phí lắp đặt tận nơi. Anh/chị cho em xin thông tin để em lên phiếu đăng ký gói 12 tháng ưu đãi này nhé ạ!",
+      "sales_stage": "upsell_cross_sell",
+      "sales_tactic": "So sánh lợi ích 12 tháng tặng 4 tháng (16 tháng dùng) -> Nhấn mạnh sự an tâm dài hạn -> Giữ nguyên mức giá 112.5k/tháng -> Kêu gọi đăng ký",
+      "package_key": "12wifi 1",
+      "intent": "Tư vấn gói cước 12 tháng tặng 4 tháng"
+    },
+    {
+      "question": "Gói 6WiFi 1 và 6WiFi 2 khác nhau thế nào, tôi nên chọn gói nào?",
+      "answer_template": "Dạ hai gói này khác nhau chủ yếu ở băng thông tốc độ để phù hợp với từng quy mô gia đình ạ:\n- **Gói 6WiFi 1**: Tốc độ 300 Mbps, cước 900.000đ/8 tháng (**112.500đ/tháng**), rất phù hợp cho gia đình từ 3 - 6 thiết bị, nhà 1 tầng hoặc căn hộ chung cư.\n- **Gói {display_name}**: Tốc độ nâng cấp lên **{speed_mbps} Mbps**, cước {base_price_fmt}đ/{total_months} tháng (**{price_per_month_fmt}đ/tháng**), tối ưu cho gia đình 6 - 10 thiết bị, nhà 2 - 3 tầng hoặc thường xuyên xem video 4K, chơi game đồ họa cao.\nNếu nhà mình nhiều tầng hoặc đông người dùng đồng thời, em khuyên nên chọn gói **{display_name}** để đường truyền luôn ở trạng thái tốt nhất ạ. Anh/chị để lại SĐT em hỗ trợ khảo sát nhé!",
+      "sales_stage": "kham_pha_nhu_cau",
+      "sales_tactic": "So sánh trực quan thông số và mức giá 2 gói -> Đưa ra tiêu chí lựa chọn rõ ràng theo số thiết bị/không gian -> Định hướng gói cao hơn",
+      "package_key": "6wifi 2",
+      "intent": "So sánh 6WiFi 1 và 6WiFi 2"
+    },
+    {
+      "question": "Tôi đang dùng SIM MobiFone thì lắp Internet MobiFiber có ưu đãi gì liên kết không?",
+      "answer_template": "Dạ có ạ! Khách hàng là thuê bao di động MobiFone khi lắp đặt mạng Internet MobiFiber sẽ được tham gia hệ sinh thái kết nối toàn diện với ưu đãi tích điểm MyPoint, nhận mã giảm giá cước và hỗ trợ quản lý cước tập trung tiện lợi trên ứng dụng My MobiFone. Với gói cáp quang **{display_name}** ({speed_mbps} Mbps), gia đình vừa có WiFi căng đét trọn gói {base_price_fmt}đ/{total_months} tháng (chỉ **{price_per_month_fmt}đ/tháng**), vừa đồng bộ ưu đãi với SIM di động đang dùng. Anh/chị cung cấp SĐT MobiFone để em kiểm tra các chương trình tri ân dành riêng cho thuê bao của mình nhé!",
+      "sales_stage": "upsell_cross_sell",
+      "sales_tactic": "Liên kết hệ sinh thái SIM di động + MobiFiber -> Giới thiệu gói 6WiFi 1 -> Tận dụng SĐT MobiFone để tra cứu ưu đãi cá nhân hóa",
+      "package_key": "6wifi 1",
+      "intent": "Ưu đãi khách hàng dùng SIM MobiFone"
+    },
+    {
+      "question": "MobiFone hỗ trợ kỹ thuật và bảo hành mạng sau khi lắp đặt như thế nào?",
+      "answer_template": "Dạ MobiFone cam kết dịch vụ Chăm sóc Khách hàng & Hỗ trợ kỹ thuật 24/7 chuyên nghiệp và tận tâm ạ:\n- **Tổng đài CSKH miễn cước 18001090** luôn sẵn sàng tiếp nhận xử lý sự cố kỹ thuật 24/7.\n- **Kỹ thuật viên hỗ trợ tận nhà trong vòng 2 - 4 giờ** nếu có sự cố đường truyền.\n- **Bảo hành và đổi mới Modem WiFi 6 miễn phí** trong suốt quá trình anh/chị sử dụng dịch vụ.\nHiện tại gói **{display_name}** ({speed_mbps} Mbps) đang có ưu đãi {base_price_fmt}đ/{total_months} tháng (chỉ **{price_per_month_fmt}đ/tháng**). Anh/chị hoàn toàn yên tâm khi đồng hành cùng MobiFone, để lại SĐT để em hỗ trợ lắp đặt sớm nhé ạ!",
+      "sales_stage": "chot_don_closing",
+      "sales_tactic": "Khẳng định cam kết hỗ trợ 24/7 -> Nêu thời gian phản hồi 2-4h -> Cam kết bảo hành 1 đổi 1 Modem -> Củng cố niềm tin chốt đơn",
+      "package_key": "6wifi 1",
+      "intent": "Chính sách bảo hành và hỗ trợ sau bán"
+    },
+    {
+      "question": "Tôi có phải trả tiền mua thiết bị Modem WiFi 6 không?",
+      "answer_template": "Dạ hoàn toàn **KHÔNG** anh/chị nhé! Khi đăng ký các gói cước MobiFiber như **{display_name}** ({speed_mbps} Mbps, trọn gói {base_price_fmt}đ cho {total_months} tháng = **{price_per_month_fmt}đ/tháng**), MobiFone sẽ **trang bị miễn phí 100% Modem WiFi 6 băng tần kép hiện đại** trong suốt thời gian anh/chị sử dụng dịch vụ, đồng thời miễn toàn bộ công lắp đặt. Anh/chị không phải bỏ thêm bất kỳ khoản tiền nào để mua thiết bị. Anh/chị cho em xin SĐT để chuyên viên liên hệ bàn giao và kích hoạt thiết bị ngay nhé ạ!",
+      "sales_stage": "xu_ly_tu_choi_gia",
+      "sales_tactic": "Khẳng định chắc chắn miễn phí Modem WiFi 6 -> Nhắc lại giá trọn gói không phát sinh -> Kêu gọi SĐT bàn giao thiết bị",
+      "package_key": "6wifi 1",
+      "intent": "Giải đáp phí thiết bị Modem"
+    }
+  ]
+}
