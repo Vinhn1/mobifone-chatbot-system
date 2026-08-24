@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Bot, Save, RefreshCw, Check, Zap, MessageSquare, Target, Clock, Star, Plus, Trash2, Shield, Eye, EyeOff, Activity, User, Link2, Upload, FileText, ExternalLink, FileCode } from "lucide-react";
+import { Bot, Save, RefreshCw, Check, Zap, MessageSquare, Target, Clock, Star, Plus, Trash2, Shield, Eye, EyeOff, Activity, User, Link2, Upload, FileText, ExternalLink, FileCode, Code2, Copy, CheckCheck, Globe, Palette, Sparkles } from "lucide-react";
 import { RobotAvatar } from "../../components/RobotAvatar";
 import axios from "axios";
 import { useAuth } from "../../context/AuthContext";
@@ -74,6 +74,14 @@ export function BotConfigPage() {
   const [zaloAccessToken, setZaloAccessToken] = useState("");
   const [zaloRefreshToken, setZaloRefreshToken] = useState("");
   const [zaloOaId, setZaloOaId] = useState("");
+
+  // Widget embed customization states
+  const [widgetBotName, setWidgetBotName] = useState("Mia - Chuyên viên MobiFone");
+  const [widgetThemeColor, setWidgetThemeColor] = useState("#005BAA");
+  const [widgetPosition, setWidgetPosition] = useState<"bottom-right" | "bottom-left">("bottom-right");
+  const [widgetGreeting, setWidgetGreeting] = useState("Xin chào! Mia là Chuyên viên CSKH số của MobiFone. Mia có thể hỗ trợ gì cho bạn hôm nay?");
+  const [widgetAutoOpen, setWidgetAutoOpen] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   // UI state
   const [showFbSecret, setShowFbSecret] = useState(false);
@@ -314,6 +322,7 @@ export function BotConfigPage() {
         {[
           { id: "persona", label: "Nhân dạng & Lời thoại", icon: Bot },
           { id: "channels", label: "Kênh truyền thông & Webhook", icon: MessageSquare },
+          { id: "widget", label: "Mã nhúng Website (Embed Widget)", icon: Code2 },
         ].map(tab => {
           const Icon = tab.icon;
           const active = activeTab === tab.id;
@@ -743,6 +752,222 @@ export function BotConfigPage() {
                     </motion.div>
                   )}
                 </AnimatePresence>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "widget" && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* LEFT COLUMN: Customizer & Code Snippet (7/12 cols) */}
+              <div className="lg:col-span-7 flex flex-col gap-6">
+                {/* Configuration Options */}
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs flex flex-col gap-5">
+                  <div className="flex items-center gap-2.5 pb-4 border-b border-slate-100">
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#0055A5] flex items-center justify-center font-bold">
+                      <Palette size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-slate-900 font-black text-sm">Tùy biến Giao diện Widget</h3>
+                      <p className="text-xs text-slate-400">Thiết lập màu sắc, tiêu đề và vị trí của bong bóng chat nhúng</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Bot Title */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 mb-1.5 block">Tên hiển thị của Bot</label>
+                      <input
+                        type="text"
+                        value={widgetBotName}
+                        onChange={(e) => setWidgetBotName(e.target.value)}
+                        placeholder="Mia - Chuyên viên MobiFone"
+                        className="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 focus:bg-white focus:border-[#0055A5] outline-none"
+                      />
+                    </div>
+
+                    {/* Position */}
+                    <div>
+                      <label className="text-xs font-bold text-slate-700 mb-1.5 block">Vị trí hiển thị trên màn hình</label>
+                      <select
+                        value={widgetPosition}
+                        onChange={(e) => setWidgetPosition(e.target.value as any)}
+                        className="w-full text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 focus:bg-white focus:border-[#0055A5] outline-none cursor-pointer"
+                      >
+                        <option value="bottom-right">Góc dưới bên phải (Mặc định)</option>
+                        <option value="bottom-left">Góc dưới bên trái</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Theme Color Picker */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 mb-1.5 block">Màu chủ đạo (Brand Theme Color)</label>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={widgetThemeColor}
+                          onChange={(e) => setWidgetThemeColor(e.target.value)}
+                          className="w-9 h-9 rounded-xl border border-slate-200 p-0.5 cursor-pointer bg-transparent"
+                        />
+                        <input
+                          type="text"
+                          value={widgetThemeColor}
+                          onChange={(e) => setWidgetThemeColor(e.target.value)}
+                          className="w-24 text-xs font-mono font-bold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 uppercase"
+                        />
+                      </div>
+
+                      {/* Color Presets */}
+                      <div className="flex items-center gap-1.5">
+                        {[
+                          { name: "Mobi Blue", color: "#005BAA" },
+                          { name: "Navy Dark", color: "#003B70" },
+                          { name: "Mobi Red", color: "#E30613" },
+                          { name: "Emerald", color: "#059669" },
+                          { name: "Indigo", color: "#4F46E5" },
+                        ].map((preset) => (
+                          <button
+                            key={preset.color}
+                            type="button"
+                            onClick={() => setWidgetThemeColor(preset.color)}
+                            title={preset.name}
+                            className={`w-7 h-7 rounded-lg border-2 cursor-pointer transition-transform ${
+                              widgetThemeColor === preset.color ? "border-slate-800 scale-110 shadow-xs" : "border-white"
+                            }`}
+                            style={{ backgroundColor: preset.color }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Greeting Text */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 mb-1.5 block">Lời chào mở đầu khi người dùng bấm chat</label>
+                    <textarea
+                      value={widgetGreeting}
+                      onChange={(e) => setWidgetGreeting(e.target.value)}
+                      rows={3}
+                      className="w-full text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-xl p-3 focus:bg-white focus:border-[#0055A5] outline-none transition-all resize-none leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Auto open toggle */}
+                  <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-xl">
+                    <div>
+                      <div className="text-xs font-bold text-slate-800">Tự động mở khung chat</div>
+                      <div className="text-[11px] text-slate-400">Mở sẵn hộp thoại chat sau 1 giây khi khách truy cập website</div>
+                    </div>
+                    <Toggle value={widgetAutoOpen} onChange={setWidgetAutoOpen} />
+                  </div>
+                </div>
+
+                {/* Code Snippet Box */}
+                <div className="bg-slate-900 rounded-2xl p-6 shadow-md text-white">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Code2 size={18} className="text-sky-400" />
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-200">Mã nhúng HTML</h4>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const snippet = `<!-- MobiFone AI Chatbot Widget -->\n<script \n  src="${window.location.origin}/widget.js" \n  data-chat-url="${window.location.origin}" \n  data-position="${widgetPosition}" \n  data-theme-color="${widgetThemeColor}" \n  data-bot-name="${widgetBotName}" \n  data-greeting="${widgetGreeting}"\n  ${widgetAutoOpen ? 'data-auto-open="true"' : ''}>\n</script>`;
+                        navigator.clipboard.writeText(snippet);
+                        setCopiedCode(true);
+                        setTimeout(() => setCopiedCode(false), 2500);
+                      }}
+                      className="flex items-center gap-1.5 bg-sky-500 hover:bg-sky-400 text-slate-950 px-3 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all shadow-xs"
+                    >
+                      {copiedCode ? <><CheckCheck size={14} /> Đã sao chép!</> : <><Copy size={14} /> Sao chép mã</>}
+                    </button>
+                  </div>
+                  <p className="text-slate-400 text-[11px] mb-3">
+                    Dán đoạn mã dưới đây vào trước thẻ đóng <code className="text-sky-300">&lt;/body&gt;</code> trên website của bạn:
+                  </p>
+                  <pre className="bg-slate-950 p-4 rounded-xl text-[11px] font-mono text-sky-300 overflow-x-auto leading-relaxed border border-slate-800">
+{`<!-- MobiFone AI Chatbot Widget -->
+<script 
+  src="${window.location.origin}/widget.js" 
+  data-chat-url="${window.location.origin}" 
+  data-position="${widgetPosition}" 
+  data-theme-color="${widgetThemeColor}" 
+  data-bot-name="${widgetBotName}" 
+  data-greeting="${widgetGreeting}"
+  ${widgetAutoOpen ? 'data-auto-open="true"' : ''}>
+</script>`}
+                  </pre>
+
+                  <div className="mt-4 flex items-center justify-between text-xs pt-3 border-t border-slate-800">
+                    <span className="text-slate-400">Kiểm tra hiển thị thực tế:</span>
+                    <a
+                      href="/test-embed.html"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1 no-underline"
+                    >
+                      Mở trang demo test-embed.html <ExternalLink size={13} />
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: Live Interactive Simulator (5/12 cols) */}
+              <div className="lg:col-span-5 flex flex-col gap-4">
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Globe size={16} className="text-[#0055A5]" />
+                      <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Mô phỏng Widget Trực tiếp</h4>
+                    </div>
+                    <span className="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">Live Preview</span>
+                  </div>
+                  <p className="text-xs text-slate-500 mb-3">
+                    Xem trước cách widget hoạt động khi nhúng vào website:
+                  </p>
+
+                  {/* Mock Browser Container */}
+                  <div className="w-full h-[540px] rounded-xl border border-slate-200 shadow-inner bg-slate-100 flex flex-col overflow-hidden relative">
+                    {/* Mock Browser Topbar */}
+                    <div className="bg-slate-200 px-3 py-1.5 flex items-center gap-1.5 border-b border-slate-300/80 shrink-0">
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block"></span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                      <div className="ml-2 bg-white px-2 py-0.5 rounded text-[10px] text-slate-500 font-mono flex-1 truncate">
+                        https://your-website.com/preview
+                      </div>
+                    </div>
+
+                    {/* Mock Website Background */}
+                    <div className="p-4 flex-1 flex flex-col justify-between overflow-hidden relative bg-gradient-to-b from-white to-slate-50">
+                      <div>
+                        <div className="h-4 bg-slate-200 rounded w-1/3 mb-2"></div>
+                        <div className="h-3 bg-slate-100 rounded w-2/3 mb-4"></div>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          <div className="h-16 bg-blue-50/60 rounded-lg border border-blue-100 p-2">
+                            <div className="h-2.5 bg-blue-200 rounded w-1/2 mb-1.5"></div>
+                            <div className="h-2 bg-blue-100 rounded w-3/4"></div>
+                          </div>
+                          <div className="h-16 bg-slate-100 rounded-lg p-2">
+                            <div className="h-2.5 bg-slate-200 rounded w-1/2 mb-1.5"></div>
+                            <div className="h-2 bg-slate-200 rounded w-3/4"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Embedded Live Iframe Preview */}
+                      <div 
+                        className={`absolute bottom-3 ${widgetPosition === "bottom-right" ? "right-3" : "left-3"} w-[310px] h-[400px] bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col z-10 transition-all`}
+                      >
+                        <iframe
+                          src={`/embed?theme=${encodeURIComponent(widgetThemeColor)}&title=${encodeURIComponent(widgetBotName)}&greeting=${encodeURIComponent(widgetGreeting)}`}
+                          title="Widget Live Preview"
+                          className="w-full h-full border-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

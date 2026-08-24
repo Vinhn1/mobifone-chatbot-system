@@ -13,6 +13,7 @@ import { PromptPlaygroundPage } from "./pages/admin/PromptPlaygroundPage";
 import { BotConfigPage } from "./pages/admin/BotConfigPage";
 import { AdminProfilePage } from "./pages/admin/AdminProfilePage";
 import { StaffManagementPage } from "./pages/admin/StaffManagementPage";
+import { EmbedChatPage } from "./pages/EmbedChatPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -22,6 +23,14 @@ export const router = createBrowserRouter([
     children: [
       { index: true, Component: HomePage },
     ],
+  },
+  {
+    path: "/embed",
+    Component: EmbedChatPage,
+  },
+  {
+    path: "/widget",
+    Component: EmbedChatPage,
   },
   {
     path: "/login",
