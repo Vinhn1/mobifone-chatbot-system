@@ -15,23 +15,23 @@ chroma_write_lock = threading.Lock()
 try:
     from query_reformulator import reformulate_query
     _REFORMULATOR_AVAILABLE = True
-except ImportError:
+except Exception as e:
     _REFORMULATOR_AVAILABLE = False
-    print("[PIPELINE] query_reformulator.py not found -- reformulation disabled")
+    print(f"[PIPELINE] query_reformulator not loaded ({e}) -- reformulation disabled")
 
 try:
     from hybrid_retriever import BM25Index, reciprocal_rank_fusion
     _HYBRID_AVAILABLE = True
-except ImportError:
+except Exception as e:
     _HYBRID_AVAILABLE = False
-    print("[PIPELINE] hybrid_retriever.py not found -- BM25 disabled")
+    print(f"[PIPELINE] hybrid_retriever not loaded ({e}) -- BM25 disabled")
 
 try:
     from reranker import rerank as crossencoder_rerank
     _RERANKER_AVAILABLE = True
-except ImportError:
+except Exception as e:
     _RERANKER_AVAILABLE = False
-    print("[PIPELINE] reranker.py not found -- cross-encoder reranking disabled")
+    print(f"[PIPELINE] reranker not loaded ({e}) -- cross-encoder reranking disabled")
 
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')

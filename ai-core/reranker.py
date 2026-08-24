@@ -54,7 +54,8 @@ def rerank(
         print(f"[RERANKER] Reranked {len(candidates)} -> top {top_k}")
         for i, c in enumerate(reranked[:top_k]):
             preview = c["document"][:60].replace("\n", " ")
-            print(f"  {i+1}. score={c.get("rerank_score", 0):.3f} | {preview}")
+            score_val = c.get('rerank_score', 0)
+            print(f"  {i+1}. score={score_val:.3f} | {preview}")
         return reranked[:top_k]
     except Exception as e:
         logger.warning(f"[RERANKER] Reranking failed: {e} -- returning original order")

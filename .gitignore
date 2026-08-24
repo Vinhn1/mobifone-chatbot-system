@@ -61,7 +61,6 @@ ai-core/generate_eval_dataset.py
 ai-core/run_eval_ci.py
 ai-core/run_eval_ci.bat
 ai-core/sales_benchmark.py
-ai-core/sales_metrics.py
 ai-core/validate_final.py
 ai-core/validate_wifi_packages.py
 ai-core/reports/

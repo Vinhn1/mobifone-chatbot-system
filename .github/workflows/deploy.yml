@@ -100,17 +100,39 @@ jobs:
             echo "✓ docker compose up hoàn tất"
 
 
-            echo "=== [5/5] Kiểm tra trạng thái ==="
-            sleep 10
+            echo "=== [5/5] Kiểm tra trạng thái & Health Check ==="
+            sleep 15
             docker compose ps
-            # Kiểm tra có container nào bị Exit không
-            FAILED=$(docker compose ps --status exited --format "{{.Name}}" 2>/dev/null || true)
+
+            # Kiểm tra có container nào bị Exit hoặc liên tục Restarting không
+            FAILED=$(docker compose ps --filter "status=exited" --filter "status=restarting" --format "{{.Name}} ({{.Status}})" 2>/dev/null || true)
             if [ -n "$FAILED" ]; then
-              echo "❌ Container bị lỗi: $FAILED"
-              docker compose logs --tail=50 $FAILED
+              echo "❌ Container bị lỗi / restarting:"
+              echo "$FAILED"
+              docker compose logs --tail=100
               exit 1
             fi
-            echo "✅ Tất cả container đang chạy bình thường!"
+
+            # Health check trực tiếp vào AI Core
+            echo "Kiểm tra AI Core health..."
+            AI_HEALTH_OK=false
+            for i in $(seq 1 10); do
+              if curl -s -f http://localhost:8001/health > /dev/null 2>&1; then
+                AI_HEALTH_OK=true
+                echo "✓ AI Core phản hồi HTTP 200 OK"
+                break
+              fi
+              echo "Đang chờ AI Core sẵn sàng (lần $i/10)..."
+              sleep 3
+            done
+
+            if [ "$AI_HEALTH_OK" = false ]; then
+              echo "❌ AI Core không phản hồi /health sau 30s!"
+              docker compose logs --tail=100 ai-core
+              exit 1
+            fi
+
+            echo "✅ Tất cả container và dịch vụ AI Core đang chạy bình thường!"
 
         env:
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
