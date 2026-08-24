@@ -1406,12 +1406,40 @@ async def upload_document(
             else:
                 text_content = json.dumps(json_data, ensure_ascii=False)
         elif file_ext == ".pdf":
-            # Dùng pdfminer.six (đã có sẵn vì là dependency của pdfplumber)
-            # LAParams giúp xử lý đúng layout 2 cột của công văn nhà nước:
-            #   - boxes_flow=0.5: cân bằng giữa x và y khi sort text blocks
-            #   - char_margin=2.0: gộp ký tự cách nhau ≤2x font size thành 1 từ
-            #   - line_margin=0.5: gộp dòng cách nhau ≤0.5x font size thành 1 block
-            # → Số "6790" và "/D01-B4-B5" trong cùng text box sẽ được nối đúng
+            # Trích xuất văn bản kết hợp bảng biểu Markdown từ PDF
+            text_content = ""
+            tables_md = []
+            
+            # 1. Trích xuất bảng biểu Markdown với pdfplumber
+            try:
+                import pdfplumber
+                with pdfplumber.open(temp_file_path) as pdf:
+                    for page_num, page in enumerate(pdf.pages, start=1):
+                        try:
+                            tables = page.extract_tables() or []
+                            for t in tables:
+                                if not t or not any(t):
+                                    continue
+                                cleaned_rows = []
+                                for row in t:
+                                    if row:
+                                        cleaned_rows.append([str(c or "").replace("\n", " ").strip() for c in row])
+                                if cleaned_rows and len(cleaned_rows) >= 2:
+                                    header = cleaned_rows[0]
+                                    col_count = len(header)
+                                    if col_count >= 2:
+                                        md_lines = ["| " + " | ".join(header) + " |"]
+                                        md_lines.append("| " + " | ".join(["---"] * col_count) + " |")
+                                        for row in cleaned_rows[1:]:
+                                            padded = (row + [""] * col_count)[:col_count]
+                                            md_lines.append("| " + " | ".join(padded) + " |")
+                                        tables_md.append(f"\n[BẢNG BIỂU TRANG {page_num}]:\n" + "\n".join(md_lines))
+                        except Exception as e_tbl:
+                            print(f"[PDF-TABLE] Cảnh báo extract_tables trang {page_num}: {e_tbl}")
+            except Exception as e_plumb:
+                print(f"[PDF-TABLE] Cảnh báo nạp pdfplumber: {e_plumb}")
+
+            # 2. Trích xuất text chính xác qua pdfminer.six
             try:
                 from pdfminer.high_level import extract_text as pdfminer_extract
                 from pdfminer.layout import LAParams
@@ -1423,10 +1451,9 @@ async def upload_document(
                     detect_vertical=False,
                 )
                 text_content = pdfminer_extract(temp_file_path, laparams=laparams) or ""
-                # Làm sạch khoảng trắng thừa
                 import re as _re
-                text_content = _re.sub(r'\n{3,}', '\n\n', text_content)  # Tối đa 2 dòng trắng liên tiếp
-                text_content = _re.sub(r'[ \t]{3,}', ' ', text_content)   # Tối đa 1 khoảng trắng
+                text_content = _re.sub(r'\n{3,}', '\n\n', text_content)
+                text_content = _re.sub(r'[ \t]{3,}', ' ', text_content)
                 print(f"[PDF] pdfminer ok: {len(text_content)} ký tự")
             except Exception as e_pdfminer:
                 print(f"[PDF] pdfminer lỗi ({e_pdfminer}), fallback sang pdfplumber...")
@@ -1442,6 +1469,12 @@ async def upload_document(
                     import pypdf
                     reader = pypdf.PdfReader(temp_file_path)
                     text_content = "\n".join(p.extract_text() or "" for p in reader.pages)
+
+            # 3. Gắn thêm bảng biểu Markdown vào cuối nội dung để RAG truy xuất hoàn hảo
+            if tables_md:
+                table_block = "\n\n" + "\n\n".join(tables_md)
+                text_content += table_block
+                print(f"[PDF] Đã bổ sung {len(tables_md)} bảng biểu Markdown vào text")
 
 
         elif file_ext in [".docx", ".doc"]:

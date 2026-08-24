@@ -773,20 +773,36 @@ class MobiFoneRAG:
     def _classify_sentiment_and_intent(self, question: str, chat_history: list = None) -> dict:
         """
         [Phase 2 - Task 2.1] Pre-RAG Classifier nâng cấp:
-        - Nhận diện tâm lý KH & giai đoạn hội thoại CSKH
+        - Nhận diện tâm lý KH & giai đoạn hội thoại CSKH (bao gồm chao_hoi)
         - Phát hiện escalation (cần chuyển người thật)
         - Nhận diện lead capture opportunity
         - Detect đối thủ được nhắc đến để kích hoạt battlecard
         - Sử dụng lịch sử hội thoại để classify chính xác hơn
         """
         try:
+            # Nhận diện nhanh chào hỏi xã giao
+            q_clean = question.lower().strip()
+            if any(re.match(p, q_clean) for p in [
+                r"^chào(\s+bạn|\s+ad|\s+shop|\s+admin|\s+em|\s+mia|\s+bot)?(,\s+.*)?$",
+                r"^hello.*$", r"^hi(\s+.*)?$", r"^xin\s+chào.*$", r"^alo.*$",
+                r"^bạn\s+là\s+ai\??$", r"^bạn\s+tên\s+là\s+gì\??$"
+            ]) and (not chat_history or len(chat_history) == 0):
+                return {
+                    "sentiment": "INFO_SEEKING",
+                    "sales_stage": "chao_hoi",
+                    "tactic": "Chào hỏi lịch sự, giới thiệu Mia CSKH MobiFone, hỏi khách cần hỗ trợ gì. Tuyệt đối không tự ý báo giá khi chưa hỏi.",
+                    "escalation_required": False,
+                    "lead_capture": False,
+                    "competitor_mentioned": "",
+                }
+
             # Tóm tắt ngắn lịch sử hội thoại gần nhất (tối đa 3 lượt)
             history_context = ""
             if chat_history:
                 recent = chat_history[-6:] if len(chat_history) >= 6 else chat_history
                 for msg in recent:
                     role = "KH" if msg.get("role") == "user" else "Mia"
-                    content = msg.get("message", "").strip()[:120]
+                    content = (msg.get("message") or msg.get("content") or "").strip()[:120]
                     if content:
                         history_context += f"{role}: {content}\n"
 
@@ -805,6 +821,7 @@ Tin nhắn khách hàng: "{question}"
 Yêu cầu phân loại:
 1. "sentiment": "ANGRY" | "HESITANT" | "READY_TO_BUY" | "INFO_SEEKING"
 2. "sales_stage":
+   - "chao_hoi"            (chào hỏi xã giao, hello, hi, bạn là ai)
    - "xu_ly_tu_choi_gia"   (chê đắt, so sánh giá)
    - "kham_pha_nhu_cau"    (hỏi chung, tư vấn gói)
    - "chot_don_closing"    (hỏi cách mua, đăng ký)
@@ -872,6 +889,10 @@ Cấu trúc JSON duy nhất:
         """
         Lấy các câu ứng xử mẫu và kỹ thuật tư vấn thực chiến từ collection mobifone_sales_playbook
         """
+        # Không nạp playbook bán hàng cho câu chào hỏi thuần túy
+        if sales_stage == "chao_hoi":
+            return []
+
         try:
             where_clause = None
             if sales_stage and sales_stage != "kham_pha_nhu_cau":
@@ -904,6 +925,7 @@ Cấu trúc JSON duy nhất:
         except Exception as e:
             print(f"[PLAYBOOK-RAG] Cảnh báo Playbook Retrieval: {e}")
             return []
+
     def answer_question(self, question, history=None, user_info=None):
         """Alias tương thích ngược cho api_server.py gọi answer_question."""
         return self.generate_response(question, chat_history=history, user_info=user_info)
@@ -1263,13 +1285,21 @@ Cấu trúc JSON duy nhất:
             "băng thông", "bang thong", "gói mạng", "goi mang",
             "6wifi", "12wifi", "1plus", "2plus", "3plus", "vieon",
             "lắp mạng", "lap mang", "đăng ký mạng", "dang ky mang",
-            "tốc độ", "toc do", "mbps", "modem"
+            "tốc độ", "toc do", "mbps", "modem", "đóng theo từng tháng",
+            "đóng từng tháng", "theo tháng", "từng tháng", "gói cước đóng",
+            "sinh viên", "gia đình", "căn hộ", "nhà tầng", "mesh"
         ]
-        is_wifi_query = any(kw in question.lower() for kw in wifi_keywords)
-        if not is_wifi_query and chat_history:
-            # Kiểm tra lịch sử hội thoại: nếu 3 tin nhắn gần nhất liên quan WiFi
+        is_greeting = any(re.match(p, question.lower().strip()) for p in [
+            r"^chào(\s+bạn|\s+ad|\s+shop|\s+admin|\s+em|\s+mia|\s+bot)?(,\s+.*)?$",
+            r"^hello.*$", r"^hi(\s+.*)?$", r"^xin\s+chào.*$", r"^alo.*$",
+            r"^bạn\s+là\s+ai\??$", r"^bạn\s+tên\s+là\s+gì\??$"
+        ]) and (not chat_history or len(chat_history) == 0)
+
+        is_wifi_query = (not is_greeting) and any(kw in question.lower() for kw in wifi_keywords)
+        if not is_wifi_query and not is_greeting and chat_history:
+            # Kiểm tra lịch sử hội thoại: nếu các tin nhắn gần nhất liên quan WiFi
             recent_msgs = " ".join([
-                str(m.get("content", "")) for m in chat_history[-6:]
+                str(m.get("message") or m.get("content") or "") for m in chat_history[-6:]
             ]).lower()
             is_wifi_query = any(kw in recent_msgs for kw in wifi_keywords)
 
@@ -1335,14 +1365,22 @@ Cấu trúc JSON duy nhất:
         fact_contexts = self._normalize_wifi_promo_context(fact_contexts, fact_metadatas)
 
         if not fact_contexts:
-            fact_section = (
-                "[DỮ LIỆU SỰ THẬT CHÍNH THỨC CỦA MOBIFONE (FILES & WEB)]:\n"
-                "⚠️ KHÔNG CÓ DỮ LIỆU TÀI LIỆU CHÍNH THỨC TRONG CƠ SỞ DỮ LIỆU (RAG FILES = 0).\n"
-                "YÊU CẦU BẮT BUỘC: Bạn BẢO VỆ TUYỆT ĐỐI nguyên tắc Grounding, PHẢI phản hồi từ chối bịa đặt: "
-                "'Hiện tại Mia chưa tìm thấy thông tin chính thức về dịch vụ/gói cước này trong cơ sở dữ liệu hệ thống MobiFone. "
-                "Bạn vui lòng liên hệ tổng đài 18001090 hoặc để lại Số điện thoại để chuyên viên hỗ trợ tra cứu trực tiếp cho bạn nhé!'. "
-                "TUYỆT ĐỐI KHÔNG ĐƯỢC BỊA ĐẶT TÊN GÓI HOẶC GIÁ CƯỚC!"
-            )
+            if is_greeting:
+                fact_section = (
+                    "[DỮ LIỆU SỰ THẬT / CHỦ ĐỀ HỘI THOẠI]:\n"
+                    "Khách hàng đang chào hỏi xã giao. Hãy chào lại lịch sự, ấm áp, giới thiệu bạn là Mia - Chuyên viên Chăm sóc Khách hàng của MobiFone.\n"
+                    "Hỏi khách hàng cần hỗ trợ thông tin gì hôm nay (ví dụ: tư vấn lắp đặt Internet cáp quang MobiFiber, gói cước 4G/5G, đăng ký eSIM, v.v.).\n"
+                    "TUYỆT ĐỐI KHÔNG tự tiện liệt kê bảng giá hoặc tạo ra các mức giá gói cước khi khách hàng chưa yêu cầu tra cứu."
+                )
+            else:
+                fact_section = (
+                    "[DỮ LIỆU SỰ THẬT CHÍNH THỨC CỦA MOBIFONE (FILES & WEB)]:\n"
+                    "⚠️ KHÔNG CÓ DỮ LIỆU TÀI LIỆU CHÍNH THỨC TRONG CƠ SỞ DỮ LIỆU (RAG FILES = 0).\n"
+                    "YÊU CẦU BẮT BUỘC: Bạn BẢO VỆ TUYỆT ĐỐI nguyên tắc Grounding, PHẢI phản hồi từ chối bịa đặt: "
+                    "'Hiện tại Mia chưa tìm thấy thông tin chính thức về dịch vụ/gói cước này trong cơ sở dữ liệu hệ thống MobiFone. "
+                    "Bạn vui lòng liên hệ tổng đài 18001090 hoặc để lại Số điện thoại để chuyên viên hỗ trợ tra cứu trực tiếp cho bạn nhé!'. "
+                    "TUYỆT ĐỐI KHÔNG ĐƯỢC BỊA ĐẶT TÊN GÓI HOẶC GIÁ CƯỚC!"
+                )
         else:
             fact_section = (
                 "[DỮ LIỆU SỰ THẬT CHÍNH THỨC CỦA MOBIFONE (FILES & WEB)]:\n" +
@@ -1469,7 +1507,8 @@ Cấu trúc JSON duy nhất:
             prompt += "\n[Lịch sử hội thoại gần đây giữa Khách hàng và MobiFone]:\n"
             for msg in chat_history:
                 role_label = "Khách hàng" if msg.get("role") == "user" else "MobiFone (Bạn)"
-                prompt += f"- {role_label}: {msg.get('message')}\n"
+                content_text = msg.get("message") or msg.get("content") or ""
+                prompt += f"- {role_label}: {content_text}\n"
 
         prompt += f"""
 [Câu hỏi hiện tại của khách hàng]:

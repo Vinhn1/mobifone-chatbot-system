@@ -5,7 +5,7 @@
   "playbooks": [
     {
       "question": "Tôi muốn tìm hiểu các gói cước wifi mạng cáp quang MobiFiber có giá như thế nào?",
-      "answer_template": "Chào bạn, MobiFone cung cấp dịch vụ Internet cáp quang **MobiFiber** thế hệ mới (trang bị miễn phí **Modem WiFi 6**) với 2 hình thức thanh toán linh hoạt và minh bạch:\n\n**1. Hình thức đóng trước dài kỳ (Tiết kiệm nhất)**\n\nĐóng trước {pay_months} tháng, MobiFone tặng thêm {bonus_months} tháng sử dụng miễn phí (tổng {total_months} tháng):\n\n- **6WiFi 1Plus** (Tốc độ 350 Mbps): Trọn gói **{base_price_fmt} đồng** dùng **{total_months} tháng** (trung bình chỉ ~{price_per_month_fmt} đồng/tháng).\n- **6WiFi 2Plus** (Tốc độ 450 Mbps): Trọn gói tương ứng theo bảng giá hiện hành.\n- **6WiFi 3Plus** (Tốc độ 600 Mbps): Trọn gói tương ứng theo bảng giá hiện hành.\n\n*(Nếu đóng 12 tháng sẽ được tặng thêm 4 tháng = tổng 16 tháng sử dụng).*\n\n**2. Hình thức đóng từng tháng (Đơn kỳ linh hoạt)**\n\n- **WiFi 1Plus**: Giá theo tháng, tốc độ 350 Mbps.\n- **WiFi 2Plus**: Giá theo tháng, tốc độ 450 Mbps.\n- **WiFi 3Plus**: Giá theo tháng, tốc độ 600 Mbps.\n\n*(Tất cả mức giá đã bao gồm thuế VAT 10%).*\n\nKỹ thuật viên hỗ trợ khảo sát hạ tầng, đo kiểm sóng và nghiệm thu tại nhà hoàn toàn miễn phí. Bạn cho Mia biết không gian nhà mình (căn hộ hay nhà tầng) và số lượng thiết bị để Mia tư vấn gói cước tối ưu nhất nhé!",
+      "answer_template": "Chào bạn, MobiFone cung cấp dịch vụ Internet cáp quang **MobiFiber** thế hệ mới (trang bị miễn phí **Modem WiFi 6**) với 2 hình thức thanh toán linh hoạt và minh bạch:\n\n**1. Hình thức đóng từng tháng (Đơn kỳ linh hoạt)**\n\n- **WiFi 1Plus** (Tốc độ 350 Mbps): **165.000 đồng/tháng**.\n- **WiFi 2Plus** (Tốc độ 450 Mbps): **195.000 đồng/tháng**.\n- **WiFi 3Plus** (Tốc độ 600 Mbps): **230.000 đồng/tháng**.\n\n**2. Hình thức đóng trước dài kỳ (Tiết kiệm nhất — Tặng thêm tháng cước)**\n\n- **6WiFi 1Plus** (350 Mbps): Trọn gói **{base_price_fmt} đồng** dùng **{total_months} tháng** (đóng {pay_months} tháng tặng {bonus_months} tháng, ~{price_per_month_fmt} đồng/tháng).\n- **6WiFi 2Plus** (450 Mbps): Trọn gói **1.170.000 đồng** dùng **8 tháng** (đóng 6 tháng tặng 2 tháng, ~146.250 đồng/tháng).\n- **6WiFi 3Plus** (600 Mbps): Trọn gói **1.380.000 đồng** dùng **8 tháng** (đóng 6 tháng tặng 2 tháng, ~172.500 đồng/tháng).\n\n*(Đóng 12 tháng tặng thêm 4 tháng = tổng 16 tháng sử dụng: 12WiFi 1Plus 1.980.000đ, 12WiFi 2Plus 2.340.000đ, 12WiFi 3Plus 2.760.000đ).*\n\n*(Tất cả mức giá đã bao gồm thuế VAT 10%).*\n\nĐặc quyền: Miễn phí Modem WiFi 6, miễn phí 100% công lắp đặt và hỗ trợ khảo sát đo sóng tận nhà miễn phí. Bạn cho Mia biết không gian nhà mình (căn hộ hay nhà tầng) và số lượng thiết bị để Mia tư vấn gói cước tối ưu nhất nhé!",
       "sales_stage": "kham_pha_nhu_cau",
       "sales_tactic": "Trình bày báo giá 2 tầng (Dài kỳ tiết kiệm vs Đơn kỳ từng tháng) -> Nêu rõ tổng tiền thanh toán ngay + thời gian dùng thực tế -> Cam kết Modem WiFi 6 và khảo sát miễn phí",
       "package_key": "6wifi 1plus",
@@ -20,8 +20,8 @@
       "intent": "Tư vấn WiFi gia đình"
     },
     {
-      "question": "Gói 6WiFi 1 giá 900k cho 8 tháng là giá ưu đãi tháng đầu hay cho tất cả các tháng?",
-      "answer_template": "Dạ anh/chị hoàn toàn yên tâm ạ! Mức giá **{base_price_fmt}đ** của gói **{display_name}** thực chất là tiền cước đóng trước **{pay_months} tháng** (150.000đ/tháng x 6 = 900.000đ) và MobiFone **TẶNG THÊM {bonus_months} THÁNG MIỄN PHÍ 100%**. Vì vậy, tổng thời gian gia đình được sử dụng trọn gói là **{total_months} tháng** mà KHÔNG phát sinh thêm bất kỳ chi phí nào khác trong suốt {total_months} tháng này! Nhờ chương trình tặng {bonus_months} tháng cước miễn phí, tính trung bình mỗi tháng gia đình chỉ tốn **{price_per_month_fmt}đ/tháng**. Anh/chị cho em xin Địa chỉ lắp đặt và SĐT liên hệ để kỹ thuật viên qua khảo sát hạ tầng tận nơi trong hôm nay nhé ạ!",
+      "question": "Gói 6WiFi 1Plus giá 990k cho 8 tháng là giá ưu đãi tháng đầu hay cho tất cả các tháng?",
+      "answer_template": "Dạ anh/chị hoàn toàn yên tâm ạ! Mức giá **{base_price_fmt}đ** của gói **{display_name}** thực chất là tiền cước đóng trước **{pay_months} tháng** (165.000đ/tháng x 6 = 990.000đ đã gồm VAT) và MobiFone **TẶNG THÊM {bonus_months} THÁNG MIỄN PHÍ 100%**. Vì vậy, tổng thời gian gia đình được sử dụng trọn gói là **{total_months} tháng** mà KHÔNG phát sinh thêm bất kỳ chi phí nào khác trong suốt {total_months} tháng này! Nhờ chương trình tặng {bonus_months} tháng cước miễn phí, tính trung bình mỗi tháng gia đình chỉ tốn **{price_per_month_fmt}đ/tháng**. Anh/chị cho em xin Địa chỉ lắp đặt và SĐT liên hệ để kỹ thuật viên qua khảo sát hạ tầng tận nơi trong hôm nay nhé ạ!",
       "sales_stage": "xu_ly_tu_choi_gia",
       "sales_tactic": "Giải thích rõ cơ chế đóng 6 tháng + tặng 2 tháng free -> Cam kết không chi phí ẩn -> Chốt hẹn khảo sát tận nơi",
       "package_key": "6wifi 1plus",
@@ -101,9 +101,9 @@
     },
     {
       "question": "Gói WiFi nào của MobiFone rẻ nhất hiện nay?",
-      "answer_template": "Dạ gói cước Internet cáp quang có mức giá tiết kiệm và được nhiều hộ gia đình lựa chọn nhất là gói **{display_name}** ạ! Gói có tốc độ cao {speed_mbps} Mbps, cước đóng {pay_months} tháng được **tặng thêm {bonus_months} tháng miễn phí** (tổng **{total_months} tháng** sử dụng với cước trọn gói {base_price_fmt}đ). Tính trung bình mỗi tháng chỉ **{price_per_month_fmt}đ/tháng** - mức giá rẻ nhất cho đường truyền cáp quang 300 Mbps trên thị trường hiện nay. Đặc biệt anh/chị được tặng Modem WiFi 6 và miễn phí lắp đặt hoàn toàn ạ. Anh/chị để lại SĐT để em hỗ trợ đăng ký ngay nhé!",
+      "answer_template": "Dạ gói cước Internet cáp quang có mức giá tiết kiệm và được nhiều hộ gia đình lựa chọn nhất là gói **{display_name}** ạ! Gói có tốc độ cao {speed_mbps} Mbps, cước đóng {pay_months} tháng được **tặng thêm {bonus_months} tháng miễn phí** (tổng **{total_months} tháng** sử dụng với cước trọn gói {base_price_fmt}đ). Tính trung bình mỗi tháng chỉ **{price_per_month_fmt}đ/tháng** - mức giá cực kỳ tiết kiệm cho đường truyền cáp quang {speed_mbps} Mbps trên thị trường hiện nay. Đặc biệt anh/chị được tặng Modem WiFi 6 và miễn phí lắp đặt hoàn toàn ạ. Anh/chị để lại SĐT để em hỗ trợ đăng ký ngay nhé!",
       "sales_stage": "kham_pha_nhu_cau",
-      "sales_tactic": "Chỉ rõ gói rẻ nhất 6WiFi 1 -> Nhấn mạnh giá 112.5k/tháng -> Nêu bật tốc độ 300 Mbps và Modem WiFi 6 -> Kêu gọi hành động",
+      "sales_tactic": "Chỉ rõ gói rẻ nhất 6WiFi 1Plus -> Nhấn mạnh giá 123.750đ/tháng -> Nêu bật tốc độ 350 Mbps và Modem WiFi 6 -> Kêu gọi hành động",
       "package_key": "6wifi 1plus",
       "intent": "Tìm gói WiFi rẻ nhất"
     },
@@ -127,7 +127,7 @@
       "question": "Nhà tôi đang dùng mạng VNPT thì chuyển sang mạng MobiFone có bị mất mạng gián đoạn công việc không?",
       "answer_template": "Dạ anh/chị hoàn toàn yên tâm, quá trình chuyển đổi không hề gây gián đoạn công việc hay học tập ạ! Quy trình chuẩn của MobiFone là: **Kỹ thuật viên sẽ kéo cáp, cài đặt Modem WiFi 6 của MobiFone hoàn thiện, anh/chị kết nối dùng thử mạng mới chạy căng đét rồi mới cần liên hệ ngắt hợp đồng mạng cũ**. Anh/chị có thể đăng ký gói **{display_name}** ({speed_mbps} Mbps, trọn gói {base_price_fmt}đ/{total_months} tháng = **{price_per_month_fmt}đ/tháng**) được miễn phí 100% công lắp đặt. Anh/chị cho em xin SĐT và địa chỉ để kỹ thuật qua khảo sát trước đường dây nhé ạ!",
       "sales_stage": "chot_don_closing",
-      "sales_tactic": "Giải tỏa nỗi sợ mất mạng -> Cam kết lắp xong mạng mới mượt mới cắt mạng cũ -> Giới thiệu gói 6WiFi 1 -> Xin thông tin khảo sát",
+      "sales_tactic": "Giải tỏa nỗi sợ mất mạng -> Cam kết lắp xong mạng mới mượt mới cắt mạng cũ -> Giới thiệu gói 6WiFi 1Plus -> Xin thông tin khảo sát",
       "package_key": "6wifi 1plus",
       "intent": "Chuyển đổi nhà mạng không gián đoạn"
     },
@@ -135,7 +135,7 @@
       "question": "Nhà tôi kinh doanh / văn phòng có trên 10-15 thiết bị truy cập thì dùng gói nào khỏe?",
       "answer_template": "Dạ với nhu cầu từ 10-15 thiết bị cùng lúc (laptop, điện thoại, camera, máy in) và cần độ ổn định cao, em khuyên anh/chị nên đăng ký gói **{display_name}** (tốc độ vượt trội **{speed_mbps} Mbps**). Gói này cước trọn gói {base_price_fmt}đ cho {total_months} tháng sử dụng (chỉ **{price_per_month_fmt}đ/tháng**). Băng thông khủng {speed_mbps} Mbps kết hợp cùng Modem WiFi 6 chịu tải đa luồng sẽ đảm bảo tất cả các máy cùng họp online, tải file nặng hay live stream mượt mà không bị nghẽn mạng. Anh/chị cho em xin SĐT để em cử chuyên viên kỹ thuật qua đo tải và tư vấn phương án lắp đặt tối ưu nhất ạ!",
       "sales_stage": "upsell_cross_sell",
-      "sales_tactic": "Phân tích nhu cầu tải cao -> Đề xuất gói tốc độ cao 6WiFi 3 (600 Mbps) -> Nhấn mạnh khả năng chịu tải của WiFi 6 -> Đề xuất chuyên viên kỹ thuật",
+      "sales_tactic": "Phân tích nhu cầu tải cao -> Đề xuất gói tốc độ cao 6WiFi 3Plus (600 Mbps) -> Nhấn mạnh khả năng chịu tải của WiFi 6 -> Đề xuất chuyên viên kỹ thuật",
       "package_key": "6wifi 3plus",
       "intent": "Tư vấn WiFi cho văn phòng/kinh doanh"
     },
@@ -143,13 +143,13 @@
       "question": "Nếu tôi đóng cước trước 12 tháng thì có ưu đãi gì hơn gói 6 tháng không?",
       "answer_template": "Dạ có ưu đãi đặc biệt lớn hơn nhiều ạ! Khi anh/chị đóng trước 12 tháng gói **{display_name}**, MobiFone sẽ **TẶNG THÊM 4 THÁNG MIỄN PHÍ** (tổng thời gian sử dụng lên tới **{total_months} tháng** liên tục với cước trọn gói {base_price_fmt}đ). Tính ra chi phí bình quân vẫn cực kỳ tiết kiệm chỉ **{price_per_month_fmt}đ/tháng**, mà gia đình yên tâm sử dụng mạng tốc độ cao {speed_mbps} Mbps suốt hơn 1 năm không lo nhớ kỳ hạn đóng cước hàng tháng. Ngoài ra anh/chị vẫn được miễn phí 100% Modem WiFi 6 và phí lắp đặt tận nơi. Anh/chị cho em xin thông tin để em lên phiếu đăng ký gói 12 tháng ưu đãi này nhé ạ!",
       "sales_stage": "upsell_cross_sell",
-      "sales_tactic": "So sánh lợi ích 12 tháng tặng 4 tháng (16 tháng dùng) -> Nhấn mạnh sự an tâm dài hạn -> Giữ nguyên mức giá 112.5k/tháng -> Kêu gọi đăng ký",
+      "sales_tactic": "So sánh lợi ích 12 tháng tặng 4 tháng (16 tháng dùng) -> Nhấn mạnh sự an tâm dài hạn -> Giữ nguyên mức giá tiết kiệm -> Kêu gọi đăng ký",
       "package_key": "12wifi 1plus",
       "intent": "Tư vấn gói cước 12 tháng tặng 4 tháng"
     },
     {
       "question": "Gói 6WiFi 1 và 6WiFi 2 khác nhau thế nào, tôi nên chọn gói nào?",
-      "answer_template": "Dạ hai gói này khác nhau chủ yếu ở băng thông tốc độ để phù hợp với từng quy mô gia đình ạ:\n- **Gói 6WiFi 1**: Tốc độ 300 Mbps, cước 900.000đ/8 tháng (**112.500đ/tháng**), rất phù hợp cho gia đình từ 3 - 6 thiết bị, nhà 1 tầng hoặc căn hộ chung cư.\n- **Gói {display_name}**: Tốc độ nâng cấp lên **{speed_mbps} Mbps**, cước {base_price_fmt}đ/{total_months} tháng (**{price_per_month_fmt}đ/tháng**), tối ưu cho gia đình 6 - 10 thiết bị, nhà 2 - 3 tầng hoặc thường xuyên xem video 4K, chơi game đồ họa cao.\nNếu nhà mình nhiều tầng hoặc đông người dùng đồng thời, em khuyên nên chọn gói **{display_name}** để đường truyền luôn ở trạng thái tốt nhất ạ. Anh/chị để lại SĐT em hỗ trợ khảo sát nhé!",
+      "answer_template": "Dạ hai gói này khác nhau chủ yếu ở băng thông tốc độ để phù hợp với từng quy mô gia đình ạ:\n- **Gói 6WiFi 1Plus**: Tốc độ 350 Mbps, cước 990.000đ/8 tháng (**123.750đ/tháng**), rất phù hợp cho gia đình từ 3 - 6 thiết bị, nhà 1 tầng hoặc căn hộ chung cư.\n- **Gói {display_name}**: Tốc độ nâng cấp lên **{speed_mbps} Mbps**, cước {base_price_fmt}đ/{total_months} tháng (**{price_per_month_fmt}đ/tháng**), tối ưu cho gia đình 6 - 10 thiết bị, nhà 2 - 3 tầng hoặc thường xuyên xem video 4K, chơi game đồ họa cao.\nNếu nhà mình nhiều tầng hoặc đông người dùng đồng thời, em khuyên nên chọn gói **{display_name}** để đường truyền luôn ở trạng thái tốt nhất ạ. Anh/chị để lại SĐT em hỗ trợ khảo sát nhé!",
       "sales_stage": "kham_pha_nhu_cau",
       "sales_tactic": "So sánh trực quan thông số và mức giá 2 gói -> Đưa ra tiêu chí lựa chọn rõ ràng theo số thiết bị/không gian -> Định hướng gói cao hơn",
       "package_key": "6wifi 2plus",

@@ -17,7 +17,7 @@ _FOLLOWUP_PATTERNS = [
 
 def _hash_history(h):
     recent = h[-6:] if len(h) >= 6 else h
-    text = "|".join(m.get("message", "") for m in recent)
+    text = "|".join((m.get("message") or m.get("content") or "") for m in recent)
     return hashlib.md5(text.encode()).hexdigest()[:12]
 
 def _is_ambiguous(q, history):
@@ -51,7 +51,7 @@ def reformulate_query(question, chat_history=None, gemini_client=None, gemini_mo
         hist = ""
         for m in recent:
             r = "Khach hang" if m.get("role") == "user" else "Mia"
-            c = m.get("message", "").strip()
+            c = (m.get("message") or m.get("content") or "").strip()
             if c:
                 hist += r + ": " + c + "\n"
         prompt = (
