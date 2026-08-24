@@ -1,0 +1,106 @@
+{
+  "_note": "Kich ban xu ly phan doi - Clarify -> Reframe -> Advance framework",
+  "_version": "1.0",
+  "_updated": "2026-08-21",
+  "objections": [
+    {
+      "trigger_keywords": [
+        "dat qua",
+        "mac qua",
+        "gia cao",
+        "cho khac re hon",
+        "dat hon",
+        "mac hon"
+      ],
+      "objection_type": "price_too_high",
+      "sales_stage": "xu_ly_tu_choi_gia",
+      "clarify": "Da de Mia hieu ro hon, anh/chi dang so sanh voi goi cu the nao a? De Mia co the doi chieu chinh xac nhat cho minh.",
+      "reframe_points": [
+        "Modem WiFi 6 tri gia 1.5-2 trieu dong tang kem mien phi 100%",
+        "Quy doi chi phi: {price_per_month}d/thang = {price_per_day}d/ngay cho ca gia dinh",
+        "Uu dai dong 6 tang 2 thang (hoac dong 12 tang 4 thang) = tiet kiem 25%",
+        "Mien phi 100% cong lap dat, khao sat do song tai nha"
+      ],
+      "advance": "Anh/chi cho Mia hoi: Hien tai mang dang dung toc do co dat yeu cau cong viec/giai tri khong? Mia muon tim giai phap toi uu nhat cho nha minh.",
+      "intent": "Xu ly phan doi gia cao"
+    },
+    {
+      "trigger_keywords": [
+        "viettel re hon",
+        "vnpt re hon",
+        "fpt re hon",
+        "ben kia re hon",
+        "doi thu"
+      ],
+      "objection_type": "competitor_cheaper",
+      "sales_stage": "so_sanh_doi_thu",
+      "clarify": "Da do la goi nao cua nha mang do a, anh/chi co nho ten goi khong? De Mia so sanh chinh xac tung hang muc gia tri cho anh/chi.",
+      "reframe_points": [
+        "1. Modem WiFi 6 mien phi (bien nay nhieu nha mang tinh them phi thiet bi 300-500k)",
+        "2. Chinh sach dong 6 tang 2 thang + dong 12 tang 4 thang - uoc tinh tiet kiem 25% so voi dong tung thang",
+        "3. Cam ket nghiem thu: Mang chay muot tai nha moi thanh toan cuoc lan dau - khong rui ro cho anh/chi",
+        "4. Ky thuat vien ho tro 24/7 qua 18001090 mien phi"
+      ],
+      "advance": "Anh/chi co muon Ky thuat vien MobiFone den do song thuc te tai nha mien phi khong? Minh se biet ngay chat luong truoc khi quyet dinh.",
+      "intent": "So sanh voi doi thu canh tranh"
+    },
+    {
+      "trigger_keywords": [
+        "can nghi them",
+        "de suy nghi",
+        "chua chac",
+        "hoi them",
+        "de toi xem",
+        "to mo"
+      ],
+      "objection_type": "hesitation",
+      "sales_stage": "xu_ly_do_du",
+      "clarify": "Da hoan toan hieu y anh/chi. Anh/chi dang bang khoan o diem nao nhat - gia cuoc, chat luong song, hay thu tuc lap dat a?",
+      "reframe_points": [
+        "Uu dai tang thang chi ap dung trong dot khuyen mai hien hanh",
+        "Khao sat do song tai nha mien phi - anh/chi khong mat gi ca",
+        "Neu sau khao sat chua hai long, hoan toan khong can ky hop dong"
+      ],
+      "advance": "Anh/chi de Mia dat lich Ky thuat vien den khao sat mien phi truoc nhe - buoc nay hoan toan 0 dong, anh/chi nam ro thong tin truoc khi quyet dinh.",
+      "intent": "Xu ly do du chua quyet dinh"
+    },
+    {
+      "trigger_keywords": [
+        "mang yeu",
+        "lag",
+        "giat",
+        "mat mang",
+        "khong on dinh",
+        "hay mat song"
+      ],
+      "objection_type": "quality_concern",
+      "sales_stage": "xu_ly_lo_ngai",
+      "clarify": "Da Mia xin loi ve trai nghiem do. Anh/chi dang o dia chi nao de Mia kiem tra do phu song thuc te khu vuc nha minh a?",
+      "reframe_points": [
+        "Cap quang MobiFiber la cap vat ly - on dinh hon mang khong day nhieu lan",
+        "MobiFone cam ket do song: Ky thuat vien do kiem tin hieu thuc te, nghiem thu on dinh moi thu tien",
+        "Ho tro ky thuat 24/7 qua 18001090"
+      ],
+      "advance": "Mia se ghi nhan dia chi va cho Ky thuat vien den do song MIEN PHI. Neu chat luong khong dat yeu cau, hoan toan khong can lap dat. Anh/chi cho Mia so dien thoai de ky thuat lien he nhe!",
+      "intent": "Xu ly lo ngai chat luong"
+    },
+    {
+      "trigger_keywords": [
+        "doi mang phuc tap",
+        "dat day phuc tap",
+        "han hop dong",
+        "tra cuoc cu"
+      ],
+      "objection_type": "switching_friction",
+      "sales_stage": "xu_ly_lo_ngai",
+      "clarify": "Da anh/chi dang dung mang nao hien tai a? Mia muon hieu chinh xac de tu van giai phap chuyen doi thuan tien nhat.",
+      "reframe_points": [
+        "Ky thuat vien MobiFone ho tro keo day, cau hinh thiet bi hoan toan - anh/chi chi ngoi xem",
+        "Mang moi chay on dinh, anh/chi moi can cat mang cu - dam bao 0 phut gian doan cong viec",
+        "Modem WiFi 6 moi tang kem luon - khong can mua them thiet bi"
+      ],
+      "advance": "De khong gian doan cong viec, Ky thuat vien se lap song moi song song truoc. Anh/chi cho Mia so dien thoai de dat lich ky thuat den khao sat nhe!",
+      "intent": "Xu ly e ngai chuyen doi mang"
+    }
+  ]
+}

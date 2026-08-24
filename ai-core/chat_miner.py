@@ -351,34 +351,43 @@ def analyze_chat_with_llm(conversation: ChatConversation, bot_pipeline=None) -> 
             pii_redacted_count=total_pii_count
         )
 
-    prompt = f"""Bạn là Chuyên gia Phân tích Lịch sử CSKH & Đào tạo Sales AI của MobiFone.
-Hãy phân tích đoạn hội thoại CSKH dưới đây và xuất kết quả dưới định dạng JSON duy nhất.
+    prompt = f"""Bạn là Chuyên gia Đào tạo Bán hàng Viễn thông & Giám đốc Phân tích Hội thoại (Conversation Intelligence) của MobiFone.
+Hãy phân tích cuộc hội thoại CSKH/Bán hàng dưới đây (đã che PII) để bóc tách các kịch bản tư vấn, xử lý từ chối và chốt đơn xuất sắc của nhân viên Top Performer.
 
-Đoạn hội thoại:
+Đoạn hội thoại thực tế:
 \"\"\"
 {formatted_chat_str}
 \"\"\"
 
-Yêu cầu phân tích:
-1. "quality_score": Điểm số chất lượng cuộc chat từ 1.0 đến 10.0 (Dựa trên độ lịch sự, tư vấn chính xác, thuyết phục).
-2. "quality_reason": Lý do ngắn gọn đánh giá điểm số.
-3. "extracted_qa_list": Danh sách các cặp Hỏi - Đáp thực chiến trích xuất từ cuộc chat (Bỏ qua chào hỏi xã giao, tập trung vào thắc mắc gói cước, cú pháp, xử lý lỗi). 
-   - "sales_stage" BẮT BUỘC chọn 1 trong các giá trị: "kham_pha_nhu_cau", "xu_ly_tu_choi_gia", "chot_don_closing", "khach_phan_nan", "upsell_cross_sell", "so_sanh_doi_thu".
-   - "sales_tactic": Tóm tắt ngắn gọn kỹ thuật tư vấn CSKH đã dùng (Ví dụ: "Đồng cảm -> Chia nhỏ chi phí theo ngày -> Đề xuất gói 4GB/ngày").
-4. "extracted_tactics": Danh sách các kịch bản/kỹ thuật xử lý từ chối hoặc chốt đơn xuất sắc của nhân viên (nếu có). Mỗi phần tử gồm: "customer_objection" (Khách chê/từ chối), "agent_strategy" (Chiến thuật nhân viên dùng), "recommended_pitch" (Lời khuyên tư vấn mẫu), "package_name".
+Nhiệm vụ phân tích chuyên sâu:
+1. "quality_score": Chấm điểm chất lượng bán hàng & CSKH từ 1.0 đến 10.0 (Dựa trên: tính lịch sự, khả năng lắng nghe, khám phá nhu cầu, định khung giá trị, phản xạ xử lý chê đắt/so sánh đối thủ, kỹ năng xin số điện thoại/chốt hẹn).
+2. "quality_reason": Nhận xét 1-2 câu ngắn gọn về điểm mạnh/yếu của nhân viên trong cuộc chat.
+3. "extracted_qa_list": Bóc tách các cặp Hỏi - Đáp mang tính chiến thuật (BỎ QUA chào hỏi rỗng, tập trung vào giải quyết thắc mắc, phân tích gói cước, thuyết phục khách hàng):
+   - "sales_stage": BẮT BUỘC gán 1 trong 5 nhãn phễu bán hàng:
+     • "kham_pha_nhu_cau": Hỏi thăm dò không gian, số lượng thiết bị, thói quen dùng mạng (SPIN Discovery).
+     • "xu_ly_tu_choi_gia": Khách chê đắt/không có tiền -> Nhân viên chia nhỏ chi phí theo ngày, nêu giá trị quà tặng Modem WiFi 6/tháng tặng thêm.
+     • "so_sanh_doi_thu": Khách so sánh Viettel/FPT/VNPT -> Nhân viên đồng cảm, nhấn mạnh 3 đặc quyền vượt trội của MobiFone.
+     • "upsell_cross_sell": Gợi ý từ gói ngày sang gói tháng/dài kỳ để tiết kiệm hơn 50%.
+     • "chot_don_closing": Đề xuất khảo sát đo sóng miễn phí tại nhà, chốt xin SĐT và địa chỉ.
+   - "sales_tactic": Tóm tắt ngắn gọn công thức thuyết phục (Ví dụ: "Đồng cảm -> Chia nhỏ còn 4k/ngày -> Đề xuất gói 6WiFi 1Plus tặng 2 tháng").
+4. "extracted_tactics": Bóc tách các tình huống Battlecard phản bác cụ thể. Mỗi phần tử gồm:
+   - "customer_objection": Lời phản bác hoặc phân vân của khách (VD: "Gói 6 tháng 990k đắt quá em").
+   - "agent_strategy": Chiến thuật tâm lý bán hàng nhân viên dùng (VD: "Quy đổi ra 123.750đ/tháng và nhấn mạnh miễn phí Modem WiFi 6").
+   - "recommended_pitch": Mẫu câu tư vấn chuẩn mực, lịch sự để đưa vào cẩm nang huấn luyện.
+   - "package_name": Tên gói cước liên quan (nếu có).
 
-Trả về KẾT QUẢ JSON DUY NHẤT theo cấu trúc sau (không kèm markdown rác):
+Trả về KẾT QUẢ JSON DUY NHẤT theo cấu trúc sau (không kèm text rác):
 {{
-  "quality_score": 8.5,
-  "quality_reason": "...",
+  "quality_score": 9.0,
+  "quality_reason": "Nhân viên tư vấn nhiệt tình, bẻ phản bác giá xuất sắc bằng cách quy đổi chi phí theo ngày.",
   "extracted_qa_list": [
     {{
       "question": "...",
       "answer": "...",
-      "package_name": "...",
-      "intent": "...",
+      "package_name": "6WiFi 1Plus",
+      "intent": "Tư vấn gói cước",
       "sales_stage": "xu_ly_tu_choi_gia",
-      "sales_tactic": "..."
+      "sales_tactic": "Đồng cảm -> Quy đổi giá theo tháng -> Nhấn mạnh tặng 2 tháng"
     }}
   ],
   "extracted_tactics": [
@@ -400,6 +409,8 @@ Trả về KẾT QUẢ JSON DUY NHẤT theo cấu trúc sau (không kèm markdow
             text_resp = response.text.strip()
         if text_resp.startswith("```json"):
             text_resp = text_resp[7:]
+        if text_resp.startswith("```"):
+            text_resp = text_resp[3:]
         if text_resp.endswith("```"):
             text_resp = text_resp[:-3]
         text_resp = text_resp.strip()
@@ -410,8 +421,8 @@ Trả về KẾT QUẢ JSON DUY NHẤT theo cấu trúc sau (không kèm markdow
 
         return MiningAnalysisResult(
             conversation_id=conversation.conversation_id,
-            quality_score=float(data.get("quality_score", 8.0)),
-            quality_reason=str(data.get("quality_reason", "Đã phân tích qua LLM")),
+            quality_score=float(data.get("quality_score", 8.5)),
+            quality_reason=str(data.get("quality_reason", "Đã phân tích qua LLM Conversation Intelligence")),
             sanitized_messages=sanitized_messages,
             extracted_qa_list=qa_list,
             extracted_tactics=tactics_list,
@@ -421,7 +432,7 @@ Trả về KẾT QUẢ JSON DUY NHẤT theo cấu trúc sau (không kèm markdow
         print(f"[CHAT-MINER] Lỗi phân tích LLM: {e}")
         return MiningAnalysisResult(
             conversation_id=conversation.conversation_id,
-            quality_score=7.0,
+            quality_score=7.5,
             quality_reason=f"Phân tích dự phòng (Lỗi LLM: {e})",
             sanitized_messages=sanitized_messages,
             extracted_qa_list=[],

@@ -256,15 +256,34 @@ docker compose up -d --build
 
 ### CI/CD tự động (GitHub Actions)
 
-Mỗi khi push lên nhánh `main`, workflow `.github/workflows/deploy.yml` sẽ tự động:
-1. SSH vào VPS
-2. Pull code mới nhất
-3. Tạo file `.env` từ GitHub Secrets
-4. Rebuild và restart tất cả container
+Hệ thống tích hợp 2 luồng GitHub Actions CI/CD:
+1. **`.github/workflows/eval.yml`**: Tự động chạy Smoke Test đánh giá chất lượng RAG khi push/PR vào `ai-core/**`.
+2. **`.github/workflows/deploy.yml`**: Tự động SSH vào VPS, pull code mới và rebuild container khi push lên nhánh `main`.
 
 Xem [cấu hình GitHub Secrets](docs/huong_dan_trien_khai_vps.md#5-danh-sách-github-secrets-cần-cấu-hình) để thiết lập.
 
 ---
+
+## 📊 Đánh giá chất lượng RAG & Sales Intelligence
+
+Hệ thống đi kèm bộ công cụ đánh giá tự động dựa trên phương pháp **LLM-as-a-Judge**:
+
+```bash
+cd ai-core
+
+# 1. Chạy Smoke Test kiểm tra nhanh (5 câu đại diện, dùng cho CI)
+python run_eval_ci.py
+# (Hoặc trên Windows: run_eval_ci.bat)
+
+# 2. Đánh giá chất lượng toàn diện với 100 câu hỏi chuẩn hóa (10 categories)
+python eval_accuracy.py
+
+# 3. So sánh báo cáo benchmark và kiểm tra sụt giảm chất lượng (Regression Detection)
+python sales_benchmark.py
+```
+
+---
+
 
 ## 📁 Cấu trúc dự án
 
@@ -290,12 +309,22 @@ mobifone-chatbot-system/
 │   │   └── email/               # Email service
 │   └── Dockerfile
 │
-├── 📂 ai-core/                   # Python FastAPI AI Service
-│   ├── api_server.py            # FastAPI endpoints
-│   ├── rag_pipeline.py          # RAG implementation
+├── 📂 ai-core/                   # Python FastAPI AI Service & Sales RAG
+│   ├── api_server.py            # FastAPI endpoints (Chat, Mining, Metrics)
+│   ├── rag_pipeline.py          # RAG pipeline kết hợp Hybrid Search + Reranker
+│   ├── hybrid_retriever.py      # BM25 + Vector Search (RRF fusion)
+│   ├── reranker.py              # Cross-Encoder Reranker (ms-marco-MiniLM)
+│   ├── query_reformulator.py    # Query Reformulation cho hội thoại đa lượt
+│   ├── sales_metrics.py         # Theo dõi metrics bán hàng, latency, escalation
+│   ├── eval_accuracy.py         # LLM-as-a-Judge đánh giá RAG & Sales quality
+│   ├── eval_dataset_100.json    # Dataset chuẩn hóa 100 câu (10 categories)
+│   ├── sales_benchmark.py       # So sánh benchmark và phát hiện regression
+│   ├── run_eval_ci.py           # Smoke test nhanh cho CI/CD pipeline
+│   ├── generate_eval_dataset.py # Quản lý và kiểm tra tính toàn vẹn dataset
+│   ├── ingest_sales_playbooks.py# Nạp kịch bản bán hàng vào ChromaDB
 │   ├── crawl_engine.py          # Web crawling engine
 │   ├── chat_miner.py            # Chat history mining
-│   ├── rag_config.json          # RAG configuration
+│   ├── rag_config.json          # RAG system prompts & sales guidelines
 │   ├── requirements.txt
 │   └── Dockerfile
 │
@@ -311,7 +340,8 @@ mobifone-chatbot-system/
 │   └── huong_dan_trien_khai_vps.md
 │
 ├── 📂 .github/workflows/
-│   └── deploy.yml               # CI/CD GitHub Actions
+│   ├── deploy.yml               # CI/CD Deploy VPS
+│   └── eval.yml                 # CI/CD RAG Quality Smoke Test
 │
 ├── docker-compose.yml           # Orchestration toàn bộ hệ thống
 ├── .gitignore

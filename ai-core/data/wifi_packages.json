@@ -1,38 +1,41 @@
 {
   "_note": "Nguồn sự thật duy nhất cho giá gói WiFi/MobiFiber. Sửa file này khi giá thay đổi, sau đó chạy lại ingest_wifi_playbook.py để cập nhật ChromaDB.",
-  "_version": "1.0",
-  "_updated": "2026-08-13",
-  "_cross_check": "Verify giá với VPS trước khi deploy. price_per_month = base_price / (pay_months + bonus_months).",
+  "_version": "2.0",
+  "_updated": "2026-08-20",
+  "_cross_check": "Verify giá theo Công văn 3949/D01-B5 và Quyết định 2692. Tất cả giá đã bao gồm 10% VAT.",
   "packages": [
     {
-      "key": "6wifi 1",
-      "display_name": "6WiFi 1",
-      "pay_months": 6,
-      "bonus_months": 2,
-      "base_price": 900000,
-      "price_per_month": 112500,
-      "speed_mbps": 300,
-      "service_type": "wifi"
+      "key": "wifi 1plus",
+      "display_name": "WiFi 1Plus",
+      "pay_months": 1,
+      "bonus_months": 0,
+      "base_price": 165000,
+      "price_per_month": 165000,
+      "speed_mbps": 350,
+      "service_type": "wifi",
+      "modem": "Modem WiFi 6"
     },
     {
-      "key": "6wifi 2",
-      "display_name": "6WiFi 2",
-      "pay_months": 6,
-      "bonus_months": 2,
-      "base_price": 1080000,
-      "price_per_month": 135000,
-      "speed_mbps": 400,
-      "service_type": "wifi"
+      "key": "wifi 2plus",
+      "display_name": "WiFi 2Plus",
+      "pay_months": 1,
+      "bonus_months": 0,
+      "base_price": 195000,
+      "price_per_month": 195000,
+      "speed_mbps": 450,
+      "service_type": "wifi",
+      "modem": "Modem WiFi 6"
     },
     {
-      "key": "6wifi 3",
-      "display_name": "6WiFi 3",
-      "pay_months": 6,
-      "bonus_months": 2,
-      "base_price": 1260000,
-      "price_per_month": 157500,
+      "key": "wifi 3plus",
+      "display_name": "WiFi 3Plus",
+      "pay_months": 1,
+      "bonus_months": 0,
+      "base_price": 230000,
+      "price_per_month": 230000,
       "speed_mbps": 600,
-      "service_type": "wifi"
+      "service_type": "wifi",
+      "modem": "Modem WiFi 6"
     },
     {
       "key": "6wifi 1plus",
@@ -41,9 +44,9 @@
       "bonus_months": 2,
       "base_price": 990000,
       "price_per_month": 123750,
-      "speed_mbps": null,
+      "speed_mbps": 350,
       "service_type": "wifi",
-      "_note": "speed_mbps chưa xác nhận — cross-check với VPS trước khi điền"
+      "modem": "Modem WiFi 6"
     },
     {
       "key": "6wifi 2plus",
@@ -52,39 +55,53 @@
       "bonus_months": 2,
       "base_price": 1170000,
       "price_per_month": 146250,
-      "speed_mbps": null,
+      "speed_mbps": 450,
       "service_type": "wifi",
-      "_note": "speed_mbps chưa xác nhận — cross-check với VPS trước khi điền"
+      "modem": "Modem WiFi 6"
     },
     {
-      "key": "12wifi 1",
-      "display_name": "12WiFi 1",
-      "pay_months": 12,
-      "bonus_months": 4,
-      "base_price": 1800000,
-      "price_per_month": 112500,
-      "speed_mbps": 300,
-      "service_type": "wifi"
-    },
-    {
-      "key": "12wifi 2",
-      "display_name": "12WiFi 2",
-      "pay_months": 12,
-      "bonus_months": 4,
-      "base_price": 2160000,
-      "price_per_month": 135000,
-      "speed_mbps": 400,
-      "service_type": "wifi"
-    },
-    {
-      "key": "12wifi 3",
-      "display_name": "12WiFi 3",
-      "pay_months": 12,
-      "bonus_months": 4,
-      "base_price": 2520000,
-      "price_per_month": 157500,
+      "key": "6wifi 3plus",
+      "display_name": "6WiFi 3Plus",
+      "pay_months": 6,
+      "bonus_months": 2,
+      "base_price": 1380000,
+      "price_per_month": 172500,
       "speed_mbps": 600,
-      "service_type": "wifi"
+      "service_type": "wifi",
+      "modem": "Modem WiFi 6"
+    },
+    {
+      "key": "12wifi 1plus",
+      "display_name": "12WiFi 1Plus",
+      "pay_months": 12,
+      "bonus_months": 4,
+      "base_price": 1980000,
+      "price_per_month": 123750,
+      "speed_mbps": 350,
+      "service_type": "wifi",
+      "modem": "Modem WiFi 6"
+    },
+    {
+      "key": "12wifi 2plus",
+      "display_name": "12WiFi 2Plus",
+      "pay_months": 12,
+      "bonus_months": 4,
+      "base_price": 2340000,
+      "price_per_month": 146250,
+      "speed_mbps": 450,
+      "service_type": "wifi",
+      "modem": "Modem WiFi 6"
+    },
+    {
+      "key": "12wifi 3plus",
+      "display_name": "12WiFi 3Plus",
+      "pay_months": 12,
+      "bonus_months": 4,
+      "base_price": 2760000,
+      "price_per_month": 172500,
+      "speed_mbps": 600,
+      "service_type": "wifi",
+      "modem": "Modem WiFi 6"
     },
     {
       "key": "6wifi vieon 1",
@@ -93,9 +110,9 @@
       "bonus_months": 2,
       "base_price": 1020000,
       "price_per_month": 127500,
-      "speed_mbps": null,
+      "speed_mbps": 350,
       "service_type": "wifi_combo",
-      "_note": "speed_mbps chưa xác nhận"
+      "modem": "Modem WiFi 6"
     },
     {
       "key": "6wifi vieon 2",
@@ -104,9 +121,9 @@
       "bonus_months": 2,
       "base_price": 1200000,
       "price_per_month": 150000,
-      "speed_mbps": null,
+      "speed_mbps": 450,
       "service_type": "wifi_combo",
-      "_note": "speed_mbps chưa xác nhận"
+      "modem": "Modem WiFi 6"
     },
     {
       "key": "6wifi vieon 3",
@@ -115,9 +132,9 @@
       "bonus_months": 2,
       "base_price": 1380000,
       "price_per_month": 172500,
-      "speed_mbps": null,
+      "speed_mbps": 600,
       "service_type": "wifi_combo",
-      "_note": "speed_mbps chưa xác nhận"
+      "modem": "Modem WiFi 6"
     },
     {
       "key": "12wifi vieon 1",
@@ -126,9 +143,9 @@
       "bonus_months": 4,
       "base_price": 2040000,
       "price_per_month": 127500,
-      "speed_mbps": null,
+      "speed_mbps": 350,
       "service_type": "wifi_combo",
-      "_note": "speed_mbps chưa xác nhận"
+      "modem": "Modem WiFi 6"
     },
     {
       "key": "12wifi vieon 2",
@@ -137,9 +154,9 @@
       "bonus_months": 4,
       "base_price": 2400000,
       "price_per_month": 150000,
-      "speed_mbps": null,
+      "speed_mbps": 450,
       "service_type": "wifi_combo",
-      "_note": "speed_mbps chưa xác nhận"
+      "modem": "Modem WiFi 6"
     },
     {
       "key": "12wifi vieon 3",
@@ -148,9 +165,9 @@
       "bonus_months": 4,
       "base_price": 2760000,
       "price_per_month": 172500,
-      "speed_mbps": null,
+      "speed_mbps": 600,
       "service_type": "wifi_combo",
-      "_note": "speed_mbps chưa xác nhận"
+      "modem": "Modem WiFi 6"
     }
   ]
 }

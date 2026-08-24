@@ -1,0 +1,43 @@
+{
+  "_note": "Kich ban giu chan khach hang cu - Win-back va Upsell",
+  "_version": "1.0",
+  "_updated": "2026-08-21",
+  "scenarios": [
+    {
+      "trigger": "khach_huy_dich_vu",
+      "question_patterns": [
+        "huy dich vu",
+        "huy hop dong",
+        "cat mang",
+        "khong dung nua",
+        "dung mang roi"
+      ],
+      "sales_stage": "retention_winback",
+      "step1_diagnose": "Da Mia rat tiec khi nghe tin nay. Anh/chi co the cho Mia biet ly do chinh khong a? De Mia co the ho tro tot nhat: (1) Gia cuoc, (2) Chat luong duong truyen, (3) Dich vu ky thuat, hay (4) Ly do khac a?",
+      "responses_by_reason": {
+        "price": "Da Mia hieu. Hien MobiFone co chuong trinh giu chan cho khach hang than thiet: Anh/chi co the chuyen sang goi phu hop hon hoac nhan them uu dai gia han hop dong. Mia se ket noi voi Chuyen vien tu van de tim giai phap tot nhat cho anh/chi.",
+        "quality": "Da Mia xin loi ve trai nghiem nay. Mia se dang ky ngay ky thuat vien uu tien cao nhat den kiem tra va xu ly sut song tai nha anh/chi mien phi. Neu sau khi xu ly van khong hai long, anh/chi co quyen huy hop dong khong phat.",
+        "service": "Da Mia thay phieu xin loi chan thanh. Mia se ghi nhan phan hoi nay len Cap quan ly va dam bao chuyen vien cham soc rieng se lien he anh/chi trong 24h."
+      },
+      "last_resort": "Neu anh/chi van muon huy sau khi Mia da ho tro het minh, MobiFone hoan toan ton trong quyet dinh cua anh/chi. Anh/chi vui long lien he 18001090 de lam thu tuc nhe. Mia hy vong co the phuc vu anh/chi tro lai trong tuong lai!",
+      "intent": "Giu chan khach hang co y dinh huy"
+    },
+    {
+      "trigger": "khach_cu_upsell",
+      "question_patterns": [
+        "the nao",
+        "gia han",
+        "tiep tuc dung",
+        "dang ky tiep"
+      ],
+      "sales_stage": "retention_upsell",
+      "recognition_script": "Da cam on anh/chi da dong hanh cung MobiFone thoi gian qua! Nhan thay anh/chi la khach hang than thiet, Mia muon gioi thieu chuong trinh uu dai gia han doc quyen dang hien hanh:",
+      "upsell_tactics": [
+        "Goi hien tai het han -> Gia han gói cu giu nguyen gia hoac nang cap goi moi ton it hon",
+        "Khach dang dung WiFi 1Plus -> De xuat nang cap WiFi 2Plus (them 50Mbps, ca nha su dung muot hon)",
+        "Dong truoc 12 thang -> Tang 4 thang mien phi = tiet kiem 4 thang cuoc"
+      ],
+      "intent": "Upsell khach hang cu"
+    }
+  ]
+}

@@ -11,6 +11,28 @@ from dotenv import load_dotenv
 # Global lock đảm bảo chỉ 1 thread ghi vào ChromaDB (hnswlib không thread-safe)
 chroma_write_lock = threading.Lock()
 
+# ─── Phase 1: Import các module nâng cấp ───────────────────────────────────
+try:
+    from query_reformulator import reformulate_query
+    _REFORMULATOR_AVAILABLE = True
+except ImportError:
+    _REFORMULATOR_AVAILABLE = False
+    print("[PIPELINE] query_reformulator.py not found -- reformulation disabled")
+
+try:
+    from hybrid_retriever import BM25Index, reciprocal_rank_fusion
+    _HYBRID_AVAILABLE = True
+except ImportError:
+    _HYBRID_AVAILABLE = False
+    print("[PIPELINE] hybrid_retriever.py not found -- BM25 disabled")
+
+try:
+    from reranker import rerank as crossencoder_rerank
+    _RERANKER_AVAILABLE = True
+except ImportError:
+    _RERANKER_AVAILABLE = False
+    print("[PIPELINE] reranker.py not found -- cross-encoder reranking disabled")
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 if hasattr(sys.stderr, 'reconfigure'):
@@ -42,11 +64,12 @@ gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY and genai
 # Simple Vietnamese Stopwords for dynamic keyword search
 VIETNAMESE_STOPWORDS = {
     "và", "hoặc", "của", "cho", "là", "các", "những", "được", "bị", "bởi", "thì", "mà", "nào", "gì", "đâu", "ở", "lúc", 
-    "khi", "tại", "sao", "thế", "hãy", "tôi", "bạn", "chào", "vui", "hỗ", "trợ", "cần", "muốn", "vào", "ngày", 
-    "tháng", "năm", "với", "ra", "như", "đã", "đang", "sẽ", "đọc", "lại", "có", "không", "biết", "hỏi", "xin",
+    "khi", "tại", "sao", "thế", "hãy", "tôi", "bạn", "chào", "vui", "hỗ", "trợ", "cần", "muốn", "vào",
+    "với", "ra", "như", "đã", "đang", "sẽ", "đọc", "lại", "có", "không", "biết", "hỏi", "xin",
     "cảm", "ơn", "nhà", "mạng", "cung", "cấp", "dịch", "vụ", "thông", "tin", "chi", "tiết", "cho", "về", "nhé",
     "đây", "đó", "này", "kia", "đều", "tất", "cả", "mình", "sử", "dụng", "dùng", "đăng", "ký", "tìm", "kiếm", "tra", "cứu",
-    "gói", "giá", "cước", "bao", "nhiêu", "tốc", "độ", "chu", "kỳ", "số", "lượng", "hạn", "mức", "phí", "tiền", "đồng", "vnđ", "vnd"
+    "bao", "nhiêu", "tốc", "độ", "chu", "kỳ", "số", "lượng", "hạn", "mức", "phí", "tiền", "đồng", "vnđ", "vnd",
+    "tư", "vấn", "tư vấn", "giới", "thiệu", "giúp", "giùm", "xem", "em", "anh", "chị"
 }
 
 def extract_query_keywords(query: str) -> list:
@@ -58,8 +81,13 @@ def extract_query_keywords(query: str) -> list:
     # Filter stopwords
     filtered_words = [w for w in words if w not in VIETNAMESE_STOPWORDS and len(w) > 1]
     
-    # Generate bi-grams to capture compound terms like "thành lập", "slogan", "gói cước", "trụ sở"
+    # Generate bi-grams to capture compound terms like "thành lập", "gói ngày", "data ngày", "gói cước", "trụ sở"
     bigrams = []
+    for i in range(len(words) - 1):
+        pair = f"{words[i]} {words[i+1]}"
+        if pair in ["gói ngày", "gói cước", "data ngày", "theo ngày", "gói tháng", "gói năm", "thành lập", "slogan", "trụ sở"]:
+            bigrams.append(pair)
+            
     for i in range(len(filtered_words) - 1):
         bigrams.append(f"{filtered_words[i]} {filtered_words[i+1]}")
         
@@ -99,6 +127,14 @@ class MobiFoneRAG:
             name="mobifone_sales_playbook",
             embedding_function=self.embedding_function
         )
+
+        # 5. [Phase 1] BM25 Index cho hybrid search (lazy-build khi retrieve() lần đầu)
+        self._bm25_index: "BM25Index | None" = BM25Index() if _HYBRID_AVAILABLE else None
+        self._bm25_built = False
+
+        # 6. [Phase 2] Metrics state cache cho lượt chat gần nhất
+        self._last_intent = None
+        self._last_was_reformulated = False
         
     def index_knowledge_base(self, kb_json_path=None):
         """Đọc file knowledge_base.json đã cào và nạp vào Vector DB"""
@@ -233,11 +269,16 @@ class MobiFoneRAG:
         
         # 2. Định tuyến danh mục (Category Routing) dựa trên từ khóa câu hỏi
         target_categories = []
+        is_day_package_query = any(kw in query_lower for kw in [
+            "gói ngày", "gói cước ngày", "data ngày", "theo ngày", "1 ngày", "3 ngày", "7 ngày",
+            "dùng trong ngày", "ngắn ngày", "gói 1 ngày", "gói data ngày", "cước ngày", "gói theo ngày"
+        ])
+        
         if any(kw in query_lower for kw in ["esim", "e-sim"]):
             target_categories.append("dich_vu")
         if any(kw in query_lower for kw in ["5g", "mạng 5g"]):
             target_categories.append("5g")
-        if any(kw in query_lower for kw in ["gói cước", "gói", "đăng ký gói", "goi cuoc", "dang ky"]):
+        if any(kw in query_lower for kw in ["gói cước", "gói", "đăng ký gói", "goi cuoc", "dang ky"]) or is_day_package_query:
             target_categories.append("goi_cuoc")
         if any(kw in query_lower for kw in ["mất sóng", "sóng", "không gọi được", "lỗi", "hỏng sim", "hỗ trợ", "tổng đài", "cửa hàng", "faq", "giải quyết", "bảo hành", "khiếu nại"]):
             target_categories.append("ho_tro")
@@ -320,15 +361,29 @@ class MobiFoneRAG:
         # 4. Truy vấn ngữ nghĩa từ ChromaDB sử dụng mở rộng câu truy vấn (Query Expansion)
         queries_to_run = [normalized_query]
         
-        # Thêm các câu truy vấn từ khóa nếu phát hiện các chủ đề cụ thể để tối ưu hóa với mô hình embedding tiếng Anh
-        if "esim" in query_lower or "e-sim" in query_lower:
+        # Thêm các câu truy vấn từ khóa nếu phát hiện các chủ đề cụ thể để tối ưu hóa với mô hình embedding
+        if is_day_package_query:
+            queries_to_run.extend([
+                "gói cước data theo ngày 1 ngày 3 ngày 7 ngày ngắn ngày",
+                "danh sách gói cước data ngày MobiFone",
+                "bảng giá gói cước ngày chu kỳ 24h"
+            ])
+        elif "esim" in query_lower or "e-sim" in query_lower:
             queries_to_run.extend(["eSIM MobiFone", "đổi eSIM My MobiFone", "phí đổi eSIM"])
         elif any(kw in query_lower for kw in ["roaming", "chuyển vùng", "cvqt"]):
             queries_to_run.extend(["chuyển vùng quốc tế MobiFone", "đăng ký roaming", "giá cước roaming"])
         elif "5g" in query_lower:
             queries_to_run.extend(["5G MobiFone", "đăng ký 5G", "gói cước 5G"])
         elif any(kw in query_lower for kw in ["wifi", "tivi", "cáp quang", "mobifiber", "internet"]):
-            queries_to_run.extend(["gói cước wifi cáp quang MobiFiber 6WiFi 12WiFi", "gói 6WiFi 1 300 Mbps 900k", "gói 6WiFi 2 400 Mbps"])
+            # [Thay đổi C] Cải thiện WiFi query expansion — ưu tiên bảng giá đầy đủ 9 gói
+            queries_to_run.extend([
+                # Query 1: Bắt chunk chứa bảng giá đầy đủ (có cả WiFi 1Plus, 6WiFi, 12WiFi)
+                "bảng giá gói cước wifi cáp quang MobiFiber WiFi 1Plus WiFi 2Plus WiFi 3Plus 6WiFi 12WiFi",
+                # Query 2: Gói 6 tháng — giá gồm VAT 990.000đ tặng 2 tháng
+                "6WiFi 1Plus 990000 350 Mbps 6 tháng tặng 2 tháng miễn phí tổng 8 tháng",
+                # Query 3: Gói 12 tháng — giá gồm VAT 1.980.000đ tặng 4 tháng
+                "12WiFi 1Plus 1980000 350 Mbps 12 tháng tặng 4 tháng miễn phí tổng 16 tháng",
+            ])
             
         semantic_results_list = []
         for q_text in queries_to_run:
@@ -464,16 +519,52 @@ class MobiFoneRAG:
                         is_uploaded = doc_id.startswith("upload_") or doc_type in ["DOCX", "PDF", "XLSX", "XLS"]
                         
                         # Áp dụng Boosting danh mục hoặc loại tài liệu bảng tính
-                        if doc_type in ["XLSX", "XLS", "CSV"]:
+                        is_package_query = "goi_cuoc" in target_categories
+                        is_doc_id_query = any(k in query_lower for k in ["số hiệu", "công văn", "văn bản", "số:", "quyết định", "thông báo", "hướng dẫn"])
+                        has_pdf_context = any(k in query_lower for k in ["hướng dẫn", "công văn", "quy định", "fwa", "cpe", "mobifiber", "hợp đồng", "văn bản", "triển khai"])
+
+                        if is_doc_id_query and (is_uploaded or doc_type in ["PDF", "DOCX"]):
+                            dist = dist * 0.05
+                            if "[THÔNG TIN ĐỊNH DANH VĂN BẢN CHÍNH THỨC]:" in s_docs[i]:
+                                dist = dist * 0.2  # Ưu tiên số 1 cho chunk định danh văn bản
+                                print(f"✨ [Document ID Header Boost] Document {doc_id} chứa thông tin định danh văn bản chính thức")
+                        elif is_doc_id_query and doc_type == "WEB":
+                            dist = dist * 3.0  # Giảm ưu tiên web khi đang hỏi số hiệu công văn
+                        elif doc_type in ["XLSX", "XLS", "CSV"]:
                             dist = dist * 0.2
                             print(f"✨ Boosting document {doc_id} vì là tài liệu bảng tính ({doc_type})")
-                        elif is_uploaded:
+                        elif is_uploaded and has_pdf_context:
                             dist = dist * 0.25
-                            print(f"✨ Boosting document {doc_id} vì là tài liệu tải lên ({doc_type})")
+                            print(f"✨ Boosting document {doc_id} vì là tài liệu tải lên phù hợp ngữ cảnh ({doc_type})")
                         elif target_categories and category in target_categories:
-                            dist = dist * 0.3  # Giảm khoảng cách để đẩy lên đầu
+                            dist = dist * 0.1  # Giảm khoảng cách mạnh để ưu tiên trang danh mục gói cước
                             print(f"✨ Boosting document {doc_id} vì thuộc danh mục khớp '{category}'")
-                            
+                        elif doc_type == "WEB" and is_package_query:
+                            dist = dist * 0.15
+                            print(f"✨ Boosting document {doc_id} vì là trang web gói cước")
+
+                        # [Thay đổi D] Boost mạnh cho chunk chứa bảng giá đầy đủ WiFi
+                        # Chunk đầy đủ có cả 6WiFi 1Plus VÀ 12WiFi 1Plus → ưu tiên tuyệt đối
+                        # tránh trường hợp chunk overlap (chỉ có 6WiFi 3Plus) bị rank cao hơn
+                        if any(kw in query_lower for kw in ["wifi", "cáp quang", "mobifiber", "internet"]):
+                            doc_lower_check = s_docs[i].lower()
+                            if "6wifi 1plus" in doc_lower_check and "12wifi 1plus" in doc_lower_check:
+                                dist = dist * 0.5  # Giảm dist 50% = tăng priority mạnh
+                                print(f"✨ [WiFi Full-Table Boost] Document {doc_id} chứa bảng giá WiFi đầy đủ")
+
+                        # [Cơ chế Doanh nghiệp] Time-decay & Recency Weighting: Ưu tiên văn bản mới nhất (2026 > 2025)
+                        doc_year = meta.get("doc_year")
+                        if doc_year:
+                            try:
+                                y_val = int(doc_year)
+                                if y_val >= 2026:
+                                    dist = dist * 0.85  # Thưởng 15% cho tài liệu mới nhất năm 2026
+                                    print(f"✨ [Recency Boost] Document {doc_id} được ưu tiên vì ban hành năm {y_val}")
+                                elif y_val <= 2024:
+                                    dist = dist * 1.15  # Phạt nhẹ cho tài liệu cũ
+                            except Exception:
+                                pass
+
                         doc_lower = s_docs[i].lower()
                         
                         # Áp dụng thêm keyword boost cho semantic search
@@ -532,19 +623,23 @@ class MobiFoneRAG:
                     dist = 0.8  # Khoảng cách mặc định cho kết quả từ khóa không qua semantic search
                     
                     doc_type = str(meta.get("type", "")).upper()
-                    category = meta.get("category", "")
                     is_learned_qa = doc_id.startswith("wifi_playbook_") or doc_id.startswith("cskh_qa_") or category == "CSKH_Learned_QA"
+                    is_uploaded_doc = doc_id.startswith("upload_") or doc_type in ["DOCX", "PDF", "XLSX", "XLS"]
                     if is_learned_qa:
                         dist = 0.05
                         print(f"✨ Boosting CSKH Playbook document {doc_id}")
                     elif doc_type in ["XLSX", "XLS", "CSV"]:
                         dist = 0.2
                         print(f"✨ Boosting document {doc_id} vì là tài liệu bảng tính ({doc_type})")
-                    elif is_uploaded:
+                    elif is_uploaded_doc and has_pdf_context:
                         dist = 0.25
-                        print(f"✨ Boosting document {doc_id} vì là tài liệu tải lên ({doc_type})")
+                        print(f"✨ Boosting document {doc_id} vì là tài liệu tải lên phù hợp ngữ cảnh ({doc_type})")
                     elif target_categories and category in target_categories:
-                        dist = dist * 0.3
+                        dist = dist * 0.1
+                        print(f"✨ Boosting document {doc_id} vì thuộc danh mục khớp '{category}'")
+                    elif doc_type == "WEB" and is_package_query:
+                        dist = dist * 0.15
+                        print(f"✨ Boosting document {doc_id} vì là trang web gói cước")
                         
                     doc_lower = l_docs[i].lower()
                     matched_kws = [kw for kw in dynamic_keywords if kw in doc_lower]
@@ -563,19 +658,50 @@ class MobiFoneRAG:
                     })
                     seen_ids.add(doc_id)
                     
-        # 6. Sắp xếp toàn bộ ứng viên theo điểm ưu tiên tăng dần
-        all_candidates.sort(key=lambda x: x["score"])
-        
-        print("DEBUG: Top 10 sorted candidates:")
+        # 6. [Phase 1] BM25 Hybrid: build index lần đầu, sau đó dùng RRF fusion
+        if _HYBRID_AVAILABLE and self._bm25_index is not None and not self._bm25_built:
+            try:
+                all_docs = self.collection.get()
+                if all_docs and all_docs.get("documents"):
+                    self._bm25_index.build(all_docs["documents"], all_docs["ids"])
+                    self._bm25_built = True
+                    print(f"[HYBRID] BM25 index built with {len(all_docs['documents'])} docs")
+            except Exception as e:
+                print(f"[HYBRID] BM25 build failed: {e}")
+
+        if _HYBRID_AVAILABLE and self._bm25_built and self._bm25_index is not None:
+            try:
+                # Lấy top-20 từ BM25 để fusion
+                bm25_results = self._bm25_index.top_k(normalized_query, k=20)
+                # Chuyển all_candidates sang format (id, score, text) cho vector side
+                vector_results = [(c["id"], c["score"], c["document"]) for c in all_candidates]
+                # RRF fusion
+                fused = reciprocal_rank_fusion(vector_results, bm25_results, k_rrf=60, alpha=0.6)
+                # Merge metadata lại
+                id_to_meta = {c["id"]: c["metadata"] for c in all_candidates}
+                fused_candidates = []
+                for doc_id, fused_score, doc_text in fused:
+                    meta = id_to_meta.get(doc_id, {})
+                    fused_candidates.append({"id": doc_id, "document": doc_text, "metadata": meta, "score": 1.0 - fused_score})
+                all_candidates = fused_candidates
+                print(f"[HYBRID] RRF fusion: {len(bm25_results)} BM25 + {len(vector_results)} vector -> {len(fused_candidates)} merged")
+            except Exception as e:
+                print(f"[HYBRID] RRF fusion failed: {e} -- using original order")
+                all_candidates.sort(key=lambda x: x["score"])
+        else:
+            # Fallback: sắp xếp theo điểm gốc
+            all_candidates.sort(key=lambda x: x["score"])
+
+        print("DEBUG: Top 10 sorted candidates after fusion:")
         for idx, item in enumerate(all_candidates[:10]):
             doc_preview = item['document'][:50].strip().replace('\n', ' ')
-            print(f"  {idx+1}. ID: {item['id']}, Score: {item['score']:.4f}, Category: {item['metadata'].get('category')}, Doc (first 50 chars): {doc_preview}")
-        
-        # 7. Loại bỏ trùng lặp nội dung (Deduplication) để tránh lãng phí context
+            print(f"  {idx+1}. ID: {item['id']}, Score: {item['score']:.4f}, Category: {item['metadata'].get('category')}, Doc: {doc_preview}")
+
+        # 7. Loại bỏ trùng lặp nội dung (Deduplication)
         unique_docs = []
         unique_metadatas = []
         seen_contents = set()
-        
+
         for item in all_candidates:
             content = item["document"].strip()
             norm_content = " ".join(content.split())
@@ -583,10 +709,23 @@ class MobiFoneRAG:
                 seen_contents.add(norm_content)
                 unique_docs.append(item["document"])
                 unique_metadatas.append(item["metadata"])
-                
             if len(unique_docs) >= n_results:
                 break
-                
+
+        # 8. [Phase 1] Cross-Encoder Reranking (sau khi đã có top n_results candidates)
+        if _RERANKER_AVAILABLE and len(unique_docs) > 1:
+            try:
+                rerank_inputs = [
+                    {"id": f"doc_{i}", "document": d, "metadata": m, "score": 0.5}
+                    for i, (d, m) in enumerate(zip(unique_docs, unique_metadatas))
+                ]
+                reranked = crossencoder_rerank(query, rerank_inputs, top_k=min(n_results, len(rerank_inputs)))
+                unique_docs = [r["document"] for r in reranked]
+                unique_metadatas = [r["metadata"] for r in reranked]
+                print(f"[RERANKER] Applied cross-encoder reranking on {len(rerank_inputs)} candidates")
+            except Exception as e:
+                print(f"[RERANKER] Reranking failed: {e} -- using fusion order")
+
         return {
             "documents": [unique_docs],
             "metadatas": [unique_metadatas]
@@ -633,48 +772,101 @@ class MobiFoneRAG:
 
     def _classify_sentiment_and_intent(self, question: str, chat_history: list = None) -> dict:
         """
-        Pre-RAG Classifier:
-        Sử dụng Gemini nhận diện tâm lý khách hàng & giai đoạn hội thoại CSKH để chọn chiến lược tư vấn.
+        [Phase 2 - Task 2.1] Pre-RAG Classifier nâng cấp:
+        - Nhận diện tâm lý KH & giai đoạn hội thoại CSKH
+        - Phát hiện escalation (cần chuyển người thật)
+        - Nhận diện lead capture opportunity
+        - Detect đối thủ được nhắc đến để kích hoạt battlecard
+        - Sử dụng lịch sử hội thoại để classify chính xác hơn
         """
         try:
-            prompt = f"""Bạn là Trợ lý AI Phân loại Ý định & Tâm lý Khách hàng CSKH MobiFone.
-Hãy phân tích tin nhắn của khách hàng và trả về duy nhất chuỗi JSON (không kèm markdown rác).
+            # Tóm tắt ngắn lịch sử hội thoại gần nhất (tối đa 3 lượt)
+            history_context = ""
+            if chat_history:
+                recent = chat_history[-6:] if len(chat_history) >= 6 else chat_history
+                for msg in recent:
+                    role = "KH" if msg.get("role") == "user" else "Mia"
+                    content = msg.get("message", "").strip()[:120]
+                    if content:
+                        history_context += f"{role}: {content}\n"
 
+            history_section = ""
+            if history_context:
+                history_section = f"""
+Lịch sử hội thoại gần nhất (để hiểu ngữ cảnh):
+{history_context.strip()}
+"""
+
+            prompt = f"""Bạn là Trợ lý AI Phân loại Ý định & Tâm lý Khách hàng CSKH MobiFone.
+Phân tích tin nhắn khách hàng và trả về DUY NHẤT chuỗi JSON (không markdown).
+{history_section}
 Tin nhắn khách hàng: "{question}"
 
 Yêu cầu phân loại:
-1. "sentiment": Chọn 1 trong các giá trị: "ANGRY", "HESITANT", "READY_TO_BUY", "INFO_SEEKING".
-2. "sales_stage": Chọn 1 trong các giá trị:
-   - "xu_ly_tu_choi_gia" (nếu khách chê giá đắt, so sánh đắt rẻ)
-   - "kham_pha_nhu_cau" (nếu khách hỏi chung chung, tư vấn gói)
-   - "chot_don_closing" (nếu khách hỏi cách mua, đăng ký, dủ điều kiện)
-   - "khach_phan_nan" (nếu khách phàn nàn mạng yếu, lỗi, trừ tiền)
-   - "upsell_cross_sell" (nếu khách muốn tìm gói nhiều data hơn)
-   - "so_sanh_doi_thu" (nếu khách nhắc tới Viettel, VinaPhone)
-3. "tactic": Hướng dẫn ngắn 1 câu cho chuyên viên CSKH ứng xử với tình huống này.
+1. "sentiment": "ANGRY" | "HESITANT" | "READY_TO_BUY" | "INFO_SEEKING"
+2. "sales_stage":
+   - "xu_ly_tu_choi_gia"   (chê đắt, so sánh giá)
+   - "kham_pha_nhu_cau"    (hỏi chung, tư vấn gói)
+   - "chot_don_closing"    (hỏi cách mua, đăng ký)
+   - "khach_phan_nan"      (phàn nàn mạng yếu, lỗi, trừ tiền sai)
+   - "upsell_cross_sell"   (muốn gói nhiều data hơn, gói gia đình)
+   - "so_sanh_doi_thu"     (nhắc Viettel, VNPT, FPT, VinaPhone)
+   - "xu_ly_do_du"         (do dự, cần nghĩ thêm, chưa quyết định)
+   - "retention_winback"   (muốn hủy, cắt mạng, chuyển mạng đi)
+3. "tactic": Hướng dẫn ngắn 1 câu cho Mia ứng xử tình huống này.
+4. "escalation_required": true | false
+   → true nếu: KH nổi giận mạnh, yêu cầu gặp quản lý/trưởng phòng, đe dọa kiện,
+     phàn nàn về vấn đề kỹ thuật nghiêm trọng (mất mạng >24h, trừ tiền sai liên tục),
+     hoặc yêu cầu hoàn tiền khẩn cấp.
+5. "lead_capture": true | false
+   → true nếu: KH hỏi về lắp đặt, đăng ký dịch vụ mới, muốn chốt gói cụ thể,
+     hoặc đang ở giai đoạn "chot_don_closing".
+6. "competitor_mentioned": "" | "viettel" | "vnpt" | "fpt" | "vinaphone"
+   → Tên đối thủ nếu KH nhắc đến, chuỗi rỗng nếu không.
 
 Cấu trúc JSON duy nhất:
 {{
   "sentiment": "HESITANT",
   "sales_stage": "xu_ly_tu_choi_gia",
-  "tactic": "Đồng cảm với khách -> Chia nhỏ chi phí theo ngày -> Nhấn mạnh ưu đãi 4GB/ngày"
+  "tactic": "Đồng cảm -> Chia nhỏ chi phí theo ngày -> Nhấn mạnh ưu đãi tặng thêm",
+  "escalation_required": false,
+  "lead_capture": false,
+  "competitor_mentioned": ""
 }}
 """
-            resp = self._call_gemini_with_retry(prompt, temperature=0.1, max_tokens=150)
+            resp = self._call_gemini_with_retry(prompt, temperature=0.1, max_tokens=200)
             cleaned = resp.strip()
             if cleaned.startswith("```"):
                 lines = cleaned.splitlines()
                 if lines[0].startswith("```"): lines = lines[1:]
                 if lines and lines[-1].startswith("```"): lines = lines[:-1]
                 cleaned = "\n".join(lines).strip()
-            return json.loads(cleaned)
+            result = json.loads(cleaned)
+
+            # Đảm bảo có đủ các field (backward compatible)
+            result.setdefault("escalation_required", False)
+            result.setdefault("lead_capture", False)
+            result.setdefault("competitor_mentioned", "")
+
+            # Log escalation để tracking
+            if result.get("escalation_required"):
+                print(f"[ESCALATION] Detected for question: {question[:80]}")
+            if result.get("lead_capture"):
+                print(f"[LEAD-CAPTURE] Opportunity detected: stage={result.get('sales_stage')}")
+
+            return result
+
         except Exception as e:
             print(f"[PRE-RAG] Cảnh báo Classifier: {e}")
             return {
                 "sentiment": "INFO_SEEKING",
                 "sales_stage": "kham_pha_nhu_cau",
-                "tactic": "Xác nhận nhu cầu và tư vấn thông tin chính xác"
+                "tactic": "Xác nhận nhu cầu và tư vấn thông tin chính xác",
+                "escalation_required": False,
+                "lead_capture": False,
+                "competitor_mentioned": "",
             }
+
 
     def _retrieve_playbook_examples(self, question: str, sales_stage: str = None, n_results: int = 2) -> list:
         """
@@ -690,6 +882,13 @@ Cấu trúc JSON duy nhất:
                 n_results=n_results,
                 where=where_clause
             )
+
+            # Fallback nếu lọc theo stage không có tài liệu nào
+            if (not results or not results.get("documents") or len(results["documents"][0]) == 0) and where_clause:
+                results = self.playbook_collection.query(
+                    query_texts=[question],
+                    n_results=n_results
+                )
             
             playbook_list = []
             if results and results.get("documents") and len(results["documents"]) > 0:
@@ -704,9 +903,59 @@ Cấu trúc JSON duy nhất:
             return playbook_list
         except Exception as e:
             print(f"[PLAYBOOK-RAG] Cảnh báo Playbook Retrieval: {e}")
+            return []
     def answer_question(self, question, history=None, user_info=None):
         """Alias tương thích ngược cho api_server.py gọi answer_question."""
         return self.generate_response(question, chat_history=history, user_info=user_info)
+
+    def _enrich_query_with_history(self, question: str, chat_history: list) -> str:
+        """
+        Conversational Context Injection (Thay đổi A):
+        Nếu câu hỏi hiện tại ngắn/mơ hồ (không chứa từ khóa chủ đề rõ ràng),
+        tự động bổ sung từ khóa ngữ cảnh từ 2 lượt hội thoại cuối để cải thiện
+        chất lượng ChromaDB retrieval.
+
+        Không refactor signature của retrieve() — zero breaking change.
+        """
+        if not chat_history or len(question.strip()) > 40:
+            return question  # Câu hỏi dài/rõ ràng → không cần enrich
+
+        # Các từ khóa rõ ràng trong câu hỏi hiện tại → không cần enrich
+        EXPLICIT_TOPIC_MARKERS = [
+            "wifi", "cáp quang", "mobifiber", "internet",
+            "gói ngày", "data ngày", "d5", "d7", "d10",
+            "esim", "e-sim", "roaming", "chuyển vùng", "5g",
+            "gói cước", "đăng ký"
+        ]
+        q_lower = question.lower()
+        if any(marker in q_lower for marker in EXPLICIT_TOPIC_MARKERS):
+            return question  # Câu hỏi đã có chủ đề rõ → không cần enrich
+
+        # Định nghĩa các topic và từ khóa nhận diện từ lịch sử
+        TOPIC_KEYWORDS = {
+            "wifi": ("wifi cáp quang mobifiber internet",
+                     ["wifi", "cáp quang", "mobifiber", "internet", "6wifi", "12wifi", "fiber", "lắp mạng", "băng thông"]),
+            "goi_ngay": ("gói ngày data ngày",
+                          ["gói ngày", "data ngày", "d5", "d7", "d10", "me5", "theo ngày", "1 ngày"]),
+            "esim": ("esim e-sim",
+                     ["esim", "e-sim"]),
+            "roaming": ("chuyển vùng quốc tế roaming",
+                         ["roaming", "chuyển vùng", "cvqt", "nước ngoài"]),
+            "5g": ("5G MobiFone",
+                   ["5g", "mạng 5g"]),
+        }
+
+        # Lấy 4 messages cuối (tương đương 2 lượt hội thoại)
+        recent = chat_history[-4:] if len(chat_history) >= 4 else chat_history
+        recent_text = " ".join(m.get("message", "") for m in recent).lower()
+
+        for topic, (append_str, keywords) in TOPIC_KEYWORDS.items():
+            if any(kw in recent_text for kw in keywords):
+                enriched = f"{question} {append_str}"
+                print(f"🔗 [Context Injection] Enrich query: '{question}' → '{enriched}' (topic: {topic})")
+                return enriched
+
+        return question
 
     def _normalize_wifi_promo_context(self, fact_contexts: list, fact_metadatas: list) -> list:
         """
@@ -743,10 +992,28 @@ Cấu trúc JSON duy nhất:
 
     def generate_response(self, question, chat_history=None, user_info=None):
         import re
-        """Truy xuất thông tin liên quan và gửi OpenAI sinh câu trả lời"""
-        # 1. Lấy ngữ cảnh tương quan (Tăng từ 3 lên 5 để tối ưu tư vấn)
-        # [P3] Tăng n_results từ 5 lên 10 để cải thiện Context Recall
-        retrieved = self.retrieve(question, n_results=10)
+        """Truy xuất thông tin liên quan và gửi LLM sinh câu trả lời"""
+        # 1. [Phase 1 — Task 1.1] Query Reformulation: viết lại câu hỏi follow-up mơ hồ
+        # Thay thế _enrich_query_with_history (keyword matching) bằng LLM-based reformulation
+        was_reformulated = False
+        if _REFORMULATOR_AVAILABLE:
+            reformulated, was_reformulated = reformulate_query(
+                question=question,
+                chat_history=chat_history,
+                gemini_client=gemini_client,
+                gemini_model=GEMINI_MODEL,
+            )
+            enriched_question = reformulated
+            if was_reformulated:
+                print(f"[PIPELINE] Query reformulated: {repr(question)} -> {repr(reformulated)}")
+        else:
+            # Fallback về enrich cũ nếu module chưa có
+            enriched_question = self._enrich_query_with_history(question, chat_history)
+
+        self._last_was_reformulated = was_reformulated
+
+        # [P3] n_results=10 để cải thiện Context Recall trước khi rerank về top-5
+        retrieved = self.retrieve(enriched_question, n_results=10)
         contexts = retrieved.get('documents', [[]])[0]
         sources = retrieved.get('metadatas', [[]])[0]
 
@@ -756,7 +1023,22 @@ Cấu trúc JSON duy nhất:
 
         for doc, meta in zip(contexts, sources):
             meta_type = str(meta.get("type") or meta.get("ingest_type") or "").lower()
-            if meta_type == "conversation":
+            meta_source = str(meta.get("source") or meta.get("source_url") or "").lower()
+            meta_category = str(meta.get("category") or "").lower()
+
+            # BẢO VỆ TUYỆT ĐỐI NGUYÊN TẮC GROUNDING:
+            # Tất cả chat mẫu/kịch bản bán hàng chỉ được đưa vào playbook_contexts để học phong thái.
+            # TUYỆT ĐỐI KHÔNG BAO GIỜ đưa chat mẫu vào fact_contexts làm dữ liệu sự thật!
+            is_playbook = (
+                meta_type in ["conversation", "qa_pair", "sales_playbook", "playbook"] or
+                "chat_mining" in meta_source or
+                "playbook" in meta_source or
+                "playbook" in meta_category or
+                "cskh_learned" in meta_category or
+                "cskh_qa" in meta_category
+            )
+
+            if is_playbook:
                 playbook_contexts.append(doc)
             else:
                 fact_contexts.append(doc)
@@ -970,28 +1252,84 @@ Cấu trúc JSON duy nhất:
             fact_contexts = injected_facts + fact_contexts
 
         # ============================================================
-        # [P2] REGISTRATION KNOWLEDGE BASE — Bypass Context Recall issue
-        # Tiêm trực tiếp cú pháp đăng ký (SMS/USSD/App) cho các gói phổ biến
+        # [ANTI-HALLUCINATION SHIELD] WiFi Package Price Table Injection
+        # Khi câu hỏi liên quan đến gói WiFi/MobiFiber/cáp quang:
+        # BẮT BUỘC inject TOÀN BỘ bảng giá chính xác từ wifi_packages.json
+        # vào fact_context — bất kể RAG retrieval có lấy đúng chunk hay không.
+        # Đây là tường lửa chống LLM hallucination giá cước WiFi.
         # ============================================================
-        registration_triggers = ["đăng ký", "cách đăng", "dang ky", "hướng dẫn", "thủ tục", "làm thế nào", "đk ", " dk ", "soạn"]
-        is_registration_query = any(t in question_lower for t in registration_triggers)
+        wifi_keywords = [
+            "wifi", "wi-fi", "mobifiber", "cáp quang", "cap quang", "internet",
+            "băng thông", "bang thong", "gói mạng", "goi mang",
+            "6wifi", "12wifi", "1plus", "2plus", "3plus", "vieon",
+            "lắp mạng", "lap mang", "đăng ký mạng", "dang ky mang",
+            "tốc độ", "toc do", "mbps", "modem"
+        ]
+        is_wifi_query = any(kw in question.lower() for kw in wifi_keywords)
+        if not is_wifi_query and chat_history:
+            # Kiểm tra lịch sử hội thoại: nếu 3 tin nhắn gần nhất liên quan WiFi
+            recent_msgs = " ".join([
+                str(m.get("content", "")) for m in chat_history[-6:]
+            ]).lower()
+            is_wifi_query = any(kw in recent_msgs for kw in wifi_keywords)
 
-        registration_kb = {
-            "tk90": "[CÚ PHÁP ĐĂNG KÝ GÓI TK90] Soạn: DK TK90 gửi 9084. USSD: *098#. App My MobiFone: Gói cước -> TK90.",
-            "tk135": "[CÚ PHÁP ĐĂNG KÝ GÓI TK135] Soạn: DK TK135 gửi 9084. USSD: *098#. App My MobiFone: Gói cước -> TK135.",
-            "f70": "[CÚ PHÁP ĐĂNG KÝ GÓI F70] Soạn: DK F70 gửi 9084. USSD: *098#. App My MobiFone: Gói cước -> F70.",
-            "f90n": "[CÚ PHÁP ĐĂNG KÝ GÓI F90N] Soạn: DK F90N gửi 9084. USSD: *098#. App My MobiFone: Gói cước -> F90N.",
-            "mxh100": "[CÚ PHÁP ĐĂNG KÝ GÓI MXH100] Soạn: DK MXH100 gửi 9084. App My MobiFone: Gói cước -> MXH100.",
-            "mxh150": "[CÚ PHÁP ĐĂNG KÝ GÓI MXH150] Soạn: DK MXH150 gửi 9084. App My MobiFone: Gói cước -> MXH150.",
-            "data50": "[CÚ PHÁP ĐĂNG KÝ GÓI DATA50] Soạn: DK DATA50 gửi 9084. App My MobiFone: Gói cước -> DATA50."
-        }
+        if is_wifi_query:
+            wifi_pkg_path = os.path.join(BASE_DIR, "data", "wifi_packages.json")
+            if os.path.exists(wifi_pkg_path):
+                try:
+                    with open(wifi_pkg_path, "r", encoding="utf-8") as f:
+                        pkg_data = json.load(f)
+                    packages = pkg_data.get("packages", [])
 
-        if is_registration_query:
-            for pkg_key, reg_info in registration_kb.items():
-                pattern = r'(?<![a-z0-9])' + re.escape(pkg_key) + r'(?![a-z0-9])'
-                if re.search(pattern, question_lower):
-                    fact_contexts = [reg_info] + fact_contexts
+                    # Nhóm theo chu kỳ
+                    groups = {"1": [], "6": [], "12": []}
+                    for p in packages:
+                        key = str(p.get("pay_months", 1))
+                        if key in groups:
+                            groups[key].append(p)
 
+                    def fmt_currency(n):
+                        return f"{int(n):,}".replace(",", ".") + "đ"
+
+                    lines = [
+                        "[BẢNG GIÁ CHÍNH THỨC MOBIFIBER — ĐÃ BAO GỒM VAT — NGUỒN SỰ THẬT DUY NHẤT]",
+                        "TUYỆT ĐỐI CHỈ DÙNG GIÁ TỪ BẢNG NÀY. KHÔNG DÙNG GIÁ TỰ NHỚ HOẶC SUY LUẬN.\n"
+                    ]
+
+                    if groups["1"]:
+                        lines.append("Nhóm 1: Đóng từng tháng (Đơn kỳ linh hoạt):")
+                        for p in groups["1"]:
+                            lines.append(
+                                f"  - {p['display_name']} | Tốc độ: {p['speed_mbps']} Mbps | "
+                                f"Giá: {fmt_currency(p['base_price'])}/tháng"
+                            )
+
+                    if groups["6"]:
+                        lines.append("\nNhóm 2: Đóng trước 6 tháng — TẶNG THÊM 2 THÁNG MIỄN PHÍ = TỔNG 8 THÁNG SỬ DỤNG:")
+                        for p in groups["6"]:
+                            lines.append(
+                                f"  - {p['display_name']} | Tốc độ: {p['speed_mbps']} Mbps | "
+                                f"Tổng thanh toán: {fmt_currency(p['base_price'])} (đóng 6 tháng + tặng 2 tháng miễn phí) | "
+                                f"Quy đổi: {fmt_currency(p['price_per_month'])}/tháng"
+                            )
+
+                    if groups["12"]:
+                        lines.append("\nNhóm 3: Đóng trước 12 tháng — TẶNG THÊM 4 THÁNG MIỄN PHÍ = TỔNG 16 THÁNG SỬ DỤNG:")
+                        for p in groups["12"]:
+                            lines.append(
+                                f"  - {p['display_name']} | Tốc độ: {p['speed_mbps']} Mbps | "
+                                f"Tổng thanh toán: {fmt_currency(p['base_price'])} (đóng 12 tháng + tặng 4 tháng miễn phí) | "
+                                f"Quy đổi: {fmt_currency(p['price_per_month'])}/tháng"
+                            )
+
+                    lines.append("\nĐặc quyền đi kèm TẤT CẢ các gói: Miễn phí Modem WiFi 6 | Miễn phí lắp đặt | Khảo sát đo sóng tận nhà miễn phí")
+                    wifi_table_text = "\n".join(lines)
+                    fact_contexts.insert(0, wifi_table_text)
+                    print(f"[WiFi Shield] Injected price table: {len(packages)} packages into fact_contexts")
+                except Exception as e:
+                    print(f"[WiFi Shield] Loi doc wifi_packages.json: {e}")
+
+        # ============================================================
         # Chuẩn hóa giá WiFi từ metadata ChromaDB (đọc pay_months/price_per_month inject lúc ingest)
         # Không dùng dict hardcode — giá thay đổi chỉ cần sửa wifi_packages.json + re-ingest
         fact_contexts = self._normalize_wifi_promo_context(fact_contexts, fact_metadatas)
@@ -1022,48 +1360,15 @@ Cấu trúc JSON duy nhất:
             
         # 2. Đọc cấu hình động từ rag_config.json (nếu có)
         config_path = os.path.join(BASE_DIR, "rag_config.json")
+        # Fallback toi thieu - TUYET DOI KHONG chua gia cuoc hay ten goi cung.
+        # Toan bo Rules va gia cuoc se duoc nap tu rag_config.json ngay ben duoi.
+        # Khi rag_config.json loi parse, bot dung prompt nay - an toan tuyet doi.
         system_prompt = (
-            "Bạn là Mia - Chuyên viên Chăm sóc Khách hàng số chuyên nghiệp, thân thiện và tận tâm của nhà mạng MobiFone.\n"
-            "Tuyệt đối KHÔNG tự nhận mình là trợ lý ảo, AI, chatbot hay AI Agent. Hãy xưng hô lịch sự là 'Mia' hoặc 'Chuyên viên chăm sóc khách hàng'.\n"
-            "CHỈ dựa trên thông tin ngữ cảnh chính thức được cung cấp dưới đây để trả lời. Đi thẳng vào trọng tâm câu hỏi.\n\n"
-            "[Quy tắc định dạng bắt buộc]:\n"
-            "1. Tuyệt đối KHÔNG sử dụng bất kỳ biểu tượng cảm xúc (emoji/icon) nào trong câu trả lời (KHÔNG dùng 👋, 📶, 📱, 💸, 🌟, 🛠️, 🎁, 😊, 🎉, 📞, v.v.). Phản hồi sạch và chuyên nghiệp.\n"
-            "2. Sử dụng định dạng Markdown rõ ràng: in đậm các thông tin quan trọng bằng dấu ** (ví dụ: **Mia**, gói **TK135**, giá cước **135.000 đồng**).\n"
-            "3. Sử dụng gạch đầu dòng với dấu gạch ngang '- ' hoặc số '1. ', '2. ' ở đầu dòng để liệt kê các gói cước hoặc thông tin chi tiết. Giữa các phần/các đoạn phải có một dòng trống để tạo khoảng cách dòng thoáng, dễ đọc. KHÔNG viết liền tù tì tất cả các ý trên cùng một dòng.\n"
-            "4. Nếu khách hỏi bằng tiếng Anh, phản hồi lịch sự bằng tiếng Anh.\n\n"
-            "[Nguyên tắc phản hồi]:\n"
-            "1. KHÔNG YÊU CẦU HỎI TÊN KHÁCH HÀNG.\n"
-            "2. THÔNG TIN GÓI CƯỚC RÕ RÀNG: Luôn cung cấp đầy đủ Giá cước, Chu kỳ, Lợi ích chi tiết. KHÔNG mơ hồ.\n"
-            "3. GIAO TIẾP TỪNG BƯỚC: Không hỏi nhiều câu cùng lúc, không đưa quá nhiều lựa chọn cùng lúc.\n"
-            "4. KẾT THÚC BẰNG CTA RÕ RÀNG: Mọi phản hồi tư vấn phải có câu kêu gọi hành động (đăng ký, để lại SĐT, liên hệ tổng đài).\n"
-            "5. BẢO MẬT SĐT: Khi khách cung cấp SĐT, TUYỆT ĐỐI KHÔNG lặp lại SĐT đó ở bất kỳ tin nhắn nào.\n"
-            "6. CHÀO HỎI XÃ GIAO: Giới thiệu là Mia, gợi ý chủ đề hỗ trợ bằng gạch đầu dòng (KHÔNG dùng emoji/icon), đặt 1 câu hỏi dẫn dắt.\n"
-            "7. CHUYÊN VIÊN TƯ VẤN THỰC SỰ: Chủ động đề xuất gói cước phù hợp nhu cầu cụ thể, không liệt kê thụ động.\n\n"
-            "══════════════════════════════════════════════════════════\n"
-            "[QUY TẮC SẮT ĐÁ — TUYỆT ĐỐI KHÔNG ĐƯỢC VI PHẠM]:\n"
-            "══════════════════════════════════════════════════════════\n"
-            "RULE 0 — TỰ KIỂM TRA TRƯỚC KHI TRẢ LỜI (GROUNDING CHECK):\n"
-            "  Trước khi viết câu trả lời, hãy tự hỏi: 'Thông tin này có THỰC SỰ xuất hiện trong ngữ cảnh được cung cấp không?'\n"
-            "  Nếu KHÔNG → KHÔNG được đưa thông tin đó vào câu trả lời. Thay vào đó hướng dẫn gọi 18001090.\n"
-            "  Nếu CÓ → Đưa thông tin đó vào và trích dẫn đúng nguồn (gói cước, chu kỳ, giá cước...).\n"
-            "RULE 1 — KHÔNG BỊA ĐẶT: CHỈ dùng thông tin CÓ trong ngữ cảnh. TUYỆT ĐỐI KHÔNG tự tạo mã SMS, USSD, giá cước, tên gói, chu kỳ nếu không được nêu rõ trong ngữ cảnh.\n"
-            "RULE 2 — XỬ LÝ [THÔNG TIN XÁC THỰC] (OOD BLOCKER):\n"
-            "  • Khi ngữ cảnh có nhãn '[THÔNG TIN XÁC THỰC]', đây là sự thật TUYỆT ĐỐI từ hệ thống nội bộ MobiFone.\n"
-            "  • PHẢI NÊU RÕ TÊN NHÀ MẠNG sở hữu gói (ví dụ: 'V90 là gói của VIETTEL, không phải MobiFone').\n"
-            "  • KHÔNG được nói 'hệ thống chưa cập nhật' hay 'chưa tìm thấy thông tin' — hãy nêu thẳng sự thật.\n"
-            "  • Sau đó giới thiệu gói MobiFone tương đương (nếu có trong context) và đề nghị để lại SĐT.\n"
-            "RULE 3 — GÓI NGOÀI DB (không tồn tại): Nếu context xác nhận gói không tồn tại, PHẢI nói THẲNG THẮN:\n"
-            "  'Mia đã kiểm tra và gói [tên gói] KHÔNG có trong hệ thống MobiFone.' Không dùng từ 'chưa cập nhật'.\n"
-            "RULE 4 — CÚ PHÁP ĐĂNG KÝ [CÚ PHÁP ĐĂNG KÝ GÓI ...]: Khi ngữ cảnh có nhãn này, đây là cú pháp chính thức.\n"
-            "  Trả lời ĐẦY ĐỦ TẤT CẢ các cách đăng ký được liệt kê (SMS, USSD, App, tổng đài).\n"
-            "RULE 5 — TƯ VẤN & DẪN DẮT KHÁCH HÀNG: Khi không có thông tin chi tiết hoặc câu hỏi của khách chung chung (như 'wifi', 'tư vấn', 'gói cước'): TUYỆT ĐỐI KHÔNG BỊA ĐẶT thông tin/giá cước. Hãy lịch sự xác nhận nhu cầu và đặt câu hỏi gợi ý dẫn dắt phân loại nhu cầu (ví dụ hỏi khách cần gói Internet cáp quang cố định MobiFiber hay gói Data 4G/5G di động).\n"
-            "RULE 6 — QUY TẮC CHÀO HỎI (GREETING RULE): CHỈ chào hỏi và giới thiệu tên (\"Chào bạn, tôi là Mia...\") ở lượt hội thoại ĐẦU TIÊN (khi [Lịch sử hội thoại] trống). Nếu trong phần [Lịch sử hội thoại] ĐÃ CÓ tin nhắn trao đổi trước đó, TUYỆT ĐỐI KHÔNG lặp lại câu chào \"Chào bạn, tôi là Mia, chuyên viên CSKH MobiFone...\". Hãy đi thẳng vào tư vấn, trả lời mượt mà và tự nhiên như chuyên viên CSKH đang tiếp nối hội thoại!\n"
-            "RULE 7 — QUY TẮC TƯ VẤN TRƯỚC - XIN SĐT SAU (PROFESSIONAL CONSULTATION RULE):\n"
-            "  • Khi khách hàng đã cung cấp thông tin nhu cầu (như số lượng 4 điện thoại + 1 tivi, nhà nhỏ), Mia BẮT BUỘC PHẢI ĐỀ XUẤT NGAY GÓI CƯỚC CỤ THỂ CÓ TRONG THÔNG TIN NGỮ CẢNH (Ví dụ: Đề xuất gói 6WiFi 1 tốc độ 300 Mbps cước 900.000đ cho 8 tháng = 112.500đ/tháng). KHÔNG tính quy đổi chi phí theo ngày (không cần ghi x.xxxđ/ngày).\n"
-            "  • TUYỆT ĐỐI KHÔNG hoãn tư vấn để vội vã đòi xin SĐT của khách hàng trước khi đưa ra thông tin gói cước và giá cước cụ thể.\n"
-            "  • CHỈ xin SĐT khi khách hàng tỏ ý muốn đăng ký gói cước, muốn đặt lịch hẹn khảo sát hạ tầng tại địa chỉ, hoặc yêu cầu tư vấn trực tiếp qua điện thoại.\n"
-            "  • Khi khách hàng để lại SĐT, hãy xác nhận lịch sự và thông báo hệ thống đã ghi nhận thông tin đăng ký để chuyên viên liên hệ hỗ trợ trong thời gian sớm nhất.\n"
-            "══════════════════════════════════════════════════════════"
+            "Ban la Mia - Chuyen vien Cham soc Khach hang so chuyen nghiep cua MobiFone.\n"
+            "Tuyet doi KHONG tu nhan minh la tro ly ao, AI, chatbot hay AI Agent.\n"
+            "CHI dua tren thong tin ngu canh chinh thuc duoc cung cap de tra loi.\n"
+            "TUYET DOI KHONG tu tao gia cuoc, ten goi, chu ky neu khong co trong ngu canh.\n"
+            "Neu khong tim thay thong tin, huong dan khach lien he tong dai 18001090.\n"
         )
         temperature = 0.0  # Set to 0.0 to prevent hallucination / enforce strict factual grounding
         top_p = 0.9
@@ -1102,7 +1407,27 @@ Cấu trúc JSON duy nhất:
 
         # 2.5. Tầng 2: Pre-RAG Classifier & Behavior Playbook Retrieval
         class_info = self._classify_sentiment_and_intent(question, chat_history)
+        self._last_intent = class_info
         playbooks = self._retrieve_playbook_examples(question, sales_stage=class_info.get("sales_stage"))
+
+        competitor_addon = ""
+        comp_name = class_info.get("competitor_mentioned", "").lower()
+        if comp_name:
+            try:
+                battlecard_path = os.path.join(BASE_DIR, "data", "playbooks", "competitor_battlecards.json")
+                if os.path.exists(battlecard_path):
+                    with open(battlecard_path, "r", encoding="utf-8") as bf:
+                        bc_data = json.load(bf)
+                        comp_info = bc_data.get("competitors", {}).get(comp_name)
+                        if comp_info:
+                            advs = "\n".join(f"  + {adv}" for adv in comp_info.get("mobifone_advantages", []))
+                            competitor_addon = (
+                                f"\n• ĐỐI THỦ ĐƯỢC NHẮC ĐẾN: {comp_info.get('name')}\n"
+                                f"• ƯU THẾ VƯỢT TRỘI CỦA MOBIFONE CẦN NHẤN MẠNH:\n{advs}\n"
+                                f"• MẪU PHẢN HỒI THUYẾT PHỤC: {comp_info.get('response_template', '')}\n"
+                            )
+            except Exception as e:
+                print(f"[BATTLECARD] Lỗi đọc battlecard {comp_name}: {e}")
 
         behavior_prompt_addon = (
             f"\n\n══════════════════════════════════════════════════════════\n"
@@ -1110,7 +1435,8 @@ Cấu trúc JSON duy nhất:
             f"══════════════════════════════════════════════════════════\n"
             f"• Trạng thái cảm xúc khách hàng: {class_info.get('sentiment', 'BÌNH THƯỜNG')}\n"
             f"• Tình huống/Giai đoạn bán hàng: {class_info.get('sales_stage', 'kham_pha_nhu_cau')}\n"
-            f"• CHIẾN LƯỢC PHẢN HỒI YÊU CẦU: {class_info.get('tactic', 'Tư vấn lịch sự, chuyên nghiệp')}\n\n"
+            f"• CHIẾN LƯỢC PHẢN HỒI YÊU CẦU: {class_info.get('tactic', 'Tư vấn lịch sự, chuyên nghiệp')}\n"
+            f"{competitor_addon}\n"
         )
 
         if playbooks:

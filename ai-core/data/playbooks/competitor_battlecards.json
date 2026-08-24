@@ -1,0 +1,37 @@
+{
+  "_note": "Thong tin so sanh uu diem MobiFone vs doi thu canh tranh",
+  "_version": "1.0",
+  "_updated": "2026-08-21",
+  "competitors": {
+    "viettel": {
+      "name": "Viettel",
+      "mobifone_advantages": [
+        "Modem WiFi 6 tang mien phi (Viettel thuong tinh phi thue thiet bi)",
+        "Uu dai dong trc 6 tang 2 thang (Viettel khong co chinh sach tuong duong mac dinh)",
+        "Cam ket nghiem thu: Mang muot moi thu tien - Viettel thu tien truoc",
+        "Ho tro ky thuat 24/7 chuyen biet WiFi, khong hang doi nhu tong dai Viettel"
+      ],
+      "response_template": "Da Viettel la nha mang uy tin, tuy nhien MobiFone hien co 3 diem vuot troi anh/chi nen biet: (1) Tang mien phi Modem WiFi 6 tri gia 1.5 trieu, (2) Uu dai dong truoc tang them thang su dung, (3) Nghiem thu muot tai nha moi thu tien. Anh/chi co muon do song mien phi truoc khi quyet dinh khong?"
+    },
+    "vnpt": {
+      "name": "VNPT/VinaPhone",
+      "mobifone_advantages": [
+        "Mang di dong MobiFone manh hon tai khu vuc nong thon/ngoai thanh",
+        "Modem WiFi 6 cong nghe moi nhat (VNPT van dung WiFi 5)",
+        "Quy trinh lap dat nhanh hon (2-4h, VNPT thuong 1-3 ngay lam viec)",
+        "Doi ngu ky thuat tre, am hieu cong nghe moi"
+      ],
+      "response_template": "Da VNPT cung la lua chon tot, nhung voi MobiFone anh/chi duoc trang bi Modem WiFi 6 cong nghe moi nhat (toc do cao hon 3-4 lan WiFi 5, xuyen tuong cuc tot), va quy trinh lap dat nhanh trong ngay. Anh/chi co muon ky thuat vien den do song thuc te tai nha mien phi khong?"
+    },
+    "fpt": {
+      "name": "FPT Telecom",
+      "mobifone_advantages": [
+        "MobiFone la mang quoc doanh, phu song toan quoc rong hon",
+        "Chinh sach bao hanh Modem suot thoi gian su dung (FPT thue thiet bi)",
+        "Uu dai dong truoc tang thang su dung mien phi",
+        "Ho tro technical 24/7, khong chi trong gio hanh chinh"
+      ],
+      "response_template": "Da FPT co dich vu tot tai khu vuc thanh pho lon. Voi MobiFone, anh/chi so huu luon Modem WiFi 6 (bao hanh suot thoi gian dung) thay vi thue thiet bi nhu FPT, va duoc huong uu dai tang them thang cuoc mien phi. Anh/chi cho Mia so dien thoai de khao sat kha nang phu song tai dia chi nhe!"
+    }
+  }
+}

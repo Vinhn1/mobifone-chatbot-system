@@ -12,6 +12,14 @@ from pydantic import BaseModel
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Query
 from fastapi.middleware.cors import CORSMiddleware
 from rag_pipeline import AIServiceError, MobiFoneRAG, chroma_write_lock
+
+# [Phase 2 - Task 2.3] Sales Metrics Tracking
+try:
+    from sales_metrics import record_chat_event, get_summary as metrics_summary
+    _METRICS_AVAILABLE = True
+except ImportError:
+    _METRICS_AVAILABLE = False
+    print("[API] sales_metrics.py not found -- metrics tracking disabled")
 try:
     from crawl_engine import crawl_url_async, crawl_site_deep_async, _extract_title_and_text_from_html
 except ImportError:
@@ -645,18 +653,47 @@ def health_check():
 # Chat endpoint
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
+    t_start = time.time()
+    # Generate session_id: dùng từ request nếu có, hoặc tự sinh
+    session_id = getattr(request, "session_id", None) or str(uuid.uuid4())
     try:
         history_list = []
         if request.history:
             history_list = [{"role": msg.role, "message": msg.message} for msg in request.history]
-            
-        answer, sources, suggested_questions, images = bot.answer_question(request.message, history=history_list, user_info=request.userInfo)
+
+        answer, sources, suggested_questions, images = bot.answer_question(
+            request.message, history=history_list, user_info=request.userInfo
+        )
         is_fallback = False
         if "[ESCALATE]" in answer:
             is_fallback = True
             answer = answer.replace("[ESCALATE]", "").strip()
-            
-        return ChatResponse(answer=answer, sources=sources, suggested_questions=suggested_questions, images=images, is_fallback=is_fallback)
+
+        # [Phase 2] Ghi metrics
+        if _METRICS_AVAILABLE:
+            latency_ms = (time.time() - t_start) * 1000
+            # Lấy intent result từ pipeline nếu được expose (optional)
+            try:
+                intent_result = getattr(bot, "_last_intent", None)
+            except Exception:
+                intent_result = None
+            record_chat_event(
+                session_id=session_id,
+                question=request.message,
+                answer_length=len(answer),
+                intent_result=intent_result,
+                latency_ms=latency_ms,
+                was_reformulated=getattr(bot, "_last_was_reformulated", False),
+                sources_count=len(sources) if sources else 0,
+            )
+
+        return ChatResponse(
+            answer=answer,
+            sources=sources,
+            suggested_questions=suggested_questions,
+            images=images,
+            is_fallback=is_fallback,
+        )
     except AIServiceError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail)
     except Exception as e:
@@ -667,6 +704,16 @@ def chat(request: ChatRequest):
             raise HTTPException(status_code=429, detail="Đã vượt giới hạn API, vui lòng thử lại sau.")
         else:
             raise HTTPException(status_code=500, detail=f"Lỗi hệ thống: {error_msg}")
+
+
+# [Phase 2] Sales Metrics Dashboard endpoint
+@app.get("/metrics")
+def get_metrics(last_n: int = 100):
+    """Admin endpoint: Xem tóm tắt sales metrics trong last_n cuộc hội thoại."""
+    if not _METRICS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Metrics module chưa được cài đặt.")
+    return metrics_summary(last_n=last_n)
+
 
 # Lấy cấu hình Prompt Playground
 @app.get("/config")
@@ -1216,6 +1263,110 @@ async def ingest_from_html(
     }
 
 
+def _normalize_administrative_document(text_content: str, filename: str) -> tuple[str, dict]:
+    """
+    Chuẩn hóa số hiệu, ngày ban hành và header của các văn bản hành chính / công văn PDF.
+    - Đọc DUY NHẤT một số hiệu chính thức, không thêm mở ngoặc biến thể (hoặc ...).
+    - Nếu văn bản không có số hiệu công văn, đánh dấu rõ ràng 'KHÔNG CÓ TRÊN VĂN BẢN GỐC'.
+    """
+    import re
+    clean_name = os.path.splitext(filename)[0]
+    
+    doc_number = None
+    doc_symbol = None
+    issue_date = None
+    doc_year = 2025
+    
+    # 1. Trích xuất số phát hành và ký hiệu từ filename
+    m1 = re.search(r'(?:VB_DEN_)?(\d{2,6})[_\-]([A-Za-z0-9\-_Đđ]+?)(?:_(\d{8}))?(?:_|$)', clean_name, re.IGNORECASE)
+    if m1:
+        doc_number = m1.group(1)
+        doc_symbol = m1.group(2).replace('_', '-')
+        if m1.group(3):
+            d_raw = m1.group(3)
+            issue_date = f"{d_raw[6:8]}/{d_raw[4:6]}/{d_raw[0:4]}"
+            try:
+                doc_year = int(d_raw[0:4])
+            except Exception:
+                pass
+            
+    if not doc_number:
+        m2 = re.search(r'VB\s*(\d{2,6})', clean_name, re.IGNORECASE)
+        if m2:
+            doc_number = m2.group(1)
+            
+    # 2. Tìm kiếm và phục hồi dòng 'Số: /...' trong nội dung text nếu bị khuyết số
+    if doc_number:
+        def repl_so(match):
+            existing_symbol = match.group(1) or ""
+            existing_symbol = existing_symbol.strip()
+            if existing_symbol:
+                return f"Số: {doc_number}/{existing_symbol}"
+            elif doc_symbol:
+                return f"Số: {doc_number}/{doc_symbol}"
+            return f"Số: {doc_number}"
+            
+        text_content = re.sub(r'Số:\s*\/\s*([A-Za-z0-9\-_Đđ\s]+?)(?=\s+Hà Nội|\s+TP|\s+ngày|\n|$)', repl_so, text_content, count=1, flags=re.IGNORECASE)
+
+    # 3. Quét lại số hiệu đầy đủ từ dòng 'Số: ...' trong text
+    full_so_hieu = ""
+    so_match = re.search(r'Số:\s*([0-9]+[A-Za-z0-9\-_\/Đđ\s]+?)(?=\s+Hà Nội|\s+TP|\s+ngày|\n|$)', text_content, re.IGNORECASE)
+    if so_match:
+        full_so_hieu = re.sub(r'\s+', '', so_match.group(1))
+    elif doc_number and doc_symbol:
+        full_so_hieu = f"{doc_number}/{doc_symbol}"
+    elif doc_number:
+        full_so_hieu = doc_number
+
+    # 4. Trích xuất trích yếu V/v... từ text
+    subject_m = re.search(r'V\/v\s+([^\n\r]+)', text_content, re.IGNORECASE)
+    subject_text = subject_m.group(1).strip() if subject_m else ""
+    
+    # 5. Trích xuất ngày ban hành từ text nếu chưa có từ filename
+    if not issue_date:
+        date_m = re.search(r'ngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(\d{4})', text_content, re.IGNORECASE)
+        if date_m:
+            issue_date = f"{int(date_m.group(1)):02d}/{int(date_m.group(2)):02d}/{date_m.group(3)}"
+            try:
+                doc_year = int(date_m.group(3))
+            except Exception:
+                pass
+        else:
+            y_m = re.search(r'năm\s+(\d{4})', clean_name)
+            if y_m:
+                try:
+                    doc_year = int(y_m.group(1))
+                except Exception:
+                    pass
+
+    # 6. Tạo metadata header chuẩn hóa chèn lên đầu
+    header_lines = ["[THÔNG TIN ĐỊNH DANH VĂN BẢN CHÍNH THỨC]:"]
+    if full_so_hieu:
+        # Chuẩn hóa duy nhất 1 định dạng (ví dụ Đ01 hoặc D01 theo đúng văn bản)
+        header_lines.append(f"- SỐ HIỆU CÔNG VĂN CHÍNH THỨC: {full_so_hieu}")
+    else:
+        header_lines.append("- SỐ HIỆU CÔNG VĂN CHÍNH THỨC: KHÔNG CÓ TRÊN VĂN BẢN GỐC (Tài liệu nội bộ/phụ lục không ghi số hiệu công văn)")
+        
+    if issue_date:
+        header_lines.append(f"- NGÀY BAN HÀNH: {issue_date}")
+    if subject_text:
+        header_lines.append(f"- TRÍCH YẾU NỘI DUNG: {subject_text}")
+    header_lines.append(f"- TÊN FILE GỐC: {filename}")
+    if full_so_hieu:
+        header_lines.append("[LƯU Ý PHÁP LÝ]: Mọi số hiệu khác xuất hiện trong phần 'Căn cứ...' chỉ là tài liệu viện dẫn cũ, KHÔNG PHẢI số hiệu của văn bản này.")
+    header_lines.append("──────────────────────────────────────────\n")
+    
+    normalized_header = "\n".join(header_lines) + "\n"
+    
+    metadata_info = {
+        "doc_number": full_so_hieu if full_so_hieu else "KHONG_CO",
+        "issue_date": issue_date if issue_date else "",
+        "doc_year": doc_year,
+        "subject": subject_text
+    }
+    return normalized_header + text_content, metadata_info
+
+
 # ─────────────────────────────────────────────────────
 # Upload tài liệu và nạp vector tức thì (Hot-reload Ingestion)
 # ─────────────────────────────────────────────────────
@@ -1321,6 +1472,28 @@ async def upload_document(
     if not is_pptx and (not text_content.strip() or len(text_content.strip()) < 10):
         raise HTTPException(status_code=400, detail="Nội dung file trống hoặc quá ngắn, không thể nạp vector.")
 
+    # Tính mã băm SHA-256 nội dung file để khử trùng lặp liên file (Cross-file Deduplication)
+    import hashlib
+    content_hash = hashlib.sha256(file_bytes).hexdigest()
+
+    # Kiểm tra xem nội dung tài liệu này đã tồn tại trong ChromaDB chưa
+    try:
+        existing_check = bot.collection.get(where={"content_hash": content_hash}, include=["metadatas"])
+        if existing_check and existing_check.get("ids"):
+            first_meta = existing_check["metadatas"][0] if existing_check["metadatas"] else {}
+            orig_file = first_meta.get("source_title", "tài liệu trước đó")
+            print(f"[DEDUPLICATION] ⚡ Bỏ qua file '{filename}' vì nội dung trùng lặp 100% (SHA-256) với '{orig_file}'")
+            return {
+                "status": "success",
+                "message": f"Nội dung file '{filename}' đã tồn tại trong hệ thống (trùng với '{orig_file}'). Đã tự động tái sử dụng để tránh tạo vector rác.",
+                "chunks_count": len(existing_check["ids"]),
+                "size": f"{size_bytes / 1024:.1f} KB",
+                "type": "DUPLICATE_SKIPPED",
+                "packages": [],
+            }
+    except Exception as hash_err:
+        print(f"⚠️ Cảnh báo khi kiểm tra SHA-256 hash: {hash_err}")
+
     upload_date = time.strftime("%d %b %Y")
     ts = int(time.time())
 
@@ -1339,6 +1512,8 @@ async def upload_document(
             "upload_date": upload_date,
             "timestamp": ts,
             "images": "",
+            "content_hash": content_hash,
+            "doc_year": 2026,
         }]
         ids = [f"conv_playbook_{filename}_{ts}"]
 
@@ -1388,15 +1563,14 @@ async def upload_document(
                 "upload_date": upload_date,
                 "timestamp": int(time.time()),
                 "slide_index": item["metadata"]["slide_index"],
-                "images": item["metadata"]["images"]
+                "images": item["metadata"]["images"],
+                "content_hash": content_hash,
+                "doc_year": 2026,
             })
             ids.append(f"upload_{filename}_{int(time.time())}_{idx}")
     else:
-        # Thêm tên file vào đầu text: đảm bảo số công văn trong filename luôn được index
-        # Ví dụ: "6790_D01-B4-B5_..._MobiFiber_2025_(lan_1).pdf"
-        # → Kể cả khi PDF extraction bỏ sót "6790", chunk đầu tiên vẫn chứa số đó
-        doc_id = os.path.splitext(filename)[0]  # Bỏ đuôi .pdf
-        text_content = f"[Tài liệu: {doc_id}]\n\n" + text_content
+        # Chuẩn hóa số hiệu công văn và thông tin hành chính
+        text_content, doc_meta = _normalize_administrative_document(text_content, filename)
 
         words = text_content.split()
         chunk_size = 300  # số từ mỗi mảnh
@@ -1425,7 +1599,11 @@ async def upload_document(
                 "size_bytes": size_bytes,
                 "upload_date": upload_date,
                 "timestamp": int(time.time()),
-                "images": chunk_images
+                "images": chunk_images,
+                "content_hash": content_hash,
+                "doc_number": doc_meta.get("doc_number", ""),
+                "doc_year": doc_meta.get("doc_year", 2025),
+                "issue_date": doc_meta.get("issue_date", "")
             })
             ids.append(f"upload_{filename}_{int(time.time())}_{idx}")
 
@@ -1560,7 +1738,7 @@ async def chat_mining_parse_file(file: UploadFile = File(...)):
 
 @app.post("/chat-mining/approve-qa")
 def chat_mining_approve_qa(req: ApproveQARequest):
-    """Duyệt và nạp Kịch bản & Tri thức CSKH thực chiến từ chat CSKH vào ChromaDB."""
+    """Duyệt và nạp Kịch bản & Tri thức Bán hàng thực chiến từ chat CSKH vào ChromaDB."""
     try:
         added_count = 0
         documents = []
@@ -1570,34 +1748,66 @@ def chat_mining_approve_qa(req: ApproveQARequest):
         dialogue_lines = []
         first_q = ""
 
-        for item in req.qa_list:
+        # 1. Nạp từng cặp Q&A với nhãn Sales Stage & Tactic chi tiết
+        for idx, item in enumerate(req.qa_list):
             question = str(item.get("question", "")).strip()
             answer = str(item.get("answer", "")).strip()
+            sales_stage = str(item.get("sales_stage", "kham_pha_nhu_cau")).strip()
+            sales_tactic = str(item.get("sales_tactic", "Tư vấn tiêu chuẩn")).strip()
+            package_name = str(item.get("package_name", "")).strip()
+            intent = str(item.get("intent", "Tư vấn")).strip()
+
             if question and answer:
                 if not first_q:
                     first_q = question
-                dialogue_lines.append(f"Khách hàng: {question}\nChuyên viên CSKH MobiFone: {answer}")
+                dialogue_lines.append(f"Khách hàng: {question}\nChuyên viên Bán hàng MobiFone: {answer}")
 
+                doc_text = f"TÌNH HUỐNG CSKH & SALES [{sales_stage.upper()}]:\nKhách hỏi: {question}\nChuyên viên tư vấn: {answer}\nChiến thuật: {sales_tactic}"
+                doc_id = f"cskh_qa_{uuid.uuid4().hex[:10]}"
+
+                documents.append(doc_text)
+                metadatas.append({
+                    "source": "CSKH_Chat_Mining",
+                    "source_title": f"Q&A: {question[:50]}",
+                    "source_url": "chat_mining://cskh",
+                    "type": "CONVERSATION",
+                    "category": "Sales_Playbook",
+                    "sales_stage": sales_stage,
+                    "sales_tactic": sales_tactic,
+                    "package_name": package_name,
+                    "question": question,
+                    "answer": answer,
+                    "intent": intent,
+                    "size_bytes": len(doc_text.encode("utf-8")),
+                    "upload_date": time.strftime("%Y-%m-%d"),
+                    "timestamp": time.time(),
+                    "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+                })
+                ids.append(doc_id)
+                added_count += 1
+
+        # 2. Nạp thêm 1 bản Full Script hoàn chỉnh cho ngữ cảnh đa lượt
         if dialogue_lines:
             full_script = "\n\n".join(dialogue_lines)
-            script_title = f"Tri thức CSKH [Kịch bản]: {first_q[:40]}..."
-            doc_text = f"KỊCH BẢN CHỐT SALE & PHONG THÁI CSKH XUẤT SẮC MẪU ({script_title}):\n{full_script}"
-            doc_id = f"cskh_playbook_{uuid.uuid4().hex[:10]}"
+            script_title = f"Kịch bản Sales Top Performer: {first_q[:40]}..."
+            full_doc_text = f"KỊCH BẢN CHỐT SALE & PHONG THÁI CSKH XUẤT SẮC MẪU ({script_title}):\n{full_script}"
+            full_doc_id = f"cskh_script_{uuid.uuid4().hex[:10]}"
 
-            documents.append(doc_text)
+            documents.append(full_doc_text)
             metadatas.append({
                 "source": "CSKH_Chat_Mining",
                 "source_title": script_title,
-                "source_url": "chat_mining://cskh",
+                "source_url": "chat_mining://cskh_script",
                 "type": "CONVERSATION",
                 "category": "CSKH_Learned_Playbook",
-                "size_bytes": len(doc_text.encode("utf-8")),
+                "size_bytes": len(full_doc_text.encode("utf-8")),
                 "upload_date": time.strftime("%Y-%m-%d"),
                 "timestamp": time.time(),
                 "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
             })
-            ids.append(doc_id)
+            ids.append(full_doc_id)
 
+        if documents:
             bot.collection.add(
                 documents=documents,
                 metadatas=metadatas,
@@ -1612,11 +1822,9 @@ def chat_mining_approve_qa(req: ApproveQARequest):
             except Exception as pb_err:
                 print(f"⚠️ Cảnh báo nạp Playbook Collection: {pb_err}")
 
-            added_count = 1
-
         return {
             "status": "success",
-            "message": f"Đã nạp thành công 1 Kịch bản tư vấn CSKH thực chiến trọn gói vào hệ thống",
+            "message": f"Đã nạp thành công {added_count} Kịch bản & Tri thức Bán hàng thực chiến vào hệ thống",
             "added_count": added_count
         }
     except Exception as e:

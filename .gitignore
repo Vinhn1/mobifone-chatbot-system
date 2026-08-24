@@ -51,11 +51,21 @@ ai-core/out.txt
 ai-core/test_output.txt
 ai-core/esim_search_results.txt
 
-# ─── Eval / Test output files ────────────────────────────────
+# ─── Eval / Test output files & scripts ─────────────────────
 ai-core/eval_dataset_100.json
 ai-core/dynamic_suggestions.json
 ai-core/eval_accuracy_report.json
 ai-core/eval_accuracy_report.md
+ai-core/eval_accuracy.py
+ai-core/generate_eval_dataset.py
+ai-core/run_eval_ci.py
+ai-core/run_eval_ci.bat
+ai-core/sales_benchmark.py
+ai-core/sales_metrics.py
+ai-core/validate_final.py
+ai-core/validate_wifi_packages.py
+ai-core/reports/
+ai-core/data/sales_metrics.jsonl
 
 # ─── Browser automation profiles ────────────────────────────
 ai-core/browser_profiles/
