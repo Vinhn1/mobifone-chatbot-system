@@ -361,6 +361,11 @@ class MobiFoneRAG:
         # 4. Truy vấn ngữ nghĩa từ ChromaDB sử dụng mở rộng câu truy vấn (Query Expansion)
         queries_to_run = [normalized_query]
         
+        is_mobile_data_query = any(kw in query_lower for kw in [
+            "4g", "5g", "data", "dung lượng", "gói cước", "mạng 4g", "mạng 5g",
+            "gói tháng", "gói data", "mxh", "kc", "pt", "tk", "s159", "cước di động"
+        ])
+
         # Thêm các câu truy vấn từ khóa nếu phát hiện các chủ đề cụ thể để tối ưu hóa với mô hình embedding
         if is_day_package_query:
             queries_to_run.extend([
@@ -372,8 +377,6 @@ class MobiFoneRAG:
             queries_to_run.extend(["eSIM MobiFone", "đổi eSIM My MobiFone", "phí đổi eSIM"])
         elif any(kw in query_lower for kw in ["roaming", "chuyển vùng", "cvqt"]):
             queries_to_run.extend(["chuyển vùng quốc tế MobiFone", "đăng ký roaming", "giá cước roaming"])
-        elif "5g" in query_lower:
-            queries_to_run.extend(["5G MobiFone", "đăng ký 5G", "gói cước 5G"])
         elif any(kw in query_lower for kw in ["wifi", "tivi", "cáp quang", "mobifiber", "internet"]):
             # [Thay đổi C] Cải thiện WiFi query expansion — ưu tiên bảng giá đầy đủ 9 gói
             queries_to_run.extend([
@@ -383,6 +386,12 @@ class MobiFoneRAG:
                 "6WiFi 1Plus 990000 350 Mbps 6 tháng tặng 2 tháng miễn phí tổng 8 tháng",
                 # Query 3: Gói 12 tháng — giá gồm VAT 1.980.000đ tặng 4 tháng
                 "12WiFi 1Plus 1980000 350 Mbps 12 tháng tặng 4 tháng miễn phí tổng 16 tháng",
+            ])
+        elif is_mobile_data_query:
+            queries_to_run.extend([
+                "các gói cước 4G Mobifone và 5G Mobifone cập nhật mới nhất",
+                "danh sách gói cước 4G MobiFone HOT MXH90 MXH100 KC90 PT70 S159QT",
+                "bảng giá gói cước data 4G 5G MobiFone đăng ký gói",
             ])
             
         semantic_results_list = []
@@ -404,8 +413,13 @@ class MobiFoneRAG:
         if "esim" in query_lower or "e-sim" in query_lower:
             keywords_to_search.extend(["eSIM", "esim", "ESIM", "E-sim", "e-sim"])
         
-        # 2. Khớp từ khóa 5G
-        if "5g" in query_lower:
+        # 2. Khớp từ khóa 5G / 4G / Data
+        if is_mobile_data_query:
+            keywords_to_search.extend([
+                "gói cước 4G", "gói cước 5G", "4G/5G", "4G MobiFone", "5G MobiFone",
+                "MXH90", "MXH100", "KC90", "PT70", "S159QT", "S159CAN", "5G135", "5G7D"
+            ])
+        elif "5g" in query_lower:
             keywords_to_search.extend(["5G", "5g"])
             
         # 3. Khớp từ khóa Chuyển vùng quốc tế / Roaming
@@ -1034,8 +1048,12 @@ Cấu trúc JSON duy nhất:
 
         self._last_was_reformulated = was_reformulated
 
-        # [P3] n_results=10 để cải thiện Context Recall trước khi rerank về top-5
-        retrieved = self.retrieve(enriched_question, n_results=10)
+        # Tăng retrieval depth linh hoạt cho câu hỏi tra cứu danh mục / toàn bộ gói (tất cả các gói 4G/5G, danh sách gói,...)
+        is_catalogue_query = any(kw in enriched_question.lower() for kw in [
+            "tất cả", "danh sách", "danh mục", "các gói", "toàn bộ", "bảng giá", "tổng hợp", "những gói", "có những gói"
+        ])
+        n_retrieval_k = 20 if is_catalogue_query else 10
+        retrieved = self.retrieve(enriched_question, n_results=n_retrieval_k)
         contexts = retrieved.get('documents', [[]])[0]
         sources = retrieved.get('metadatas', [[]])[0]
 
