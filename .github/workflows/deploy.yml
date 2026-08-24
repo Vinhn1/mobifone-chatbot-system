@@ -51,29 +51,7 @@ jobs:
 
             # Khôi phục & merge các token/kênh truyền thông từ bản backup vào rag_config.json mới
             if [ -f "/tmp/rag_config.json.bak" ]; then
-              python3 -c "
-import json, os
-bak_path = '/tmp/rag_config.json.bak'
-cur_path = 'ai-core/rag_config.json'
-try:
-    with open(bak_path, 'r', encoding='utf-8') as f:
-        bak_data = json.load(f)
-    with open(cur_path, 'r', encoding='utf-8') as f:
-        cur_data = json.load(f)
-    preserve_keys = [
-        'fb_enabled', 'fb_verify_token', 'fb_page_token', 'fb_page_id',
-        'zalo_enabled', 'zalo_app_id', 'zalo_secret_key', 'zalo_access_token',
-        'zalo_refresh_token', 'zalo_oa_id'
-    ]
-    for k in preserve_keys:
-        if k in bak_data:
-            cur_data[k] = bak_data[k]
-    with open(cur_path, 'w', encoding='utf-8') as f:
-        json.dump(cur_data, f, ensure_ascii=False, indent=2)
-    print('✓ Đã bảo lưu cấu hình Facebook/Zalo Token thành công!')
-except Exception as e:
-    print(f'⚠️ Không thể merge cấu hình cũ: {e}')
-" || true
+              python3 scripts/merge_config.py /tmp/rag_config.json.bak ai-core/rag_config.json || true
             fi
 
             echo "=== [2/5] Ghi file .env từ GitHub Secrets ==="
