@@ -374,9 +374,25 @@
   badge.innerText = "1";
   launcher.appendChild(badge);
 
-  container.appendChild(iframeContainer);
-  container.appendChild(launcher);
-  document.body.appendChild(container);
+  function mount() {
+    if (!document.body) {
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", mount);
+      } else {
+        setTimeout(mount, 30);
+      }
+      return;
+    }
+
+    if (!document.getElementById("mobifone-widget-styles")) {
+      document.head.appendChild(style);
+    }
+    container.appendChild(iframeContainer);
+    container.appendChild(launcher);
+    document.body.appendChild(container);
+  }
+
+  mount();
 
   var isOpen = false;
 
