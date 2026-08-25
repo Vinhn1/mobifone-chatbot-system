@@ -59,6 +59,27 @@ export function AdminLayout() {
     }
   }, []);
 
+  // Khóa cuộn cấp độ window/document khi ở trong Admin Layout để Navbar và Sidebar luôn cố định
+  useEffect(() => {
+    const originalHtmlOverflow = document.documentElement.style.overflow;
+    const originalHtmlHeight = document.documentElement.style.height;
+    const originalBodyOverflow = document.body.style.overflow;
+    const originalBodyHeight = document.body.style.height;
+
+    document.documentElement.style.overflow = "hidden";
+    document.documentElement.style.height = "100%";
+    document.body.style.overflow = "hidden";
+    document.body.style.height = "100%";
+    window.scrollTo(0, 0);
+
+    return () => {
+      document.documentElement.style.overflow = originalHtmlOverflow;
+      document.documentElement.style.height = originalHtmlHeight;
+      document.body.style.overflow = originalBodyOverflow;
+      document.body.style.height = originalBodyHeight;
+    };
+  }, []);
+
   // 1. Tải số lượng leads chưa liên hệ và lịch sử hội thoại ban đầu để khởi tạo đếm
   useEffect(() => {
     const adminToken = localStorage.getItem("mobifone_admin_token");
@@ -274,12 +295,14 @@ export function AdminLayout() {
   return (
     <div style={{
       display: "flex",
-      height: "100vh",
+      position: "fixed",
+      inset: 0,
       width: "100vw",
+      height: "100vh",
       background: "linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%)",
       fontFamily: "'Outfit', sans-serif",
       overflow: "hidden",
-      position: "relative"
+      zIndex: 1
     }}>
       {/* Toast Notification */}
       <AnimatePresence>
@@ -365,6 +388,7 @@ export function AdminLayout() {
         transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
         style={{
           margin: "16px 0 16px 16px",
+          height: "calc(100vh - 32px)",
           borderRadius: 24,
           background: "rgba(10, 22, 40, 0.96)",
           backdropFilter: "blur(24px)",
@@ -645,6 +669,8 @@ export function AdminLayout() {
       {/* Main View Container */}
       <div style={{
         flex: 1,
+        minWidth: 0,
+        height: "100%",
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
@@ -1086,6 +1112,7 @@ export function AdminLayout() {
         <main
           style={{
             flex: 1,
+            minHeight: 0,
             overflowY: "auto",
             padding: "16px 16px 24px 16px"
           }}
@@ -1098,7 +1125,7 @@ export function AdminLayout() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.22, ease: "easeOut" }}
-              style={{ height: "100%", width: "100%" }}
+              style={{ minHeight: "100%", width: "100%" }}
             >
               <Outlet />
             </motion.div>

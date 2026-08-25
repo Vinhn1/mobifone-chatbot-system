@@ -4,7 +4,7 @@ import { ChatWidget } from "../components/ChatWidget";
 
 export function RootLayout() {
   return (
-    <div style={{ minHeight: "100vh", overflowX: "hidden" }}>
+    <div style={{ height: "100vh", width: "100vw", overflowY: "auto", overflowX: "hidden" }}>
       <Navbar />
       <main>
         <Outlet />
