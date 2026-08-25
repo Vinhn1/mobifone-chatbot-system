@@ -31,13 +31,25 @@
     defaultBaseUrl = window.location.origin;
   }
 
+  // Đọc cấu hình tùy biến được lưu từ Admin Portal nếu có
+  var savedThemeColor = null;
+  var savedBotName = null;
+  var savedGreeting = null;
+  var savedPosition = null;
+  try {
+    savedThemeColor = localStorage.getItem("mobifone_widget_theme_color");
+    savedBotName = localStorage.getItem("mobifone_widget_bot_name");
+    savedGreeting = localStorage.getItem("mobifone_widget_greeting");
+    savedPosition = localStorage.getItem("mobifone_widget_position");
+  } catch (_) { }
+
   // Cấu hình widget
   var config = {
     baseUrl: (currentScript && currentScript.getAttribute("data-chat-url")) || defaultBaseUrl,
-    position: (currentScript && currentScript.getAttribute("data-position")) || "bottom-right",
-    themeColor: (currentScript && currentScript.getAttribute("data-theme-color")) || "#005BAA",
-    botName: (currentScript && currentScript.getAttribute("data-bot-name")) || "Mia - MobiFone AI",
-    greeting: (currentScript && currentScript.getAttribute("data-greeting")) || "",
+    position: (currentScript && currentScript.getAttribute("data-position")) || savedPosition || "bottom-right",
+    themeColor: (currentScript && currentScript.getAttribute("data-theme-color")) || savedThemeColor || "#005BAA",
+    botName: (currentScript && currentScript.getAttribute("data-bot-name")) || savedBotName || "Mia - MobiFone CSKH",
+    greeting: (currentScript && currentScript.getAttribute("data-greeting")) || savedGreeting || "",
     autoOpen: (currentScript && currentScript.getAttribute("data-auto-open")) === "true",
   };
 
@@ -60,34 +72,48 @@
       left: 20px;
     }
     .mbf-widget-launcher {
-      width: 60px;
-      height: 60px;
+      width: 78px;
+      height: 78px;
       border-radius: 50%;
-      background-color: ${config.themeColor};
-      box-shadow: 0 4px 16px rgba(0, 91, 170, 0.35), 0 2px 4px rgba(0, 0, 0, 0.1);
+      background: transparent;
+      box-shadow: none;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #ffffff;
-      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
       position: relative;
       user-select: none;
       border: none;
       outline: none;
       padding: 0;
+      overflow: visible;
     }
     .mbf-widget-launcher:hover {
-      transform: scale(1.08);
-      box-shadow: 0 6px 22px rgba(0, 91, 170, 0.45), 0 2px 6px rgba(0, 0, 0, 0.15);
+      transform: scale(1.1) translateY(-3px);
     }
     .mbf-widget-launcher:active {
       transform: scale(0.95);
     }
+    .mbf-widget-launcher.mbf-open-state {
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, ${config.themeColor} 0%, #0c1829 100%);
+      border: 2px solid #ffffff;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      margin: 18px;
+    }
+    .mbf-widget-launcher-icon {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
     .mbf-widget-badge {
       position: absolute;
-      top: -2px;
-      right: -2px;
+      top: 2px;
+      right: 2px;
       background-color: #ef4444;
       color: white;
       border: 2px solid white;
@@ -100,11 +126,68 @@
       align-items: center;
       justify-content: center;
       animation: mbf-pulse 2s infinite;
+      z-index: 10;
     }
     @keyframes mbf-pulse {
       0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
       70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
       100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+    .mbf-widget-tooltip {
+      position: absolute;
+      right: 90px;
+      top: 50%;
+      background: rgba(9, 21, 44, 0.96);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(48, 176, 235, 0.3);
+      border-radius: 14px;
+      padding: 10px 16px;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      transform: translateY(-50%) translateX(10px);
+      z-index: 2147483645;
+    }
+    .mbf-widget-bottom-left .mbf-widget-tooltip {
+      right: auto;
+      left: 90px;
+      transform: translateY(-50%) translateX(-10px);
+    }
+    .mbf-widget-container:hover .mbf-widget-tooltip {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(-50%) translateX(0);
+    }
+    .mbf-widget-tooltip-title {
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .mbf-widget-tooltip-sub {
+      color: #87D5F8;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 2px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .mbf-widget-tooltip-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22C55E;
+      box-shadow: 0 0 6px #22C55E;
+      display: inline-block;
     }
     .mbf-widget-iframe-container {
       position: fixed;
@@ -157,6 +240,9 @@
         border: none !important;
         z-index: 2147483647 !important;
       }
+      .mbf-widget-tooltip {
+        display: none !important;
+      }
     }
   `;
   document.head.appendChild(style);
@@ -186,26 +272,101 @@
   iframe.allow = "microphone; camera";
   iframeContainer.appendChild(iframe);
 
+  // Tooltip
+  var tooltip = document.createElement("div");
+  tooltip.className = "mbf-widget-tooltip";
+  tooltip.innerHTML = `
+    <div class="mbf-widget-tooltip-title">
+      <span>✨</span> ${config.botName || "Mia — Chăm sóc khách hàng MobiFone"}
+    </div>
+    <div class="mbf-widget-tooltip-sub">
+      <span class="mbf-widget-tooltip-dot"></span> Online · Sẵn sàng hỗ trợ 24/7
+    </div>
+  `;
+  container.appendChild(tooltip);
+
   // Nút launcher tròn
   var launcher = document.createElement("button");
   launcher.className = "mbf-widget-launcher";
   launcher.setAttribute("aria-label", "Mở Chatbot MobiFone");
 
-  // SVG Icons (Chat & Close)
-  var chatIconSvg = `
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+  // SVG Mia Avatar (Bao gồm tai nghe, micro, bo đệm, và mắt cyber) & Close Icon
+  var miaAvatarSvg = `
+    <svg width="78" height="78" viewBox="0 0 120 120" style="overflow: visible; display: block; filter: drop-shadow(0 8px 20px rgba(0, 85, 165, 0.35));">
+      <defs>
+        <linearGradient id="mbfCircleBgGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FFFFFF" />
+          <stop offset="35%" stop-color="#87D5F8" />
+          <stop offset="100%" stop-color="#30B0EB" />
+        </linearGradient>
+        <linearGradient id="mbfHeadphoneGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#224080" />
+          <stop offset="100%" stop-color="#122550" />
+        </linearGradient>
+        <radialGradient id="mbfEyeIris" cx="45%" cy="40%" r="55%">
+          <stop offset="0%" stop-color="#A6FFFF" />
+          <stop offset="45%" stop-color="#00E5FF" />
+          <stop offset="100%" stop-color="#008EA0" />
+        </radialGradient>
+        <filter id="mbfGlowEffect">
+          <feGaussianBlur stdDeviation="1.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <filter id="mbfShadowEffect">
+          <feDropShadow dx="0" dy="2.5" stdDeviation="3" flood-color="#0A1E3D" flood-opacity="0.35" />
+        </filter>
+      </defs>
+
+      <circle cx="60" cy="60" r="41" fill="url(#mbfCircleBgGrad)" filter="url(#mbfShadowEffect)" />
+      <ellipse cx="60" cy="25" rx="28" ry="5" fill="rgba(255,255,255,0.4)" />
+
+      <g style="user-select: none;">
+        <text x="32" y="42" fill="#1D397A" font-size="9" font-weight="900" font-family="'Outfit','Inter',sans-serif" letter-spacing="-0.2">mobi</text>
+        <text x="32" y="51" fill="#E4002B" font-size="9" font-weight="900" font-family="'Outfit','Inter',sans-serif" letter-spacing="-0.2">fone</text>
+        <text x="73" y="49" fill="#1D397A" font-size="17" font-weight="900" font-family="'Outfit','Inter',sans-serif">AI</text>
+      </g>
+
+      <path d="M 23,60 A 37,37 0 0,1 97,60" fill="none" stroke="url(#mbfHeadphoneGrad)" stroke-width="6" stroke-linecap="round" />
+      <rect x="52" y="18" width="16" height="5" rx="2.5" fill="#E1F5FE" />
+      <path d="M 37,64 C 44,60 76,60 83,64 C 91,71 87,86 60,86 C 33,86 29,71 37,64 Z" fill="url(#mbfHeadphoneGrad)" filter="url(#mbfShadowEffect)" />
+
+      <ellipse cx="45" cy="71" rx="10.5" ry="10.5" fill="#09152C" />
+      <ellipse cx="75" cy="71" rx="10.5" ry="10.5" fill="#09152C" />
+      <ellipse cx="45" cy="71" rx="7" ry="7" fill="url(#mbfEyeIris)" filter="url(#mbfGlowEffect)" />
+      <ellipse cx="45" cy="71" rx="3" ry="3" fill="#050E1F" />
+      <circle cx="47" cy="68.5" r="1.8" fill="white" opacity="0.9" />
+      <circle cx="43.5" cy="72.5" r="0.8" fill="white" opacity="0.4" />
+
+      <ellipse cx="75" cy="71" rx="7" ry="7" fill="url(#mbfEyeIris)" filter="url(#mbfGlowEffect)" />
+      <ellipse cx="75" cy="71" rx="3" ry="3" fill="#050E1F" />
+      <circle cx="77" cy="68.5" r="1.8" fill="white" opacity="0.9" />
+      <circle cx="73.5" cy="72.5" r="0.8" fill="white" opacity="0.4" />
+
+      <path d="M 54,78.5 Q 60,82.5 66,78.5" stroke="#00E5FF" stroke-width="1.6" fill="none" stroke-linecap="round" />
+
+      <rect x="13" y="49" width="10" height="22" rx="4.5" fill="url(#mbfHeadphoneGrad)" filter="url(#mbfShadowEffect)" />
+      <rect x="97" y="49" width="10" height="22" rx="4.5" fill="url(#mbfHeadphoneGrad)" filter="url(#mbfShadowEffect)" />
+
+      <path d="M 18,68 Q 18,97 50,96" fill="none" stroke="url(#mbfHeadphoneGrad)" stroke-width="3.2" stroke-linecap="round" />
+      <circle cx="50" cy="96" r="3.5" fill="url(#mbfHeadphoneGrad)" />
+      <circle cx="50" cy="96" r="1.5" fill="#00E5FF" />
     </svg>
   `;
 
   var closeIconSvg = `
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <line x1="18" y1="6" x2="6" y2="18"></line>
       <line x1="6" y1="6" x2="18" y2="18"></line>
     </svg>
   `;
 
-  launcher.innerHTML = chatIconSvg;
+  var iconWrapper = document.createElement("div");
+  iconWrapper.className = "mbf-widget-launcher-icon";
+  iconWrapper.innerHTML = miaAvatarSvg;
+  launcher.appendChild(iconWrapper);
 
   // Badge tin nhắn
   var badge = document.createElement("div");
@@ -223,13 +384,15 @@
     isOpen = !isOpen;
     if (isOpen) {
       iframeContainer.classList.add("mbf-open");
-      launcher.innerHTML = closeIconSvg;
-      if (badge.parentNode) {
-        badge.style.display = "none";
-      }
+      launcher.classList.add("mbf-open-state");
+      iconWrapper.innerHTML = closeIconSvg;
+      badge.style.display = "none";
+      tooltip.style.display = "none";
     } else {
       iframeContainer.classList.remove("mbf-open");
-      launcher.innerHTML = chatIconSvg;
+      launcher.classList.remove("mbf-open-state");
+      iconWrapper.innerHTML = miaAvatarSvg;
+      tooltip.style.display = "";
     }
   }
 

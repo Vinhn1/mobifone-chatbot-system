@@ -5,8 +5,6 @@ import {
   Send, 
   RotateCcw, 
   Sparkles, 
-  ExternalLink, 
-  Phone, 
   ShieldCheck, 
   X,
   Wifi,
@@ -139,9 +137,10 @@ export function EmbedChatPage() {
   const [searchParams] = useSearchParams();
 
   // URL query customization
-  const themeColor = searchParams.get("theme") || "#005BAA";
-  const botTitle = searchParams.get("title") || "Mia - Chuyên viên MobiFone";
-  const initialGreeting = searchParams.get("greeting") || "Xin chào! Mia là Chuyên viên CSKH số của MobiFone. Mia có thể hỗ trợ gì cho bạn hôm nay?";
+  const rawTheme = searchParams.get("theme");
+  const themeColor = (rawTheme && rawTheme !== "#005BAA" ? rawTheme : null) || localStorage.getItem("mobifone_widget_theme_color") || rawTheme || "#005BAA";
+  const botTitle = searchParams.get("title") || localStorage.getItem("mobifone_widget_bot_name") || "Mia - Chuyên viên MobiFone";
+  const initialGreeting = searchParams.get("greeting") || localStorage.getItem("mobifone_widget_greeting") || "Xin chào! Mia là Chuyên viên CSKH số của MobiFone. Mia có thể hỗ trợ gì cho bạn hôm nay?";
   const hideHeader = searchParams.get("hideHeader") === "true";
 
   // State
@@ -160,8 +159,6 @@ export function EmbedChatPage() {
   const [loading, setLoading] = useState(false);
   const [robotState, setRobotState] = useState<RobotState>("idle");
   const [suggestions, setSuggestions] = useState<string[]>(DEFAULT_SUGGESTIONS);
-  const [leadPhone, setLeadPhone] = useState("");
-  const [leadSubmitted, setLeadSubmitted] = useState(false);
 
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -202,7 +199,7 @@ export function EmbedChatPage() {
           return;
         }
       } catch {
-        // Fallback sang tin nhắn chào mặc định
+        // Fallback lời chào mặc định
       }
 
       // Khởi tạo tin nhắn chào mừng
@@ -257,7 +254,8 @@ export function EmbedChatPage() {
         userInfo: { source: "embed_widget", url: window.location.href }
       });
 
-      const botReplyText = response.data?.reply || response.data?.message || "Cảm ơn bạn đã nhắn tin. Chuyên viên MobiFone sẽ hỗ trợ bạn ngay.";
+      // Trích xuất câu trả lời chuẩn từ RAG AI backend (field answer)
+      const botReplyText = response.data?.answer || response.data?.reply || response.data?.message || "Cảm ơn bạn đã nhắn tin. Chuyên viên MobiFone sẽ hỗ trợ bạn ngay.";
       
       const botMsg: Message = {
         id: `b_${Date.now()}`,
@@ -268,7 +266,7 @@ export function EmbedChatPage() {
       };
 
       setMessages((prev) => [...prev, botMsg]);
-      setRobotState("happy");
+      setRobotState("talking");
       setTimeout(() => setRobotState("idle"), 3000);
 
       // Báo cho widget cha có tin nhắn mới
@@ -302,44 +300,12 @@ export function EmbedChatPage() {
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
-    setLeadSubmitted(false);
-    setLeadPhone("");
   };
 
   const handleClose = () => {
     if (window.parent && window.parent !== window) {
       window.parent.postMessage({ type: "MOBIFONE_WIDGET_CLOSE" }, "*");
     }
-  };
-
-  const handleLeadSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!leadPhone.trim() || leadSubmitted) return;
-
-    try {
-      await axios.post(`${API_BASE}/chat`, {
-        message: `Khách hàng để lại số điện thoại liên hệ: ${leadPhone}`,
-        sessionId: sessionId,
-        userInfo: { phone: leadPhone, source: "embed_lead_capture" }
-      });
-      setLeadSubmitted(true);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `lead_${Date.now()}`,
-          type: "bot",
-          text: `Dạ Mia đã ghi nhận số điện thoại **${leadPhone}** thành công! Chuyên viên chăm sóc khách hàng MobiFone sẽ liên hệ hỗ trợ bạn trong thời gian sớm nhất nhé.`,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]);
-    } catch {
-      setLeadSubmitted(true);
-    }
-  };
-
-  const normalizeSourceUrl = (source: string) => {
-    if (source.startsWith("http://") || source.startsWith("https://")) return source;
-    return `https://${source}`;
   };
 
   return (
@@ -358,10 +324,10 @@ export function EmbedChatPage() {
         <div
           className="relative z-10 shrink-0 overflow-hidden border-b border-white/15 text-white shadow-[0_10px_28px_rgba(0,35,76,0.18)]"
           style={{
-            background: `linear-gradient(135deg, ${themeColor} 0%, #003d7a 58%, #06152b 100%)`,
+            background: `linear-gradient(135deg, ${themeColor} 0%, #0c1829 100%)`,
           }}
         >
-          <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-[#e30613] via-[#30b0eb] to-emerald-400" />
+          <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-white/30 via-white/10 to-transparent" />
           <div className="relative flex items-center justify-between gap-3 px-4 py-3">
             <div className="flex min-w-0 items-center gap-3">
               <div className="relative shrink-0">
@@ -405,7 +371,7 @@ export function EmbedChatPage() {
 
       {/* Messages Scroll Area */}
       <div ref={messagesContainerRef} className="custom-scrollbar relative z-0 flex-1 overflow-y-auto px-3.5 py-3.5">
-        {/* Intro Service Badges (Scrolls naturally with messages, doesn't stick to the top) */}
+        {/* Intro Service Badges */}
         <div className="mb-3 grid grid-cols-3 gap-1.5">
           {[
             { icon: Wifi, text: "4G/5G", query: "Tư vấn gói cước 4G/5G" },
@@ -416,9 +382,9 @@ export function EmbedChatPage() {
               key={item.text}
               type="button"
               onClick={() => handleSendMessage(item.query)}
-              className="flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-blue-100 bg-white/90 px-2 py-2 text-[10.5px] font-bold text-blue-900 shadow-xs backdrop-blur transition-all hover:border-blue-300 hover:bg-blue-50/80 active:scale-95 cursor-pointer"
+              className="flex min-w-0 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white/90 px-2 py-2 text-[10.5px] font-bold text-slate-800 shadow-xs backdrop-blur transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95 cursor-pointer"
             >
-              <item.icon className="h-3.5 w-3.5 shrink-0 text-blue-600" />
+              <item.icon className="h-3.5 w-3.5 shrink-0 text-slate-600" />
               <span className="truncate">{item.text}</span>
             </button>
           ))}
@@ -441,7 +407,7 @@ export function EmbedChatPage() {
               >
                 {msg.type === "bot" && (
                   <div className="mt-0.5 shrink-0">
-                    <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl border border-blue-100 bg-white shadow-sm">
+                    <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                       <RobotAvatar size={30} state={robotState} />
                     </div>
                   </div>
@@ -451,12 +417,16 @@ export function EmbedChatPage() {
                   <div
                     className={`relative px-3.5 py-2.5 shadow-sm ${
                       msg.type === "user"
-                        ? "rounded-2xl rounded-tr bg-blue-700 text-white shadow-blue-900/18"
+                        ? "rounded-2xl rounded-tr text-white"
                         : "rounded-2xl rounded-tl border border-slate-200/85 bg-white/95 text-slate-800 shadow-slate-200/60 backdrop-blur"
                     }`}
                     style={
                       msg.type === "user"
-                        ? { background: `linear-gradient(135deg, ${themeColor}, #0077d9)` }
+                        ? { 
+                            background: `linear-gradient(135deg, ${themeColor} 0%, #0c1829 100%)`,
+                            border: "1px solid rgba(255, 255, 255, 0.12)",
+                            boxShadow: "0 4px 14px rgba(0, 0, 0, 0.14)"
+                          }
                         : {}
                     }
                   >
@@ -469,30 +439,13 @@ export function EmbedChatPage() {
                     {msg.time && (
                       <div
                         className={`mt-1.5 text-right text-[10px] font-medium ${
-                          msg.type === "user" ? "text-white/68" : "text-slate-400"
+                          msg.type === "user" ? "text-white/75" : "text-slate-400"
                         }`}
                       >
                         {msg.time}
                       </div>
                     )}
                   </div>
-
-                  {msg.type === "bot" && msg.sources && msg.sources.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {msg.sources.map((source, idx) => (
-                        <a
-                          key={`${source}_${idx}`}
-                          href={normalizeSourceUrl(source)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex max-w-[180px] items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-1 text-[10.5px] font-bold text-blue-700 no-underline transition-colors hover:border-blue-300 hover:bg-blue-100"
-                        >
-                          <ExternalLink className="h-3 w-3 shrink-0" />
-                          <span className="truncate">{source}</span>
-                        </a>
-                      ))}
-                    </div>
-                  )}
                 </div>
               </div>
             </motion.div>
@@ -502,14 +455,13 @@ export function EmbedChatPage() {
         {/* Loading Indicator */}
         {loading && (
           <div className="flex items-end gap-2.5 pl-0.5 text-xs text-slate-500">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-blue-100 bg-white shadow-sm">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <RobotAvatar size={30} state="thinking" />
             </div>
-            <div className="flex items-center gap-1.5 rounded-2xl rounded-tl border border-slate-200 bg-white/95 px-3.5 py-2.5 shadow-sm backdrop-blur">
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-600" style={{ animationDelay: "0ms" }} />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-600" style={{ animationDelay: "150ms" }} />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-600" style={{ animationDelay: "300ms" }} />
-              <span className="ml-1 text-[11px] font-bold text-slate-500">Mia đang tra cứu...</span>
+            <div className="flex items-center gap-1.5 rounded-2xl rounded-tl border border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur">
+              <span className="h-2 w-2 animate-bounce rounded-full" style={{ backgroundColor: themeColor, animationDelay: "0ms" }} />
+              <span className="h-2 w-2 animate-bounce rounded-full" style={{ backgroundColor: themeColor, animationDelay: "150ms" }} />
+              <span className="h-2 w-2 animate-bounce rounded-full" style={{ backgroundColor: themeColor, animationDelay: "300ms" }} />
             </div>
           </div>
         )}
@@ -531,7 +483,7 @@ export function EmbedChatPage() {
               <button
                 key={i}
                 onClick={() => handleSendMessage(sug)}
-                className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 active:scale-95"
+                className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 active:scale-95"
               >
                 {sug}
               </button>
@@ -542,29 +494,6 @@ export function EmbedChatPage() {
 
       {/* Input Form */}
       <div className="relative z-10 border-t border-slate-200 bg-white/92 p-3 shadow-[0_-12px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl">
-        {!leadSubmitted && (
-          <form
-            onSubmit={handleLeadSubmit}
-            className="mb-2 flex items-center gap-2 rounded-xl border border-blue-100 bg-blue-50/70 p-1.5"
-          >
-            <Phone className="ml-2 h-3.5 w-3.5 shrink-0 text-blue-600" />
-            <input
-              type="tel"
-              value={leadPhone}
-              onChange={(e) => setLeadPhone(e.target.value)}
-              placeholder="Để lại SĐT để được gọi lại"
-              className="min-w-0 flex-1 bg-transparent text-xs font-semibold text-slate-700 placeholder-slate-400 outline-none"
-            />
-            <button
-              type="submit"
-              disabled={!leadPhone.trim()}
-              className="rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-black text-blue-700 shadow-sm transition-all hover:bg-blue-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
-            >
-              Gửi
-            </button>
-          </form>
-        )}
-
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -572,7 +501,7 @@ export function EmbedChatPage() {
           }}
           className="flex items-center gap-2"
         >
-          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 transition-all focus-within:border-blue-300 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-500/10">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 transition-all focus-within:border-slate-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-slate-500/10">
             <MessageCircle className="h-4 w-4 shrink-0 text-slate-400" />
             <input
               ref={inputRef}
@@ -588,8 +517,12 @@ export function EmbedChatPage() {
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg shadow-blue-900/20 transition-all hover:shadow-blue-900/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
-            style={{ background: input.trim() && !loading ? `linear-gradient(135deg, ${themeColor}, #0099ff)` : "#94a3b8" }}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg transition-all hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+            style={{ 
+              background: input.trim() && !loading 
+                ? `linear-gradient(135deg, ${themeColor} 0%, #0c1829 100%)` 
+                : "#94a3b8" 
+            }}
           >
             <Send className="h-4 w-4" />
           </button>

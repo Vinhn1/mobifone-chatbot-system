@@ -1185,56 +1185,67 @@ export function ChatWidget() {
                   </div>
 
                   {/* Input form */}
-                  <div style={{ background: "rgba(0,5,15,0.85)", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "12px 16px 16px", display: "flex", gap: 8, borderRadius: "0 0 20px 20px" }}>
-                    <input
-                      value={input}
-                      onChange={e => setInput(e.target.value)}
-                      onKeyDown={e => e.key === "Enter" && send(input)}
-                      placeholder="Nhập tin nhắn hoặc số điện thoại..."
-                      style={{
-                        flex: 1,
-                        background: "rgba(255,255,255,0.06)",
-                        border: "1.5px solid rgba(255,255,255,0.08)",
-                        borderRadius: 12,
-                        padding: "10px 14px",
-                        fontSize: 13.5,
-                        outline: "none",
-                        color: "white",
-                        fontFamily: "'Outfit',sans-serif",
-                        transition: "all 0.2s"
-                      }}
-                      onFocus={e => {
-                        e.target.style.borderColor = "#30B0EB";
-                        e.target.style.background = "rgba(255,255,255,0.08)";
-                        e.target.style.boxShadow = "0 0 0 3px rgba(48,176,235,0.15)";
-                      }}
-                      onBlur={e => {
-                        e.target.style.borderColor = "rgba(255,255,255,0.08)";
-                        e.target.style.background = "rgba(255,255,255,0.06)";
-                        e.target.style.boxShadow = "none";
-                      }}
-                    />
-                    <motion.button
-                      onClick={() => send(input)}
-                      whileTap={{ scale: 0.9 }}
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 12,
-                        border: "none",
-                        background: input.trim() ? "linear-gradient(135deg,#1D397A,#30B0EB)" : "rgba(255,255,255,0.06)",
-                        color: input.trim() ? "white" : "rgba(255,255,255,0.25)",
-                        cursor: input.trim() ? "pointer" : "default",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                        boxShadow: input.trim() ? "0 4px 16px rgba(48,176,235,0.35)" : "none",
-                        transition: "all 0.25s"
-                      }}
-                    >
-                      <Send size={16} />
-                    </motion.button>
+                  <div style={{ background: "rgba(0,5,15,0.85)", borderTop: "1px solid rgba(255,255,255,0.05)", padding: "12px 16px 12px", borderRadius: "0 0 20px 20px" }}>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <input
+                        value={input}
+                        onChange={e => setInput(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && send(input)}
+                        placeholder="Nhập tin nhắn hoặc số điện thoại..."
+                        style={{
+                          flex: 1,
+                          background: "rgba(255,255,255,0.06)",
+                          border: "1.5px solid rgba(255,255,255,0.08)",
+                          borderRadius: 12,
+                          padding: "10px 14px",
+                          fontSize: 13.5,
+                          outline: "none",
+                          color: "white",
+                          fontFamily: "'Outfit',sans-serif",
+                          transition: "all 0.2s"
+                        }}
+                        onFocus={e => {
+                          e.target.style.borderColor = "#30B0EB";
+                          e.target.style.background = "rgba(255,255,255,0.08)";
+                          e.target.style.boxShadow = "0 0 0 3px rgba(48,176,235,0.15)";
+                        }}
+                        onBlur={e => {
+                          e.target.style.borderColor = "rgba(255,255,255,0.08)";
+                          e.target.style.background = "rgba(255,255,255,0.06)";
+                          e.target.style.boxShadow = "none";
+                        }}
+                      />
+                      <motion.button
+                        onClick={() => send(input)}
+                        whileTap={{ scale: 0.9 }}
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 12,
+                          border: "none",
+                          background: input.trim() ? "linear-gradient(135deg,#1D397A,#30B0EB)" : "rgba(255,255,255,0.06)",
+                          color: input.trim() ? "white" : "rgba(255,255,255,0.25)",
+                          cursor: input.trim() ? "pointer" : "default",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          boxShadow: input.trim() ? "0 4px 16px rgba(48,176,235,0.35)" : "none",
+                          transition: "all 0.25s"
+                        }}
+                      >
+                        <Send size={16} />
+                      </motion.button>
+                    </div>
+
+                    {/* Hotline support badge */}
+                    <div style={{ marginTop: 10, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 2px", fontSize: 10.5, fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 6px #22C55E", display: "inline-block" }} />
+                        <span style={{ color: "rgba(255,255,255,0.6)" }}>Tổng đài hỗ trợ: <strong style={{ color: "#30B0EB" }}>18001090</strong> (Miễn phí)</span>
+                      </div>
+                      <span style={{ color: "rgba(255,255,255,0.35)" }}>Powered by MobiFone AI</span>
+                    </div>
                   </div>
             </motion.div>
           )}

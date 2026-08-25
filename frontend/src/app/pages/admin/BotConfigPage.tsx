@@ -76,12 +76,37 @@ export function BotConfigPage() {
   const [zaloOaId, setZaloOaId] = useState("");
 
   // Widget embed customization states
-  const [widgetBotName, setWidgetBotName] = useState("Mia - Chuyên viên MobiFone");
-  const [widgetThemeColor, setWidgetThemeColor] = useState("#005BAA");
-  const [widgetPosition, setWidgetPosition] = useState<"bottom-right" | "bottom-left">("bottom-right");
-  const [widgetGreeting, setWidgetGreeting] = useState("Xin chào! Mia là Chuyên viên CSKH số của MobiFone. Mia có thể hỗ trợ gì cho bạn hôm nay?");
+  const [widgetBotName, setWidgetBotName] = useState(() => localStorage.getItem("mobifone_widget_bot_name") || "Mia - Chuyên viên MobiFone");
+  const [widgetThemeColor, setWidgetThemeColor] = useState(() => localStorage.getItem("mobifone_widget_theme_color") || "#E30613");
+  const [widgetPosition, setWidgetPosition] = useState<"bottom-right" | "bottom-left">(() => (localStorage.getItem("mobifone_widget_position") as any) || "bottom-right");
+  const [widgetGreeting, setWidgetGreeting] = useState(() => localStorage.getItem("mobifone_widget_greeting") || "Xin chào! Mia là Chuyên viên CSKH số của MobiFone. Mia có thể hỗ trợ gì cho bạn hôm nay?");
   const [widgetAutoOpen, setWidgetAutoOpen] = useState(false);
   const [copiedCode, setCopiedCode] = useState(false);
+
+  // Sync widget config immediately to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("mobifone_widget_theme_color", widgetThemeColor);
+    } catch (_) {}
+  }, [widgetThemeColor]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mobifone_widget_bot_name", widgetBotName);
+    } catch (_) {}
+  }, [widgetBotName]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mobifone_widget_greeting", widgetGreeting);
+    } catch (_) {}
+  }, [widgetGreeting]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("mobifone_widget_position", widgetPosition);
+    } catch (_) {}
+  }, [widgetPosition]);
 
   // UI state
   const [showFbSecret, setShowFbSecret] = useState(false);
@@ -135,6 +160,19 @@ export function BotConfigPage() {
         setTopP(data.top_p !== undefined ? data.top_p : 0.9);
         setMaxTokens(data.max_tokens || 512);
 
+        // Widget Config
+        const savedColor = data.widget_theme_color || localStorage.getItem("mobifone_widget_theme_color");
+        if (savedColor) setWidgetThemeColor(savedColor);
+
+        const savedName = data.widget_bot_name || localStorage.getItem("mobifone_widget_bot_name");
+        if (savedName) setWidgetBotName(savedName);
+
+        const savedGreet = data.widget_greeting || localStorage.getItem("mobifone_widget_greeting");
+        if (savedGreet) setWidgetGreeting(savedGreet);
+
+        const savedPos = data.widget_position || localStorage.getItem("mobifone_widget_position");
+        if (savedPos === "bottom-left" || savedPos === "bottom-right") setWidgetPosition(savedPos);
+
         setFbEnabled(!!data.fb_enabled);
         setFbVerifyToken(data.fb_verify_token || "");
         setFbPageToken(data.fb_page_token || "");
@@ -180,7 +218,21 @@ export function BotConfigPage() {
         zalo_access_token: zaloAccessToken,
         zalo_refresh_token: zaloRefreshToken,
         zalo_oa_id: zaloOaId,
+        widget_theme_color: widgetThemeColor,
+        widget_bot_name: widgetBotName,
+        widget_greeting: widgetGreeting,
+        widget_position: widgetPosition,
+        widget_auto_open: widgetAutoOpen,
       };
+
+      // Save to localStorage for instant widget preview across pages
+      try {
+        localStorage.setItem("mobifone_widget_theme_color", widgetThemeColor);
+        localStorage.setItem("mobifone_widget_bot_name", widgetBotName);
+        localStorage.setItem("mobifone_widget_greeting", widgetGreeting);
+        localStorage.setItem("mobifone_widget_position", widgetPosition);
+        localStorage.setItem("mobifone_widget_auto_open", String(widgetAutoOpen));
+      } catch (_) {}
 
       await axios.post(`${API_BASE}/chat/config`, payload, config);
       setSaved(true);
